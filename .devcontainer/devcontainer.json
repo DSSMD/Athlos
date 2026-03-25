@@ -1,0 +1,22 @@
+{
+  "name": "Flutter Entorno Nativo",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dart-code.flutter",
+        "dart-code.dart-code"
+      ]
+    }
+  },
+  "remoteUser": "developer",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "runArgs": [
+    "--network=host",
+    "--privileged",
+    "-v", "/dev/bus/usb:/dev/bus/usb"
+  ]
+}
