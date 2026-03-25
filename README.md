@@ -59,3 +59,52 @@ adb connect IP_DE_TU_CELULAR:PUERTO
 flutter devices
 flutter run
 ```
+
+## 🛑 Apagar y Encender el Entorno (Docker)
+
+Para no consumir recursos de tu computadora física cuando no estés programando en el sistema del taller:
+
+**Para apagar el entorno:**
+* Simplemente cierra la ventana de Visual Studio Code. Docker pausará el contenedor automáticamente.
+* *(Alternativa formal):* Presiona `F1` en VS Code, escribe **Dev Containers: Stop Container** y presiona Enter.
+
+**Para volver a trabajar (Encender):**
+1. Asegúrate de abrir **Docker Desktop** primero en tu computadora.
+2. Abre la carpeta del proyecto en VS Code.
+3. Haz clic en el botón de la esquina inferior derecha que dice **"Reopen in Container"**. En un par de segundos estarás de vuelta en la terminal de desarrollo.
+
+---
+
+## 🌿 Flujo de Trabajo (Git y Ramas)
+
+Para mantener el código ordenado y evitar conflictos en el equipo, utilizamos el modelo de GitFlow. **Nadie hace commits directos a la rama `main` ni a `develop`.**
+
+**Pasos para programar una nueva característica:**
+
+1. **Actualiza tu entorno local:**
+   Asegúrate de estar en la rama de desarrollo y descargar los últimos cambios de tus compañeros.
+   ```bash
+   git checkout develop
+   git pull origin develop
+   ```
+
+2. **Crea tu rama de trabajo:**
+   Crea una rama nueva específica para la tarea que vas a hacer (ej. inventario, login).
+   ```bash
+   git checkout -b feature/nombre-de-tu-tarea
+   ```
+
+3. **Trabaja y guarda tus cambios:**
+   Escribe tu código y haz tus commits regularmente.
+   ```bash
+   git add .
+   git commit -m "feat: descripción clara de lo que hiciste"
+   ```
+
+4. **Sube tu rama a GitHub:**
+   ```bash
+   git push -u origin feature/nombre-de-tu-tarea
+   ```
+
+5. **Integra tu código:**
+   Ve a la página de GitHub del repositorio y crea un **Pull Request** para fusionar tu rama `feature/...` hacia la rama `develop`.
