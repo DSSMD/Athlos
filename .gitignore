@@ -47,7 +47,6 @@ app.*.map.json
 
 # Entorno y Secretos (¡CRÍTICO PARA LA SEGURIDAD!)
 .env
-.env*
 *.env
 
 # Archivos de configuración de SO adicionales
