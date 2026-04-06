@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import 'ui/layouts/main_layout.dart'; // Asegúrate de crear este archivo en el paso 2
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'presentation/layouts/main_layout.dart'; // Asegúrate de crear este archivo en el paso 2
 
 void main() {
-  runApp(const MyApp());
+runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
