@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/navigation_provider.dart'; // Importamos el provider
 
-class MainLayout extends StatefulWidget {
+// 1. Cambiamos StatefulWidget por ConsumerWidget
+class MainLayout extends ConsumerWidget {
   const MainLayout({super.key});
 
   @override
-  State<MainLayout> createState() => _MainLayoutState();
-}
+  // 2. Agregamos WidgetRef para poder comunicarnos con Riverpod
+  Widget build(BuildContext context, WidgetRef ref) {
+    
+    // 3. Escuchamos el estado global del índice
+    final selectedIndex = ref.watch(navigationIndexProvider);
 
-class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0;
+    // Pantallas de ejemplo
+    final List<Widget> pages = [
+      const Center(child: Text('Dashboard - Resumen de Producción')),
+      const Center(child: Text('Taller - Control de Confección')),
+      const Center(child: Text('Inventario - Telas e Insumos')),
+    ];
 
-  // Pantallas de ejemplo para cumplir el PR (Navegable)
-  final List<Widget> _pages = [
-    const Center(child: Text('Dashboard - Resumen de Producción')),
-    const Center(child: Text('Taller - Control de Confección')),
-    const Center(child: Text('Inventario - Telas e Insumos')),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -32,24 +33,20 @@ class _MainLayoutState extends State<MainLayout> {
         builder: (context, constraints) {
           // Breakpoint para Desktop: 800px
           if (constraints.maxWidth >= 800) {
-            // Evaluamos si la pantalla es lo suficientemente grande para expandir el menú
             bool isExtended = constraints.maxWidth >= 1000;
 
             return Row(
               children: [
                 NavigationRail(
-                  selectedIndex: _selectedIndex,
+                  // Usamos la variable de Riverpod
+                  selectedIndex: selectedIndex, 
                   onDestinationSelected: (int index) {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
-                  // === AQUÍ ESTÁ LA CORRECCIÓN ===
+                    // 4. Actualizamos el estado global en lugar de usar setState
+                      ref.read(navigationIndexProvider.notifier).changeIndex(index);                  },
                   extended: isExtended,
                   labelType: isExtended
                       ? NavigationRailLabelType.none
                       : NavigationRailLabelType.all,
-                  // ================================
                   destinations: const [
                     NavigationRailDestination(
                       icon: Icon(Icons.dashboard_outlined),
@@ -69,23 +66,23 @@ class _MainLayoutState extends State<MainLayout> {
                   ],
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
-                Expanded(child: _pages[_selectedIndex]),
+                // Mostramos la página según el índice de Riverpod
+                Expanded(child: pages[selectedIndex]), 
               ],
             );
           } else {
             // VISTA MOBILE
-            return _pages[_selectedIndex];
+            return pages[selectedIndex];
           }
         },
       ),
       bottomNavigationBar: MediaQuery.of(context).size.width < 800
           ? BottomNavigationBar(
-              currentIndex: _selectedIndex,
+              // Usamos la variable de Riverpod
+              currentIndex: selectedIndex, 
               onTap: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+                // Actualizamos el estado global
+                    ref.read(navigationIndexProvider.notifier).changeIndex(index);              },
               items: const [
                 BottomNavigationBarItem(
                   icon: Icon(Icons.dashboard_outlined),
