@@ -6,20 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # 1. Instalar dependencias base, Java (para Android) y librerías para Linux Desktop
 RUN apt-get update && apt-get install -y \
-    curl git unzip xz-utils zip libglu1-mesa mesa-utils \
+    curl git unzip xz-utils zip libglu1-mesa \
     openjdk-17-jdk wget \
     clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# 1.5 Instalar Google Chrome y definir variable de entorno (Como root)
-RUN apt-get update \
-    && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
-    && rm google-chrome-stable_current_amd64.deb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV CHROME_EXECUTABLE=/usr/bin/google-chrome
 
 # Crear usuario desarrollador
 RUN useradd -ms /bin/bash developer
@@ -41,15 +31,12 @@ RUN mkdir -p $ANDROID_HOME/cmdline-tools \
 
 # 4. Aceptar licencias de Android e instalar plataformas y build-tools
 RUN yes | sdkmanager --licenses \
-    && sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "build-tools;28.0.3"
+    && sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-# 5. Instalar Flutter (Fijando la versión 3.41.6 sin romper el canal stable)
-RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME \
-    && cd $FLUTTER_HOME \
-    && git reset --hard 3.41.6
+# 5. Instalar Flutter
+RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME
 
 # 6. Pre-descargar binarios y habilitar escritorio
 RUN flutter config --no-analytics \
     && flutter config --enable-linux-desktop \
-    && flutter config --enable-web \
     && flutter precache
