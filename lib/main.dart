@@ -9,8 +9,8 @@ Future<void> main() async {
 
   // Inicializamos el cliente de Supabase (Reemplaza con tus credenciales de Athlos)
   await Supabase.initialize(
-    url: 'URL SUPABASE DE ATHLOS',
-    anonKey: 'TU_ANON_KEY',
+    url: 'https://txnmhtoczfgjdwdptrfl.supabase.co',
+    anonKey: 'sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ',
   );
 
   runApp(

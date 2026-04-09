@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+// Importamos tu nuevo repositorio (Asegúrate de que la ruta sea correcta)
+import '../../data/repositories/orden_repository_impl.dart';
 
 // ==========================================
 // 1. CLASE DE ESTADO (Los datos del formulario)
@@ -8,34 +10,40 @@ class OrdenFormState {
   final String nombreModelo;
   final String? imagePath;
   final Map<String, int> tallas;
+  final DateTime? fechaEntrega;
+  final String? idCliente;
 
   OrdenFormState({
     this.nombreModelo = '',
     this.imagePath,
     this.tallas = const {'S': 0, 'M': 0, 'L': 0, 'XL': 0},
+    this.fechaEntrega,
+    this.idCliente,
   });
 
-  // CA 3: Cálculo automático del total de prendas
   int get totalPrendas => tallas.values.fold(0, (sum, cantidad) => sum + cantidad);
 
-  // CA 4: Validación de campos obligatorios
   bool get esValido {
-    final tieneNombre = nombreModelo.trim().isNotEmpty;
-    final tieneImagen = imagePath != null;
-    final tieneCantidades = totalPrendas > 0;
-    
-    return tieneNombre && tieneImagen && tieneCantidades;
+    return nombreModelo.trim().isNotEmpty && 
+           imagePath != null && 
+           totalPrendas > 0 &&
+           fechaEntrega != null &&
+           (idCliente != null && idCliente!.trim().isNotEmpty);
   }
 
   OrdenFormState copyWith({
     String? nombreModelo,
     String? imagePath,
     Map<String, int>? tallas,
+    DateTime? fechaEntrega,
+    String? idCliente,
   }) {
     return OrdenFormState(
       nombreModelo: nombreModelo ?? this.nombreModelo,
       imagePath: imagePath ?? this.imagePath,
       tallas: tallas ?? this.tallas,
+      fechaEntrega: fechaEntrega ?? this.fechaEntrega,
+      idCliente: idCliente ?? this.idCliente,
     );
   }
 }
@@ -63,29 +71,33 @@ class OrdenFormNotifier extends Notifier<OrdenFormState> {
     state = state.copyWith(tallas: nuevasTallas);
   }
 
+  // --- NUEVOS MÉTODOS PARA ACTUALIZAR LA UI ---
+  void updateFechaEntrega(DateTime fecha) {
+    state = state.copyWith(fechaEntrega: fecha);
+  }
+
+  void updateIdCliente(String id) {
+    state = state.copyWith(idCliente: id);
+  }
+
   Future<void> guardarOrden() async {
     if (!state.esValido) return;
 
-    // Adaptación a la tabla `detalle_orden` de Athlos
-    List<Map<String, dynamic>> detallesParaBD = [];
-    
-    state.tallas.forEach((talla, cantidad) {
-      if (cantidad > 0) {
-        detallesParaBD.add({
-          'producto': '${state.nombreModelo} - Talla $talla',
-          'cantidad': cantidad,
-        });
-      }
-    });
+    try {
+      debugPrint('⏳ Iniciando guardado en Supabase...');
 
-    // Aquí iría la llamada real al repositorio
-    // Aquí iría la llamada real al repositorio
-    debugPrint('✅ GUARDANDO ORDEN...');
-    debugPrint('Ruta Imagen: ${state.imagePath}');
-    debugPrint('Detalles procesados: $detallesParaBD');
-    
-    // Limpiamos el formulario tras guardar exitosamente
-    state = OrdenFormState(); 
+      // Instanciamos el repositorio real y le enviamos todo el estado
+      final repositorio = OrdenRepositoryImpl();
+      await repositorio.guardarOrdenMultimodal(state);
+
+      debugPrint('✅ Flujo de guardado completado en la BD real.');
+
+      // Limpiamos el formulario tras guardar exitosamente
+      state = OrdenFormState(); 
+      
+    } catch (e) {
+      debugPrint('❌ Falló el guardado: $e');
+    }
   }
 }
 

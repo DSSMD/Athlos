@@ -31,6 +31,46 @@ class RegistroOrdenPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            
+            // 1. Selector de Cliente (UUID manual por ahora)
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'ID del Cliente (UUID de Supabase)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person_search),
+              ),
+              onChanged: (val) =>
+                  ref.read(ordenFormProvider.notifier).updateIdCliente(val),
+            ),
+            const SizedBox(height: 20),
+
+            // 2. Selector de Fecha de Entrega
+            ListTile(
+              title: const Text('Fecha de Entrega Pactada'),
+              subtitle: Text(
+                formState.fechaEntrega == null
+                    ? 'Presione para seleccionar'
+                    : '${formState.fechaEntrega!.day}/${formState.fechaEntrega!.month}/${formState.fechaEntrega!.year}',
+              ),
+              leading: const Icon(Icons.calendar_month),
+              tileColor: Colors.grey[100],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now().add(const Duration(days: 7)),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 90)),
+                );
+                if (date != null) {
+                  ref.read(ordenFormProvider.notifier).updateFechaEntrega(date);
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+
             // CA 2: Nombre del modelo
             TextFormField(
               decoration: const InputDecoration(
