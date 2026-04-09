@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/navigation_provider.dart'; // Importamos el provider
+import '../providers/navigation_provider.dart';
+import '../pages/registro_orden_page.dart';
 
 // 1. Cambiamos StatefulWidget por ConsumerWidget
 class MainLayout extends ConsumerWidget {
@@ -9,14 +10,13 @@ class MainLayout extends ConsumerWidget {
   @override
   // 2. Agregamos WidgetRef para poder comunicarnos con Riverpod
   Widget build(BuildContext context, WidgetRef ref) {
-    
     // 3. Escuchamos el estado global del índice
     final selectedIndex = ref.watch(navigationIndexProvider);
 
     // Pantallas de ejemplo
     final List<Widget> pages = [
       const Center(child: Text('Dashboard - Resumen de Producción')),
-      const Center(child: Text('Taller - Control de Confección')),
+      const RegistroOrdenPage(),
       const Center(child: Text('Inventario - Telas e Insumos')),
     ];
 
@@ -39,10 +39,13 @@ class MainLayout extends ConsumerWidget {
               children: [
                 NavigationRail(
                   // Usamos la variable de Riverpod
-                  selectedIndex: selectedIndex, 
+                  selectedIndex: selectedIndex,
                   onDestinationSelected: (int index) {
                     // 4. Actualizamos el estado global en lugar de usar setState
-                      ref.read(navigationIndexProvider.notifier).changeIndex(index);                  },
+                    ref
+                        .read(navigationIndexProvider.notifier)
+                        .changeIndex(index);
+                  },
                   extended: isExtended,
                   labelType: isExtended
                       ? NavigationRailLabelType.none
@@ -67,7 +70,7 @@ class MainLayout extends ConsumerWidget {
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
                 // Mostramos la página según el índice de Riverpod
-                Expanded(child: pages[selectedIndex]), 
+                Expanded(child: pages[selectedIndex]),
               ],
             );
           } else {
@@ -79,10 +82,11 @@ class MainLayout extends ConsumerWidget {
       bottomNavigationBar: MediaQuery.of(context).size.width < 800
           ? BottomNavigationBar(
               // Usamos la variable de Riverpod
-              currentIndex: selectedIndex, 
+              currentIndex: selectedIndex,
               onTap: (index) {
                 // Actualizamos el estado global
-                    ref.read(navigationIndexProvider.notifier).changeIndex(index);              },
+                ref.read(navigationIndexProvider.notifier).changeIndex(index);
+              },
               items: const [
                 BottomNavigationBarItem(
                   icon: Icon(Icons.dashboard_outlined),

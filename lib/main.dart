@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'presentation/layouts/main_layout.dart'; // Asegúrate de crear este archivo en el paso 2
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'presentation/layouts/main_layout.dart';
 
-void main() {
-runApp(
+Future<void> main() async {
+  // Aseguramos que los bindings de Flutter estén listos
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializamos el cliente de Supabase (Reemplaza con tus credenciales de Athlos)
+  await Supabase.initialize(
+    url: 'https://txnmhtoczfgjdwdptrfl.supabase.co',
+    anonKey: 'sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ',
+  );
+
+  runApp(
     const ProviderScope(
       child: MyApp(),
     ),
