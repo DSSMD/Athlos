@@ -1,4 +1,7 @@
+// services/auth_service.dart
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -29,13 +32,14 @@ class AuthService {
     try {
       final response = await _client
           .from('profiles')
-          .select('rol')
+          .select('id_rol')
           .eq('id', user.id)
           .single();
 
-      return response['rol'] as String?;
+      return response['id_rol'].toString();
     } catch (e) {
-      return 'admin';
+      debugPrint('Error obteniendo el rol del usuario: $e');
+      return null;
     }
   }
 }

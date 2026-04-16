@@ -1,6 +1,8 @@
+// pages/login_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   final VoidCallback onLoginSuccess;

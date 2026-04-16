@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../providers/orden_form_provider.dart';
+import '../../providers/orden_form_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class RegistroOrdenPage extends ConsumerWidget {

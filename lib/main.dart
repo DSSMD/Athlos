@@ -1,14 +1,19 @@
+// main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'presentation/layouts/main_layout.dart';
-import 'presentation/pages/login_page.dart'; // ← NUEVO: import del login
+import 'presentation/pages/auth/login_page.dart';
+import 'presentation/providers/auth_provider.dart';
+import 'presentation/providers/navigation_provider.dart'; // Asegúrate de importar esto
+
+import 'presentation/pages/produccion/produccion_dashboard_page.dart'; // Importamos la nueva página de producción
 
 Future<void> main() async {
-  // Aseguramos que los bindings de Flutter estén listos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializamos el cliente de Supabase (Reemplaza con tus credenciales de Athlos)
   await Supabase.initialize(
     url: 'https://txnmhtoczfgjdwdptrfl.supabase.co',
     anonKey: 'sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ',
@@ -31,75 +36,142 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Montserrat', 
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32, 
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Montserrat',
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontFamily: 'Montserrat',
-          ),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        fontFamily: 'Montserrat',
       ),
-      // CAMBIO: Antes era MainLayout(), ahora es AuthGate()
-      // AuthGate decide si mostrar Login o MainLayout según la sesión
       home: const AuthGate(), 
     );
   }
 }
 
 // ============================================
-// NUEVO: AuthGate — Decide qué pantalla mostrar
-// Si hay sesión activa → MainLayout (lo de Den)
-// Si no hay sesión → LoginPage (lo tuyo)
+// PUERTA 1: Verifica si hay sesión
 // ============================================
-class AuthGate extends StatefulWidget {
+class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authStateAsync = ref.watch(authStateProvider);
+
+    return authStateAsync.when(
+      data: (authState) {
+        if (authState.session != null) {
+          return const RoleRouter();
+        } else {
+          return LoginPage(onLoginSuccess: () {});
+        }
+      },
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        body: Center(child: Text('Error de Auth: $error')),
+      ),
+    );
+  }
 }
 
-class _AuthGateState extends State<AuthGate> {
-  bool _isLoggedIn = false;
+// ============================================
+// PUERTA 2: Verifica el rol y redirige
+// ============================================
+class RoleRouter extends ConsumerWidget {
+  const RoleRouter({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    // Verificar si ya hay una sesión activa al abrir la app
-    _isLoggedIn = Supabase.instance.client.auth.currentSession != null;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roleAsync = ref.watch(userRoleProvider);
 
-    // Escuchar cambios de sesión (login, logout, token refresh)
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (mounted) {
-        setState(() {
-          _isLoggedIn = data.session != null;
-        });
+    // MEJORA PROFESIONAL: Escuchamos si el rol cambia y reiniciamos el índice a 0.
+    // Esto es mucho más seguro que usar addPostFrameCallback.
+    ref.listen<AsyncValue<String?>>(userRoleProvider, (previous, next) {
+      if (previous?.value != next.value) {
+        ref.read(navigationIndexProvider.notifier).changeIndex(0);
       }
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoggedIn) {
-      // Si hay sesión → muestra el layout de Den tal cual
-      return const MainLayout();
-    } else {
-      // Si no hay sesión → muestra tu login
-      return LoginPage(
-        onLoginSuccess: () {
-          setState(() {
-            _isLoggedIn = true;
-          });
-        },
-      );
-    }
+    return roleAsync.when(
+      data: (role) {
+        switch (role) {
+          case '1': // Administrador (Ve Todo)
+            return MainLayout(
+              pages: const [
+                Center(child: Text('Dashboard Admin General')),
+                Center(child: Text('Gestión de Usuarios')),
+                Center(child: Text('Reportes Financieros')),
+              ],
+              railDestinations: const [
+                NavigationRailDestination(icon: Icon(Icons.dashboard), label: Text('Dashboard')),
+                NavigationRailDestination(icon: Icon(Icons.people), label: Text('Usuarios')),
+                NavigationRailDestination(icon: Icon(Icons.bar_chart), label: Text('Reportes')),
+              ],
+              bottomNavItems: const [
+                BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+                BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Usuarios'),
+                BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reportes'),
+              ],
+            );
+          
+          case '2': // Producción
+            return MainLayout(
+              pages: const [
+                ProduccionDashboardPage(),
+                Center(child: Text('Registro de Ordenes')), // Aquí iría const RegistroOrdenPage()
+                Center(child: Text('Inventario Telas')),
+              ],
+              railDestinations: const [
+                NavigationRailDestination(icon: Icon(Icons.precision_manufacturing), label: Text('Taller')),
+                NavigationRailDestination(icon: Icon(Icons.assignment), label: Text('Órdenes')),
+                NavigationRailDestination(icon: Icon(Icons.inventory_2), label: Text('Inventario')),
+              ],
+              bottomNavItems: const [
+                BottomNavigationBarItem(icon: Icon(Icons.precision_manufacturing), label: 'Taller'),
+                BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Órdenes'),
+                BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Inventario'),
+              ],
+            );
+
+          case '3': // Cajas / Ventas
+            return MainLayout(
+              pages: const [
+                Center(child: Text('Dashboard Cajas')),
+                Center(child: Text('Punto de Venta (POS)')),
+              ],
+              railDestinations: const [
+                NavigationRailDestination(icon: Icon(Icons.point_of_sale), label: Text('Cajas')),
+                NavigationRailDestination(icon: Icon(Icons.shopping_cart), label: Text('Ventas')),
+              ],
+              bottomNavItems: const [
+                BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Cajas'),
+                BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Ventas'),
+              ],
+            );
+
+          default: // MUY IMPORTANTE: Si el rol no es 1, 2 o 3
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Error: Rol no válido o no asignado ($role)'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => Supabase.instance.client.auth.signOut(),
+                      child: const Text('Cerrar Sesión'),
+                    )
+                  ],
+                ),
+              ),
+            );
+        }
+      },
+      // ESTO ES LO QUE FALTABA:
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        body: Center(child: Text('Error obteniendo perfil: $error')),
+      ),
+    );
   }
 }

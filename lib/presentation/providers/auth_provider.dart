@@ -1,3 +1,5 @@
+// providers/auth_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/services/auth_service.dart';
@@ -15,6 +17,10 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 
 // Provider del rol del usuario actual
 final userRoleProvider = FutureProvider<String?>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  if (authState.value?.session == null) {
+    return null;
+  }
   final authService = ref.watch(authServiceProvider);
   return authService.getUserRole();
 });
