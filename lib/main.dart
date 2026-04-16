@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'presentation/layouts/main_layout.dart';
-import 'presentation/pages/login_page.dart'; // ← NUEVO: import del login
+import 'presentation/pages/login_page.dart';
+import 'presentation/providers/auth_provider.dart';
 
 Future<void> main() async {
   // Aseguramos que los bindings de Flutter estén listos
@@ -35,10 +36,10 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.blue,
           brightness: Brightness.light,
         ),
-        fontFamily: 'Montserrat', 
+        fontFamily: 'Montserrat',
         textTheme: const TextTheme(
           displayLarge: TextStyle(
-            fontSize: 32, 
+            fontSize: 32,
             fontWeight: FontWeight.bold,
             fontFamily: 'Montserrat',
           ),
@@ -48,51 +49,59 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // CAMBIO: Antes era MainLayout(), ahora es AuthGate()
-      // AuthGate decide si mostrar Login o MainLayout según la sesión
-      home: const AuthGate(), 
+      home: const AuthGate(),
     );
   }
 }
 
-// ============================================
-// NUEVO: AuthGate — Decide qué pantalla mostrar
-// Si hay sesión activa → MainLayout (lo de Den)
-// Si no hay sesión → LoginPage (lo tuyo)
-// ============================================
-class AuthGate extends StatefulWidget {
+/// AuthGate — Decide si mostrar Login o MainLayout
+/// y obtiene el rol del usuario después del login
+class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
+  ConsumerState<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends State<AuthGate> {
+class _AuthGateState extends ConsumerState<AuthGate> {
   bool _isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    // Verificar si ya hay una sesión activa al abrir la app
     _isLoggedIn = Supabase.instance.client.auth.currentSession != null;
 
-    // Escuchar cambios de sesión (login, logout, token refresh)
+    // Si ya hay sesión, obtener el rol
+    if (_isLoggedIn) {
+      _fetchUserRole();
+    }
+
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (mounted) {
         setState(() {
           _isLoggedIn = data.session != null;
         });
+        if (data.session != null) {
+          _fetchUserRole();
+        }
       }
     });
+  }
+
+  // Obtener el rol del usuario y guardarlo en el provider
+  Future<void> _fetchUserRole() async {
+    final authService = ref.read(authServiceProvider);
+    final role = await authService.getUserRole();
+    if (role != null && mounted) {
+      ref.read(userRoleProvider.notifier).setRole(role);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoggedIn) {
-      // Si hay sesión → muestra el layout de Den tal cual
       return const MainLayout();
     } else {
-      // Si no hay sesión → muestra tu login
       return LoginPage(
         onLoginSuccess: () {
           setState(() {

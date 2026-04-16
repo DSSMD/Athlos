@@ -48,7 +48,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Credenciales incorrectas. Verifica tu email y contraseña.';
+        _errorMessage =
+            'Credenciales incorrectas. Verifica tu email y contraseña.';
       });
     } finally {
       if (mounted) {
@@ -62,42 +63,56 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141414),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  width: 1,
+      backgroundColor: const Color(0xFF121212),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 600;
+          return Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 24 : 32,
+                vertical: isMobile ? 32 : 48,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 28 : 40,
+                    vertical: isMobile ? 36 : 48,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      width: 1,
+                    ),
+                  ),
+                  child: _buildLoginForm(isMobile),
                 ),
               ),
-              child: _buildLoginForm(),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(bool isMobile) {
     return Form(
       key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Logo — diferente en desktop y móvil
           Center(
             child: Image.asset(
-              'assets/images/logoAthlos.png',
-              width: 180,
-              height: 180,
+              isMobile
+                  ? 'assets/images/logoAthMovil.png'
+                  : 'assets/images/logoAthlos.png',
+              width: isMobile ? 170 : 130,
+              height: isMobile ? 170 : 130,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -121,30 +136,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               },
             ),
           ),
-          const SizedBox(height: 28),
+          SizedBox(height: isMobile ? 28 : 36),
 
-          // Título
+          // Título — Sans-serif limpio
           const Text(
             'Bienvenido',
             style: TextStyle(
               fontSize: 26,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
+              fontFamily: 'Montserrat',
+              letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             'Ingresa tus credenciales para acceder al sistema de gestión',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.4),
+              color: Colors.white.withValues(alpha: 0.35),
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: isMobile ? 28 : 36),
 
           // Campo Email
           _buildFieldLabel('Correo electrónico'),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           _buildTextField(
             controller: _emailController,
             hint: 'correo@athlos.com',
@@ -159,11 +177,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               return null;
             },
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: isMobile ? 18 : 22),
 
           // Campo Contraseña
           _buildFieldLabel('Contraseña'),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           _buildTextField(
             controller: _passwordController,
             hint: '••••••••',
@@ -184,21 +202,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 });
               },
               child: Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 14),
                 child: Text(
                   _obscurePassword ? 'Mostrar' : 'Ocultar',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: Colors.white.withValues(alpha: 0.25),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isMobile ? 16 : 20),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Recordar sesión + Olvidé contraseña
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            runSpacing: 8,
             children: [
               GestureDetector(
                 onTap: () {
@@ -207,6 +228,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   });
                 },
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 18,
@@ -219,12 +241,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         border: Border.all(
                           color: _rememberSession
                               ? const Color(0xFFFF0000)
-                              : const Color(0xFF333333),
+                              : const Color(0xFF3A3A3A),
                           width: 1.5,
                         ),
                       ),
                       child: _rememberSession
-                          ? const Icon(Icons.check, size: 12, color: Colors.white)
+                          ? const Icon(Icons.check,
+                              size: 12, color: Colors.white)
                           : null,
                     ),
                     const SizedBox(width: 8),
@@ -232,7 +255,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       'Recordar sesión',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: Colors.white.withValues(alpha: 0.35),
                       ),
                     ),
                   ],
@@ -248,29 +271,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: isMobile ? 24 : 30),
 
           // Mensaje de error
           if (_errorMessage != null)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 18),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF0000).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFFF0000).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: const Color(0xFFFF0000).withValues(alpha: 0.3),
+                  color: const Color(0xFFFF0000).withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFFF4D4D)),
+                  const Icon(Icons.error_outline,
+                      size: 16, color: Color(0xFFFF4D4D)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFFF4D4D)),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFFF4D4D)),
                     ),
                   ),
                 ],
@@ -286,7 +311,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFFF0000).withValues(alpha: 0.5),
+                disabledBackgroundColor:
+                    const Color(0xFFFF0000).withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -319,9 +345,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Text(
       label,
       style: TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: Colors.white.withValues(alpha: 0.5),
+        color: Colors.white.withValues(alpha: 0.4),
       ),
     );
   }
@@ -339,37 +365,44 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(fontSize: 13, color: Colors.white),
+      style: const TextStyle(fontSize: 14, color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
           fontSize: 13,
-          color: Colors.white.withValues(alpha: 0.3),
+          color: Colors.white.withValues(alpha: 0.2),
         ),
         filled: true,
-        fillColor: const Color(0xFF1A1A1A),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0xFF222222),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF2A2A2A), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFF333333), width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF2A2A2A), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFF333333), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFFF0000), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFFFF0000), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFFF4D4D), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFFFF4D4D), width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFFF4D4D), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFFFF4D4D), width: 1.5),
         ),
-        errorStyle: const TextStyle(fontSize: 10, color: Color(0xFFFF4D4D)),
+        errorStyle:
+            const TextStyle(fontSize: 10, color: Color(0xFFFF4D4D)),
         suffixIcon: suffixIcon != null
             ? Align(
                 widthFactor: 1.0,
