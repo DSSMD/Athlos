@@ -114,6 +114,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signInWithGoogle();
+
+      // Nota: Dependiendo de la plataforma, el flujo OAuth puede abrir un navegador.
+      // Si la redirección es exitosa, tu authStateProvider (que configuramos en main.dart)
+      // detectará el cambio de sesión automáticamente y redirigirá al usuario.
+      if (mounted) {
+        widget.onLoginSuccess();
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Hubo un problema al conectar con Google.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -251,9 +278,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
 
-
-          const SizedBox(height: 12), // Reducimos el espacio a 12 para que se vea conectado al campo de contraseña
-
+          const SizedBox(
+            height: 12,
+          ), // Reducimos el espacio a 12 para que se vea conectado al campo de contraseña
           // Enlace de "¿Olvidaste tu contraseña?" alineado perfectamente a la derecha
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -268,7 +295,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: TextStyle(
                       fontSize: 12,
                       color: Color(0xFFFF4D4D),
-                      fontWeight: FontWeight.w600, // Un poco más negrita para que destaque elegantemente
+                      fontWeight: FontWeight
+                          .w600, // Un poco más negrita para que destaque elegantemente
                     ),
                   ),
                 ),
@@ -345,6 +373,67 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          // Separador visual
+          Row(
+            children: [
+              Expanded(
+                child: Divider(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'O continuar con',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Divider(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Botón de Google
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: _isLoading ? null : _handleGoogleSignIn,
+              icon: Image.network(
+                'https://img.icons8.com/color/48/000000/google-logo.png',
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.g_mobiledata,
+                    color: Colors.white,
+                    size: 30,
+                  );
+                },
+              ),
+              label: const Text(
+                'Google',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                backgroundColor: const Color(0xFF1A1A1A),
+              ),
             ),
           ),
         ],

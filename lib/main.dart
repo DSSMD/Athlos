@@ -7,16 +7,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'presentation/layouts/main_layout.dart';
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/providers/auth_provider.dart';
-import 'presentation/providers/navigation_provider.dart'; // Asegúrate de importar esto
+import 'presentation/providers/navigation_provider.dart';
 
-import 'presentation/pages/produccion/produccion_dashboard_page.dart'; // Importamos la nueva página de producción
+import 'presentation/pages/produccion/produccion_dashboard_page.dart';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: ".env");
+
   await Supabase.initialize(
-    url: 'https://txnmhtoczfgjdwdptrfl.supabase.co',
-    anonKey: 'sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ',
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   runApp(
@@ -147,6 +151,22 @@ class RoleRouter extends ConsumerWidget {
               bottomNavItems: const [
                 BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Cajas'),
                 BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Ventas'),
+              ],
+            );
+
+          case '4': // Invitado (NUEVO ROL)
+            return MainLayout(
+              pages: const [
+                Center(child: Text('Tu cuenta está en espera de aprobación por un administrador.')),
+                Center(child: Text('Configuración de Perfil')),
+              ],
+              railDestinations: const [
+                NavigationRailDestination(icon: Icon(Icons.lock_clock), label: Text('Estado')),
+                NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Perfil')),
+              ],
+              bottomNavItems: const [
+                BottomNavigationBarItem(icon: Icon(Icons.lock_clock), label: 'Estado'),
+                BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
               ],
             );
 
