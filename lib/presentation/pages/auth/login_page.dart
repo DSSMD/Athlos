@@ -1,4 +1,13 @@
 // pages/login_page.dart
+// Página de inicio de sesión para Athlos Workspace
+// Esta página se muestra cuando el usuario no tiene una sesión activa
+// El diseño es moderno y minimalista, con un fondo oscuro, el logo de Athlos, y un formulario de inicio de sesión centrado
+// El formulario incluye campos para email y contraseña, con validación básica, y un botón para iniciar sesión
+// También incluye una opción para "Recordar sesión" y un enlace para "¿Olvidaste tu contraseña?"
+// IMPORTANTE: Esta página es la primera que ve el usuario al abrir la aplicación, y es crucial para la experiencia de usuario, por lo que debe ser clara, fácil de usar y visualmente atractiva.
+// NOTA: Para una implementación real, se podrían agregar animaciones suaves al mostrar el formulario, y se podrían manejar casos adicionales
+// como el registro de nuevos usuarios, la recuperación de contraseñas, y mostrar mensajes de error más específicos según el tipo de error que 
+// ocurra al intentar iniciar sesión (por ejemplo, usuario no encontrado, contraseña incorrecta, etc.).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

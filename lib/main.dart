@@ -78,20 +78,23 @@ class AuthGate extends ConsumerWidget {
 class RoleRouter extends ConsumerWidget {
   const RoleRouter({super.key});
 
-  @override
+ @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final roleAsync = ref.watch(userRoleProvider);
+    final profileAsync = ref.watch(userProfileProvider);
 
-    // MEJORA PROFESIONAL: Escuchamos si el rol cambia y reiniciamos el índice a 0.
-    // Esto es mucho más seguro que usar addPostFrameCallback.
-    ref.listen<AsyncValue<String?>>(userRoleProvider, (previous, next) {
-      if (previous?.value != next.value) {
+    ref.listen<AsyncValue<Map<String, dynamic>?>>(userProfileProvider, (previous, next) {
+      
+      final prevRole = previous?.value?['id_rol']?.toString();
+      final nextRole = next.value?['id_rol']?.toString();
+
+      if (prevRole != nextRole) {
         ref.read(navigationIndexProvider.notifier).changeIndex(0);
       }
     });
 
-    return roleAsync.when(
-      data: (role) {
+    return profileAsync.when(
+      data: (profile) {
+        final role = profile?['id_rol']?.toString();
         switch (role) {
           case '1': // Administrador (Ve Todo)
             return MainLayout(
