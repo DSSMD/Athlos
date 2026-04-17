@@ -61,8 +61,6 @@ class AuthProfileMenu extends ConsumerWidget {
           child: userProfileAsync.when(
             data: (profile) {
 
-              print('DATOS DE SUPABASE: $profile');
-
               final nombre = profile?['nombre'] ?? 'Usuario';
               final rolTexto = profile?['roles']?['nombre_rol'] ?? 'Sin Rol';              
               final iniciales = _getInitials(nombre);

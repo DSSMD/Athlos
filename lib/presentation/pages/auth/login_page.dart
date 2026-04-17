@@ -1,4 +1,5 @@
-// pages/login_page.dart
+// lib/presentation/pages/auth/login_page.dart
+
 // Página de inicio de sesión para Athlos Workspace
 // Esta página se muestra cuando el usuario no tiene una sesión activa
 // El diseño es moderno y minimalista, con un fondo oscuro, el logo de Athlos, y un formulario de inicio de sesión centrado
@@ -6,7 +7,7 @@
 // También incluye una opción para "Recordar sesión" y un enlace para "¿Olvidaste tu contraseña?"
 // IMPORTANTE: Esta página es la primera que ve el usuario al abrir la aplicación, y es crucial para la experiencia de usuario, por lo que debe ser clara, fácil de usar y visualmente atractiva.
 // NOTA: Para una implementación real, se podrían agregar animaciones suaves al mostrar el formulario, y se podrían manejar casos adicionales
-// como el registro de nuevos usuarios, la recuperación de contraseñas, y mostrar mensajes de error más específicos según el tipo de error que 
+// como el registro de nuevos usuarios, la recuperación de contraseñas, y mostrar mensajes de error más específicos según el tipo de error que
 // ocurra al intentar iniciar sesión (por ejemplo, usuario no encontrado, contraseña incorrecta, etc.).
 
 import 'package:flutter/material.dart';
@@ -28,7 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
   bool _obscurePassword = true;
-  bool _rememberSession = true;
+  //bool _rememberSession = true;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -59,13 +60,56 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Credenciales incorrectas. Verifica tu email y contraseña.';
+        _errorMessage =
+            'Credenciales incorrectas. Verifica tu email y contraseña.';
       });
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+
+    // 1. Validamos que haya puesto un correo
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _errorMessage =
+            'Por favor, ingresa tu correo electrónico válido para recuperar tu contraseña.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authServiceProvider).resetPassword(email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Se ha enviado un enlace de recuperación a tu correo.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage =
+            'No se pudo enviar el correo. Verifica que la dirección sea correcta.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -206,59 +250,32 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
 
+
+          const SizedBox(height: 12), // Reducimos el espacio a 12 para que se vea conectado al campo de contraseña
+
+          // Enlace de "¿Olvidaste tu contraseña?" alineado perfectamente a la derecha
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _rememberSession = !_rememberSession;
-                  });
-                },
-                child: Row(
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                        color: _rememberSession
-                            ? const Color(0xFFFF0000)
-                            : Colors.transparent,
-                        border: Border.all(
-                          color: _rememberSession
-                              ? const Color(0xFFFF0000)
-                              : const Color(0xFF333333),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: _rememberSession
-                          ? const Icon(Icons.check, size: 12, color: Colors.white)
-                          : null,
+                onTap: _isLoading ? null : _handleForgotPassword,
+                // Agregamos un ligero padding invisible para hacer el área táctil más grande y fácil de presionar
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: const Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFFF4D4D),
+                      fontWeight: FontWeight.w600, // Un poco más negrita para que destaque elegantemente
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Recordar sesión',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Text(
-                '¿Olvidaste tu contraseña?',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFFFF4D4D),
-                  fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 24),
 
           // Mensaje de error
@@ -276,12 +293,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFFF4D4D)),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Color(0xFFFF4D4D),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFFF4D4D)),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFFF4D4D),
+                      ),
                     ),
                   ),
                 ],
@@ -297,7 +321,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFFF0000).withValues(alpha: 0.5),
+                disabledBackgroundColor: const Color(
+                  0xFFFF0000,
+                ).withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -359,7 +385,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         filled: true,
         fillColor: const Color(0xFF1A1A1A),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF2A2A2A), width: 1.5),

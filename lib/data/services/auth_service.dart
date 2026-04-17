@@ -55,4 +55,13 @@ class AuthService {
       return null;
     }
   }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(email);
+    } catch (e) {
+      debugPrint('Error enviando correo de recuperación: $e');
+      rethrow; 
+    }
+  }
 }
