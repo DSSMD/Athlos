@@ -109,7 +109,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Center(
             child: Image.asset(
               isMobile
-                  ? 'assets/images/logoAthMovil.png'
+                  ? 'assets/images/logoAthLogMovilyPagEscritorio.png'
                   : 'assets/images/logoAthlos.png',
               width: isMobile ? 170 : 130,
               height: isMobile ? 170 : 130,

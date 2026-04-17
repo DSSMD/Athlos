@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'presentation/layouts/main_layout.dart';
 import 'presentation/pages/login_page.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/theme/app_theme.dart'; // 👈 NUEVO
 
 Future<void> main() async {
   // Aseguramos que los bindings de Flutter estén listos
@@ -30,25 +31,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Athlos Workspace',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Montserrat',
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Montserrat',
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontFamily: 'Montserrat',
-          ),
-        ),
-      ),
+      theme: AppTheme.light, // 👈 CAMBIO: reemplaza todo el ThemeData inline
       home: const AuthGate(),
     );
   }
