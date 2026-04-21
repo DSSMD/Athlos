@@ -15,9 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  final VoidCallback onLoginSuccess;
-
-  const LoginPage({super.key, required this.onLoginSuccess});
+  const LoginPage({super.key});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -55,8 +53,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         password: _passwordController.text,
       );
 
+      // Forzamos la re-lectura de los providers para que el router
+      // detecte la sesión activa y navegue automáticamente
       if (mounted) {
-        widget.onLoginSuccess();
+        //ref.invalidate(authStateProvider);
+        ref.invalidate(userProfileProvider);
       }
     } catch (e) {
       setState(() {
@@ -124,11 +125,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final authService = ref.read(authServiceProvider);
       await authService.signInWithGoogle();
 
-      // Nota: Dependiendo de la plataforma, el flujo OAuth puede abrir un navegador.
-      // Si la redirección es exitosa, tu authStateProvider (que configuramos en main.dart)
-      // detectará el cambio de sesión automáticamente y redirigirá al usuario.
+      // Forzamos la re-lectura de los providers para que el router
+      // detecte la sesión activa y navegue automáticamente
       if (mounted) {
-        widget.onLoginSuccess();
+        //ref.invalidate(authStateProvider);
+        ref.invalidate(userProfileProvider);
       }
     } catch (e) {
       setState(() {
