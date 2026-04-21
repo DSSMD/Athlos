@@ -11,6 +11,9 @@ import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
+import '../../presentation/pages/clientes/cliente_form_page.dart';
+import '../../presentation/models/cliente_mock.dart';
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider); 
 
@@ -141,7 +144,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ROL 4: INVITADO
+     // ROL 4: INVITADO
       GoRoute(
         path: '/invitado',
         builder: (context, state) => MainLayout(
@@ -164,6 +167,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           bottomNavItems: const [
             BottomNavigationBarItem(icon: Icon(Icons.hourglass_empty), label: 'En Espera'),
           ],
+        ),
+      ),
+
+      // ─────────── SCRUM-69: Rutas temporales de testing ───────────
+      // mover estas rutas dentro del layout correspondiente
+      // (admin o ventas) y aplicar guards de rol cuando se integre HU-04.
+      GoRoute(
+        path: '/clientes/nuevo',
+        builder: (context, state) => const ClienteFormPage(
+          mode: ClienteFormMode.crear,
+        ),
+      ),
+      GoRoute(
+        path: '/clientes/editar-demo',
+        builder: (context, state) => ClienteFormPage(
+          mode: ClienteFormMode.editar,
+          initialCliente: ejemploClienteMaria(),
         ),
       ),
     ],
