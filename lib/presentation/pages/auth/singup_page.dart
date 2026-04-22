@@ -1,146 +1,40 @@
-// lib/presentation/pages/auth/login_page.dart
-
-// Página de inicio de sesión para Athlos Workspace
-// Esta página se muestra cuando el usuario no tiene una sesión activa
-// El diseño es moderno y minimalista, con un fondo oscuro, el logo de Athlos, y un formulario de inicio de sesión centrado
-// El formulario incluye campos para email y contraseña, con validación básica, y un botón para iniciar sesión
-// También incluye una opción para "Recordar sesión" y un enlace para "¿Olvidaste tu contraseña?"
-// IMPORTANTE: Esta página es la primera que ve el usuario al abrir la aplicación, y es crucial para la experiencia de usuario, por lo que debe ser clara, fácil de usar y visualmente atractiva.
-// NOTA: Para una implementación real, se podrían agregar animaciones suaves al mostrar el formulario, y se podrían manejar casos adicionales
-// como el registro de nuevos usuarios, la recuperación de contraseñas, y mostrar mensajes de error más específicos según el tipo de error que
-// ocurra al intentar iniciar sesión (por ejemplo, usuario no encontrado, contraseña incorrecta, etc.).
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/auth_provider.dart';
-import 'singup_page.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class SingupPage extends StatefulWidget {
+  const SingupPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  State<SingupPage> createState() => _SingupPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _SingupPageState extends State<SingupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _obscurePassword = true;
-  //bool _rememberSession = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  void _handleRegister() {
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      await authService.signIn(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      // Forzamos la re-lectura de los providers para que el router
-      // detecte la sesión activa y navegue automáticamente
-      if (mounted) {
-        //ref.invalidate(authStateProvider);
-        ref.invalidate(userProfileProvider);
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage =
-            'Credenciales incorrectas. Verifica tu email y contraseña.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-
-    // 1. Validamos que haya puesto un correo
-    if (email.isEmpty || !email.contains('@')) {
-      setState(() {
-        _errorMessage =
-            'Por favor, ingresa tu correo electrónico válido para recuperar tu contraseña.';
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await ref.read(authServiceProvider).resetPassword(email);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Se ha enviado un enlace de recuperación a tu correo.',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage =
-            'No se pudo enviar el correo. Verifica que la dirección sea correcta.';
-      });
-    } finally {
+    
+    // Simulación de carga (Solo Frontend)
+    setState(() => _isLoading = true);
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    }
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
     });
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      await authService.signInWithGoogle();
-
-      // Forzamos la re-lectura de los providers para que el router
-      // detecte la sesión activa y navegue automáticamente
-      if (mounted) {
-        //ref.invalidate(authStateProvider);
-        ref.invalidate(userProfileProvider);
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Hubo un problema al conectar con Google.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 
   @override
@@ -162,7 +56,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   width: 1,
                 ),
               ),
-              child: _buildLoginForm(),
+              child: _buildRegisterForm(),
             ),
           ),
         ),
@@ -170,18 +64,41 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildRegisterForm() {
     return Form(
       key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Botón de atrás
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05), // Fondo sutil
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded, // Icono moderno
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12), // Espacio antes del logo
           Center(
             child: Image.asset(
               'assets/images/logoAthlos.png',
-              width: 180,
-              height: 180,
+              width: 140, // Ligeramente más pequeño para dar espacio a los campos
+              height: 140,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -209,7 +126,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
           // Título
           const Text(
-            'Bienvenido',
+            'Crear cuenta',
             style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
@@ -218,7 +135,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Ingresa tus credenciales para acceder al sistema de gestión',
+            'Ingresa tus datos para registrarte en el sistema de gestión',
             style: TextStyle(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.4),
@@ -233,15 +150,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             controller: _emailController,
             hint: 'correo@athlos.com',
             keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Ingresa tu correo electrónico';
-              }
-              if (!value.contains('@')) {
-                return 'Ingresa un correo válido';
-              }
-              return null;
-            },
           ),
           const SizedBox(height: 18),
 
@@ -252,15 +160,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             controller: _passwordController,
             hint: '••••••••',
             obscureText: _obscurePassword,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Ingresa tu contraseña';
-              }
-              if (value.length < 6) {
-                return 'Mínimo 6 caracteres';
-              }
-              return null;
-            },
             suffixIcon: GestureDetector(
               onTap: () {
                 setState(() {
@@ -279,102 +178,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
+          const SizedBox(height: 18),
 
-          const SizedBox(
-            height: 12,
-          ), // Reducimos el espacio a 12 para que se vea conectado al campo de contraseña
-          // Enlace de "¿Olvidaste tu contraseña?" alineado perfectamente a la derecha
-          Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Alinea uno a cada extremo
-              children: [
-                // Nuevo botón: Crear cuenta
-                GestureDetector(
-                  onTap: () {
-                    // Navegación a la pantalla de registro
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SingupPage()),
-                    );
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(
-                      'Crear cuenta',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFFF4D4D), // Mismo rojo del sistema
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+          // Campo Confirmar Contraseña
+          _buildFieldLabel('Confirmar Contraseña'),
+          const SizedBox(height: 6),
+          _buildTextField(
+            controller: _confirmPasswordController,
+            hint: '••••••••',
+            obscureText: _obscureConfirmPassword,
+            suffixIcon: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Text(
+                  _obscureConfirmPassword ? 'Mostrar' : 'Ocultar',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.3),
                   ),
-                ),
-
-                // Botón existente: ¿Olvidaste tu contraseña?
-                GestureDetector(
-                  onTap: _isLoading ? null : _handleForgotPassword,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text(
-                      '¿Olvidaste tu contraseña?',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFFF4D4D),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-          const SizedBox(height: 24),
-
-          // Mensaje de error
-          if (_errorMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF0000).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFFFF0000).withValues(alpha: 0.3),
                 ),
               ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 16,
-                    color: Color(0xFFFF4D4D),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFFF4D4D),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
+          ),
 
-          // Botón Iniciar Sesión
+          const SizedBox(height: 32),
+
+          // Botón Registrarse
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleLogin,
+              onPressed: _isLoading ? null : _handleRegister,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(
-                  0xFFFF0000,
-                ).withValues(alpha: 0.5),
+                disabledBackgroundColor: const Color(0xFFFF0000).withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -390,7 +233,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     )
                   : const Text(
-                      'Iniciar sesión',
+                      'Registrarse',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -400,6 +243,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
 
           const SizedBox(height: 24),
+          
           // Separador visual
           Row(
             children: [
@@ -409,7 +253,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'O continuar con',
+                  'O registrarse con',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.4),
@@ -429,7 +273,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             width: double.infinity,
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: _isLoading ? null : _handleGoogleSignIn,
+              onPressed: () {}, // Acción vacía
               icon: Image.network(
                 'https://img.icons8.com/color/48/000000/google-logo.png',
                 width: 24,
@@ -459,6 +303,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // Regresar al Login
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '¿Ya tienes una cuenta? ',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  // Navegar de regreso al login
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Iniciar sesión',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFFF4D4D),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -480,14 +354,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     required String hint,
     bool obscureText = false,
     TextInputType? keyboardType,
-    String? Function(String?)? validator,
     Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      validator: validator,
       style: const TextStyle(fontSize: 13, color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
@@ -521,7 +393,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFFF4D4D), width: 1.5),
         ),
-        errorStyle: const TextStyle(fontSize: 10, color: Color(0xFFFF4D4D)),
         suffixIcon: suffixIcon != null
             ? Align(
                 widthFactor: 1.0,
