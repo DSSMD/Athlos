@@ -5,8 +5,7 @@
 // IMPORTANTE: Este widget es independiente y se puede reutilizar en otras partes de la aplicación donde se requiera mostrar un avatar de usuario, como en listas de usuarios, comentarios, etc.
 
 // NOTA: Para una implementación real, se podrían agregar más funcionalidades al avatar, como la posibilidad de cargar una imagen personalizada,
-// mostrar un tooltip con el nombre completo al pasar el mouse, o agregar animaciones suaves al mostrar el indicador de presencia para mejorar la experiencia de usuario.   
-
+// mostrar un tooltip con el nombre completo al pasar el mouse, o agregar animaciones suaves al mostrar el indicador de presencia para mejorar la experiencia de usuario.
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
@@ -39,10 +38,7 @@ class UserAvatar extends StatelessWidget {
           Container(
             width: size,
             height: size,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             alignment: Alignment.center,
             child: Text(
               initials,
@@ -63,7 +59,7 @@ class UserAvatar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isOnline ? AppColors.success : AppColors.neutral400,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 2),
+                  border: Border.all(color: AppColors.sidebarDark, width: 2),
                 ),
               ),
             ),
@@ -76,19 +72,20 @@ class UserAvatar extends StatelessWidget {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts[1].substring(0, 1))
+        .toUpperCase();
   }
 
   Color _colorForName(String name) {
+    // Usamos la paleta de tu app_colors.dart
     const palette = [
-      Color(0xFFFF0000), // rojo
-      Color(0xFF2563EB), // azul
-      Color(0xFF16A34A), // verde
-      Color(0xFFEAB308), // amarillo
-      Color(0xFF7C3AED), // violeta
-      Color(0xFFDC2626), // rojo oscuro
-      Color(0xFF0891B2), // cian
-      Color(0xFFEA580C), // naranja
+      AppColors.primary500, // Rojo Athlos
+      AppColors.info, // Azul
+      AppColors.success, // Verde
+      AppColors.warning, // Amarillo
+      AppColors.neutral600, // Gris oscuro
+      AppColors.primary700, // Rojo oscuro
+      AppColors.neutral800, // Casi negro
     ];
     final hash = name.codeUnits.fold<int>(0, (p, c) => p + c);
     return palette[hash % palette.length];
