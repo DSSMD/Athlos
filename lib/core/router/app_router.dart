@@ -13,8 +13,9 @@ import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
 
-import '../../presentation/pages/clientes/cliente_form_page.dart';
-import '../../presentation/models/cliente_mock.dart';
+import '../../presentation/pages/admin/clientes_page.dart';
+
+//import '../../presentation/models/cliente_mock.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
@@ -92,10 +93,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
-          pages: const [
-            Center(child: Text('Dashboard Admin General')),
-            UsuariosPage(),
-            Center(child: Text('Reportes Financieros')),
+          pages: [
+            const Center(child: Text('Dashboard Admin General')),
+            const UsuariosPage(),
+            const ClientesPage(),
+            const Center(child: Text('Reportes Financieros')),
           ],
           railDestinations: const [
             NavigationRailDestination(
@@ -105,6 +107,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             NavigationRailDestination(
               icon: Icon(Icons.people),
               label: Text('Usuarios'),
+            ),
+            // 👇 Icono corregido (adiós a los caracteres raros)
+            NavigationRailDestination(
+              icon: Icon(Icons.assignment_ind),
+              label: Text('Clientes'),
             ),
             NavigationRailDestination(
               icon: Icon(Icons.bar_chart),
@@ -120,6 +127,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               icon: Icon(Icons.people),
               label: 'Usuarios',
             ),
+            BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clientes'),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart),
               label: 'Reportes',
@@ -199,7 +207,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-     // ROL 4: INVITADO
+      // ROL 4: INVITADO
       GoRoute(
         path: '/invitado',
         builder: (context, state) => MainLayout(
@@ -230,23 +238,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               label: 'En Espera',
             ),
           ],
-        ),
-      ),
-
-      // ─────────── SCRUM-69: Rutas temporales de testing ───────────
-      // mover estas rutas dentro del layout correspondiente
-      // (admin o ventas) y aplicar guards de rol cuando se integre HU-04.
-      GoRoute(
-        path: '/clientes/nuevo',
-        builder: (context, state) => const ClienteFormPage(
-          mode: ClienteFormMode.crear,
-        ),
-      ),
-      GoRoute(
-        path: '/clientes/editar-demo',
-        builder: (context, state) => ClienteFormPage(
-          mode: ClienteFormMode.editar,
-          initialCliente: ejemploClienteMaria(),
         ),
       ),
     ],

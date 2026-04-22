@@ -1,4 +1,4 @@
-// lib/domain/models/usuario_model.dart
+// lib/domain/models/usuario_model.dart  
 
 enum UserRole { administrador, produccion, cajas, invitado }
 

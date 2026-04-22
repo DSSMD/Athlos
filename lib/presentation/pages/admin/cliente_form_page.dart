@@ -1,17 +1,4 @@
-// ============================================================================
-// cliente_form_page.dart
-// Ubicación: lib/presentation/pages/clientes/cliente_form_page.dart
-// Descripción: Página principal de Crear / Editar Cliente.
-// Orquesta los 4 cards del formulario + panel lateral (solo modo editar) +
-// validaciones locales + simulación de estados (loading, éxito, error).
 //
-// Uso:
-//   ClienteFormPage(mode: ClienteFormMode.crear)
-//   ClienteFormPage(mode: ClienteFormMode.editar, initialCliente: ejemploClienteMaria())
-//
-// @denshel: Esta pantalla hoy NO conecta a Supabase — simula los estados con
-// Future.delayed. Al integrar, reemplazar `_handleGuardar` por la llamada real.
-// ============================================================================
 
 import 'package:flutter/material.dart';
 import '../../components/clientes/cliente_contact_card.dart';
