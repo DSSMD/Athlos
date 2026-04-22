@@ -1,16 +1,19 @@
 // lib/presentation/widgets/auth_profile_menu.dart
-// Widget para mostrar el menú de perfil del usuario autenticado
-// Este widget se utiliza en el MainLayout para mostrar el nombre del usuario, su rol, y un avatar con sus iniciales, además de permitir cerrar sesión al hacer clic en él
-// El diseño es moderno y minimalista, con un fondo oscuro, texto blanco, y un avatar circular con un color de fondo rojo y las iniciales del usuario en blanco
-// IMPORTANTE: Este widget es fundamental para la experiencia de usuario en Athlos Workspace, ya que permite al usuario ver su información básica de perfil y
-// acceder a la funcionalidad de cerrar sesión de manera rápida y fácil.
+// Widget para mostrar el menú de perfil del usuario autenticado, con su avatar, nombre, rol y la opción de cerrar sesión
+// Este widget se utiliza en el MainLayout para mostrar la información del usuario en la barra lateral (en Desktop) o en el AppBar (en Mobile)
+// El diseño es moderno y minimalista, con un avatar circular que muestra las iniciales del usuario, su nombre y rol en texto, y un ícono de flecha para indicar que es un menú desplegable (aunque en esta versión solo muestra la opción de cerrar sesión al hacer clic)
+// IMPORTANTE: Este widget es independiente y se puede reutilizar en otras partes de la aplicación donde se requiera mostrar la información del usuario autenticado, como en un perfil de usuario o en una sección de configuración de cuenta.
 
-// NOTA: Para una implementación real, se podrían agregar más funcionalidades al menú de perfil, como un enlace para editar el perfil, cambiar la contraseña,
-// ver notificaciones, etc., y se podrían agregar animaciones suaves al mostrar el menú o al hacer clic en el avatar para mejorar la experiencia de usuario.   
+// NOTA: Para una implementación real, se podrían agregar más opciones al menú desplegable, como la posibilidad de editar el perfil, cambiar la contraseña, ver la actividad reciente, etc., y se podrían agregar animaciones suaves al mostrar el menú para mejorar la experiencia de usuario. 
+
+// lib/presentation/widgets/auth_profile_menu.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_typography.dart';
+import '../theme/app_colors.dart'; // Asegúrate de que este archivo exista
+import 'user_avatar.dart'; // Importamos tu nuevo widget
 import 'logout_confirmation_dialog.dart';
 
 class AuthProfileMenu extends ConsumerWidget {
@@ -34,19 +37,8 @@ class AuthProfileMenu extends ConsumerWidget {
     }
   }
 
-  // Utilidad para extraer iniciales (Ej: "Rosa Rene" -> "RR")
-  String _getInitials(String name) {
-    if (name.isEmpty) return 'U';
-    List<String> parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length > 1) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return parts[0].substring(0, parts[0].length > 1 ? 2 : 1).toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Escuchamos los datos reales del usuario
     final userProfileAsync = ref.watch(userProfileProvider);
 
     return Padding(
@@ -57,24 +49,20 @@ class AuthProfileMenu extends ConsumerWidget {
         hoverColor: Colors.white10,
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          // Usamos .when para manejar la carga de datos
           child: userProfileAsync.when(
             data: (profile) {
-
               final nombre = profile?['nombre'] ?? 'Usuario';
-              final rolTexto = profile?['roles']?['nombre_rol'] ?? 'Sin Rol';              
-              final iniciales = _getInitials(nombre);
+              final rolTexto = profile?['roles']?['nombre_rol'] ?? 'Sin Rol';
 
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.red.shade700,
-                    radius: 18,
-                    child: Text(
-                      iniciales,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
+                  // USAMOS TU NUEVO WIDGET AQUÍ
+                  UserAvatar(
+                    name: nombre,
+                    size: 36,
+                    showPresence: true, // Ahora podemos mostrar si está online
+                    isOnline: true,     // Aquí podrías conectar un provider de presencia
                   ),
                   if (showFullInfo && !isCollapsed) ...[
                     const SizedBox(width: 12),
@@ -85,35 +73,40 @@ class AuthProfileMenu extends ConsumerWidget {
                         children: [
                           Text(
                             nombre,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.brandWhite, // O el color que definas
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              overflow: TextOverflow.ellipsis,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            rolTexto, 
-                            style: const TextStyle(color: Colors.white60, fontSize: 11),
+                            rolTexto,
+                            style: AppTypography.caption,
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_right, color: Colors.white24, size: 16),
+                    const Icon(Icons.keyboard_arrow_right, 
+                        color: Colors.white24, size: 16),
                   ],
                 ],
               );
             },
-            // Estado de carga (mientras se trae el nombre de Supabase)
-            loading: () => const Row(
+            loading: () => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircleAvatar(backgroundColor: Colors.white24, radius: 18),
-                SizedBox(width: 12),
-                SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2))
+                // Avatar en estado de carga
+                const UserAvatar(name: '?', size: 36),
+                if (!isCollapsed) ...[
+                  const SizedBox(width: 12),
+                  const SizedBox(
+                    width: 16, 
+                    height: 16, 
+                    child: CircularProgressIndicator(strokeWidth: 2)
+                  ),
+                ],
               ],
             ),
-            // Si ocurre un error al cargar
             error: (error, stack) => const Icon(Icons.error, color: Colors.red),
           ),
         ),

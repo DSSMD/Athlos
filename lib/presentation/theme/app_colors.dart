@@ -1,9 +1,10 @@
-// ============================================================================
-// app_colors.dart
-// Ubicación sugerida: lib/presentation/theme/app_colors.dart
-// Descripción: Tokens de color del Sistema de Diseño de Athlos.
-// Centraliza brand, primary scale, neutrals, semánticos y backgrounds.
-// ============================================================================
+// lib/presentation/theme/app_colors.dart
+// Este archivo define la paleta de colores de tu app, organizada por categorías para facilitar su uso y mantenimiento.
+// Puedes ajustar los colores a tu marca y necesidades específicas. La idea es tener un sistema de colores consistente que puedas usar en toda la app.
+// Para usar estos colores, simplemente importa este archivo y accede a los colores estáticos, por ejemplo: AppColors.primary500 para el rojo base de tu marca.
+// Recuerda que puedes extender esta paleta con más colores o variantes según lo necesites, pero es importante mantener una estructura clara para facilitar su uso por todo el equipo de desarrollo.
+// Si quieres, también puedes agregar funciones de utilidad para generar tonos dinámicos o para convertir colores a otros formatos, pero lo básico es tener esta paleta bien definida y documentada.
+
 
 import 'package:flutter/material.dart';
 

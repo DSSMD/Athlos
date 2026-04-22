@@ -1,9 +1,10 @@
-// ============================================================================
-// app_theme.dart
-// Ubicación sugerida: lib/presentation/theme/app_theme.dart
-// Descripción: ThemeData global. Une colores, tipografía y estilos Material.
-// Uso: MaterialApp(theme: AppTheme.light)
-// ============================================================================
+
+// lib/presentation/theme/app_theme.dart
+// Este archivo define el tema global de tu app, incluyendo colores, tipografía, estilos de componentes y otros aspectos visuales.
+// Está construido sobre la base de los colores, espaciados y tipografías definidos en los archivos correspondientes, para mantener una estructura modular y fácil de mantener.
+// Puedes ajustar los estilos a tu marca y necesidades específicas. La idea es tener un tema consistente que puedas usar en toda la app,
+// y que facilite la aplicación de cambios globales en el diseño sin tener que modificar cada componente individualmente.
+
 
 import 'package:flutter/material.dart';
 import 'app_colors.dart';

@@ -1,8 +1,12 @@
-// ============================================================================
-// app_spacing.dart
-// Ubicación sugerida: lib/presentation/theme/app_spacing.dart
-// Descripción: Tokens de espaciado, radios de borde y elevaciones.
-// ============================================================================
+// lib/presentation/theme/app_spacing.dart
+// Este archivo define las constantes de espaciado, bordes y sombras de tu app, organizadas por categorías para facilitar su uso y mantenimiento.
+// Puedes ajustar estos valores a tu marca y necesidades específicas. La idea es tener un sistema de diseño consistente que puedas usar en toda la app.
+// Para usar estos valores, simplemente importa este archivo y accede a las constantes estáticas, por ejemplo: AppSpacing.md para un espaciado medio de 12 píxeles.
+// Recuerda que puedes extender esta escala con más valores según lo necesites, pero es importante mantener una estructura clara para facilitar su uso por todo el equipo de desarrollo.
+// Si quieres, también puedes agregar funciones de utilidad para generar espaciados dinámicos o para calcular sombras más complejas, pero lo básico es tener esta escala bien definida y documentada.
+// Además de los espaciados, también definimos aquí los radios de borde y las sombras para mantener todo lo relacionado con el diseño en un solo lugar.
+// Este enfoque modular facilita la consistencia visual y la mantenibilidad de tu app a medida que crece y evoluciona.
+
 
 import 'package:flutter/material.dart';
 
