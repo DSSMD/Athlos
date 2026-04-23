@@ -11,15 +11,17 @@ import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
+import '../../presentation/pages/admin/usuarios_page.dart';
+
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final notifier = ref.watch(routerNotifierProvider); 
+  final notifier = ref.watch(routerNotifierProvider);
 
   return GoRouter(
     refreshListenable: notifier,
-    
+
     // Arrancamos en loading para evaluar la sesión tranquilamente
     initialLocation: '/loading',
-    
+
     redirect: (context, state) {
       final authAsync = ref.read(authStateProvider);
       final isLoggedIn = authAsync.value?.session != null;
@@ -47,17 +49,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // REGLA 5: Distribución según rol
       if (path == '/login' || path == '/loading' || path == '/') {
         switch (role) {
-          case '1': return '/admin';
-          case '2': return '/produccion';
-          case '3': return '/ventas';
-          case '4': return '/invitado';
-          default: return '/login'; 
+          case '1':
+            return '/admin';
+          case '2':
+            return '/produccion';
+          case '3':
+            return '/ventas';
+          case '4':
+            return '/invitado';
+          default:
+            return '/login';
         }
       }
 
       // (Opcional) Bloqueo de rutas en web
       if (path.startsWith('/admin') && role != '1') return '/produccion';
-      
+
       return null;
     },
 
@@ -72,8 +79,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
-      
-     GoRoute(
+
+      GoRoute(
         path: '/login',
         builder: (context, state) => const LoginPage(), // <-- Así de limpio
       ),
@@ -84,18 +91,36 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: const [
             Center(child: Text('Dashboard Admin General')),
-            Center(child: Text('Gestión de Usuarios')),
+            UsuariosPage(),
             Center(child: Text('Reportes Financieros')),
           ],
           railDestinations: const [
-            NavigationRailDestination(icon: Icon(Icons.dashboard), label: Text('Dashboard')),
-            NavigationRailDestination(icon: Icon(Icons.people), label: Text('Usuarios')),
-            NavigationRailDestination(icon: Icon(Icons.bar_chart), label: Text('Reportes')),
+            NavigationRailDestination(
+              icon: Icon(Icons.dashboard),
+              label: Text('Dashboard'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.people),
+              label: Text('Usuarios'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.bar_chart),
+              label: Text('Reportes'),
+            ),
           ],
           bottomNavItems: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-            BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Usuarios'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reportes'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people),
+              label: 'Usuarios',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Reportes',
+            ),
           ],
         ),
       ),
@@ -110,14 +135,32 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             Center(child: Text('Inventario Telas')),
           ],
           railDestinations: const [
-            NavigationRailDestination(icon: Icon(Icons.precision_manufacturing), label: Text('Taller')),
-            NavigationRailDestination(icon: Icon(Icons.assignment), label: Text('Órdenes')),
-            NavigationRailDestination(icon: Icon(Icons.inventory_2), label: Text('Inventario')),
+            NavigationRailDestination(
+              icon: Icon(Icons.precision_manufacturing),
+              label: Text('Taller'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.assignment),
+              label: Text('Órdenes'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.inventory_2),
+              label: Text('Inventario'),
+            ),
           ],
           bottomNavItems: const [
-            BottomNavigationBarItem(icon: Icon(Icons.precision_manufacturing), label: 'Taller'),
-            BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Órdenes'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Inventario'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.precision_manufacturing),
+              label: 'Taller',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.assignment),
+              label: 'Órdenes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2),
+              label: 'Inventario',
+            ),
           ],
         ),
       ),
@@ -131,12 +174,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             Center(child: Text('Punto de Venta (POS)')),
           ],
           railDestinations: const [
-            NavigationRailDestination(icon: Icon(Icons.point_of_sale), label: Text('Cajas')),
-            NavigationRailDestination(icon: Icon(Icons.shopping_cart), label: Text('Ventas')),
+            NavigationRailDestination(
+              icon: Icon(Icons.point_of_sale),
+              label: Text('Cajas'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.shopping_cart),
+              label: Text('Ventas'),
+            ),
           ],
           bottomNavItems: const [
-            BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Cajas'),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Ventas'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.point_of_sale),
+              label: 'Cajas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'Ventas',
+            ),
           ],
         ),
       ),
@@ -152,17 +207,25 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 children: [
                   Icon(Icons.hourglass_empty, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('Acceso en espera. Un administrador debe asignarte un área.', 
-                    style: TextStyle(color: Colors.white70)),
+                  Text(
+                    'Acceso en espera. Un administrador debe asignarte un área.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
           ],
           railDestinations: const [
-            NavigationRailDestination(icon: Icon(Icons.hourglass_empty), label: Text('En Espera')),
+            NavigationRailDestination(
+              icon: Icon(Icons.hourglass_empty),
+              label: Text('En Espera'),
+            ),
           ],
           bottomNavItems: const [
-            BottomNavigationBarItem(icon: Icon(Icons.hourglass_empty), label: 'En Espera'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.hourglass_empty),
+              label: 'En Espera',
+            ),
           ],
         ),
       ),
