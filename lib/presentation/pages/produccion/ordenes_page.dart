@@ -1,75 +1,57 @@
 import 'package:flutter/material.dart';
-// Importa tus widgets de diseño ya creados
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Agregado Riverpod
+
+// --- TUS IMPORTS DE DISEÑO ---
+// Asegúrate de que las rutas a tu theme y widgets sean correctas
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/users/kpi_card.dart';
 import '../../widgets/users/search_input.dart';
 
-// --- MOCKS TEMPORALES BASADOS EN EL ESQUEMA SQL REAL ---
+// --- TUS IMPORTS DE DATOS (Rutas largas como definimos) ---
+import '../../../domain/models/orden_model.dart';
+import '../../../presentation/providers/orden_list_provider.dart';
 
+/* // ══════════════════════════════════════════════════════════════════════════════
+// CÓDIGO DE PRUEBA (MOCKS) COMENTADO - YA NO SE USA PORQUE TENEMOS SUPABASE
+// ══════════════════════════════════════════════════════════════════════════════
 enum EstadoOrden { pendiente, produccion, entregado, cancelado }
-
 enum EstadoPago { pendiente, parcial, pagado }
 
 class OrderMock {
-  final String numOrden; // -> CÓDIGO
+  final String numOrden;
   final String idCliente;
-  final String clienteNombre; // -> CLIENTE
+  final String clienteNombre;
   final String clienteCi;
-  final String producto; // -> NUEVO: PRODUCTO
-  final int cantidad; // -> NUEVO: CANTIDAD
+  final String producto;
+  final int cantidad;
   final DateTime fechaOrden;
-  final DateTime fechaEntrega; // -> ENTREGA
-  final double costoTotal; // -> TOTAL
-  final EstadoOrden estadoOrden; // -> ESTADO
-  final EstadoPago estadoPago; // -> ESTADO
+  final DateTime fechaEntrega;
+  final double costoTotal;
+  final EstadoOrden estadoOrden;
+  final EstadoPago estadoPago;
 
   OrderMock({
-    required this.numOrden,
-    required this.idCliente,
-    required this.clienteNombre,
-    required this.clienteCi,
-    required this.producto,
-    required this.cantidad,
-    required this.fechaOrden,
-    required this.fechaEntrega,
-    required this.costoTotal,
-    required this.estadoOrden,
-    required this.estadoPago,
+    required this.numOrden, required this.idCliente, required this.clienteNombre,
+    required this.clienteCi, required this.producto, required this.cantidad,
+    required this.fechaOrden, required this.fechaEntrega, required this.costoTotal,
+    required this.estadoOrden, required this.estadoPago,
   });
 }
 
-// Generador de datos actualizado
-final List<OrderMock> mockOrders = List.generate(25, (index) {
-  final String pseudoUuid = '550e8400-e29b-41d4-a716-${446655440000 + index}';
+final List<OrderMock> mockOrders = List.generate(25, (index) { ... });
+*/
 
-  return OrderMock(
-    numOrden: pseudoUuid,
-    idCliente: 'cliente-uuid-${index % 5}',
-    clienteNombre: index % 3 == 0 ? 'Taller Central' : 'Juan Pérez',
-    clienteCi: '789456${index} LP',
-    producto: index % 2 == 0
-        ? 'Polera Deportiva'
-        : 'Chamarra de Invierno', // Mock producto
-    cantidad: (index % 5) + 1, // Mock cantidad (1 a 5)
-    fechaOrden: DateTime.now().subtract(Duration(days: index)),
-    fechaEntrega: DateTime.now().add(Duration(days: 7 - (index % 10))),
-    costoTotal: 150.0 + (index * 15.5),
-    estadoOrden: EstadoOrden.values[index % 4],
-    estadoPago: EstadoPago.values[index % 3],
-  );
-});
-
-// --- PÁGINA PRINCIPAL ---
-class OrdenesPage extends StatefulWidget {
+// --- PÁGINA PRINCIPAL (Cambiado a ConsumerStatefulWidget para escuchar a Riverpod) ---
+class OrdenesPage extends ConsumerStatefulWidget {
   const OrdenesPage({super.key});
 
   @override
-  State<OrdenesPage> createState() => _OrdenesPageState();
+  ConsumerState<OrdenesPage> createState() => _OrdenesPageState();
 }
 
-class _OrdenesPageState extends State<OrdenesPage> {
+class _OrdenesPageState extends ConsumerState<OrdenesPage> {
   final TextEditingController _searchController = TextEditingController();
   int _currentPage = 1;
   final int _itemsPerPage = 10;
@@ -83,95 +65,113 @@ class _OrdenesPageState extends State<OrdenesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 900;
+    // 1. ESCUCHAMOS LOS DATOS REALES DE SUPABASE
+    final ordenesAsync = ref.watch(ordenListProvider);
 
-        // 1. Lógica de Filtrado (Simulada)
-        final filteredOrders = mockOrders.where((o) {
-          if (_selectedFilter == 0) return true;
-          return o.estadoOrden.index == (_selectedFilter - 1);
-        }).toList();
+    // 2. MANEJAMOS LOS ESTADOS DE CARGA
+    return ordenesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('Error: $error', style: const TextStyle(color: Colors.red)),
+      ),
+      data: (listaDeOrdenesReales) {
+        // 3. SI HAY DATOS, CONSTRUIMOS EL DISEÑO DE TU COMPAÑERO
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 900;
 
-        // 2. Cálculos de Paginación (Tu módulo)
-        final totalItems = filteredOrders.length;
-        final totalPages = (totalItems / _itemsPerPage).ceil();
+            // Lógica de Filtrado con datos reales
+            final filteredOrders = listaDeOrdenesReales.where((o) {
+              if (_selectedFilter == 0) return true;
+              return o.idEstado == _selectedFilter;
+            }).toList();
 
-        final paginatedOrders = isMobile
-            ? filteredOrders.take(_currentPage * _itemsPerPage).toList()
-            : filteredOrders
-                  .skip((_currentPage - 1) * _itemsPerPage)
-                  .take(_itemsPerPage)
-                  .toList();
+            // Cálculos de Paginación
+            final totalItems = filteredOrders.length;
+            final totalPages = totalItems == 0
+                ? 1
+                : (totalItems / _itemsPerPage).ceil();
 
-        return Column(
-          children: [
-            _StickyTopbar(
-              isMobile: isMobile,
-              searchController: _searchController,
-              onSearchChanged: (_) => setState(() => _currentPage = 1),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(
-                  isMobile ? AppSpacing.lg : AppSpacing.xl2,
+            final paginatedOrders = isMobile
+                ? filteredOrders.take(_currentPage * _itemsPerPage).toList()
+                : filteredOrders
+                      .skip((_currentPage - 1) * _itemsPerPage)
+                      .take(_itemsPerPage)
+                      .toList();
+
+            return Column(
+              children: [
+                _StickyTopbar(
+                  isMobile: isMobile,
+                  searchController: _searchController,
+                  onSearchChanged: (_) => setState(() => _currentPage = 1),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _KpiRow(isMobile: isMobile),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    _FilterChips(
-                      selected: _selectedFilter,
-                      onChanged: (i) => setState(() {
-                        _selectedFilter = i;
-                        _currentPage = 1;
-                      }),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(
+                      isMobile ? AppSpacing.lg : AppSpacing.xl2,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _KpiRow(isMobile: isMobile),
+                        const SizedBox(height: AppSpacing.xl),
 
-                    // --- LISTA / TABLA ---
-                    if (paginatedOrders.isEmpty)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(AppSpacing.xl2),
-                          child: Text("No se encontraron órdenes"),
+                        _FilterChips(
+                          selected: _selectedFilter,
+                          onChanged: (i) => setState(() {
+                            _selectedFilter = i;
+                            _currentPage = 1;
+                          }),
                         ),
-                      )
-                    else if (isMobile)
-                      _MobileList(orders: paginatedOrders)
-                    else
-                      _DesktopTable(orders: paginatedOrders),
+                        const SizedBox(height: AppSpacing.lg),
 
-                    const SizedBox(height: AppSpacing.xl),
+                        // --- LISTA / TABLA REAL ---
+                        if (paginatedOrders.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(AppSpacing.xl2),
+                              child: Text("No se encontraron órdenes"),
+                            ),
+                          )
+                        else if (isMobile)
+                          _MobileList(orders: paginatedOrders)
+                        else
+                          _DesktopTable(orders: paginatedOrders),
 
-                    // --- PAGINACIÓN DINÁMICA ---
-                    if (isMobile)
-                      _LoadMoreButton(
-                        hasMore: _currentPage < totalPages,
-                        onPressed: () => setState(() => _currentPage++),
-                      )
-                    else
-                      _DesktopPagination(
-                        currentPage: _currentPage,
-                        totalPages: totalPages,
-                        totalItems: totalItems,
-                        itemsPerPage: _itemsPerPage,
-                        onPageChanged: (page) =>
-                            setState(() => _currentPage = page),
-                      ),
-                  ],
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // --- PAGINACIÓN DINÁMICA ---
+                        if (isMobile)
+                          _LoadMoreButton(
+                            hasMore: _currentPage < totalPages,
+                            onPressed: () => setState(() => _currentPage++),
+                          )
+                        else
+                          _DesktopPagination(
+                            currentPage: _currentPage,
+                            totalPages: totalPages,
+                            totalItems: totalItems,
+                            itemsPerPage: _itemsPerPage,
+                            onPageChanged: (page) =>
+                                setState(() => _currentPage = page),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
   }
 }
-// --- COMPONENTES PRIVADOS DE LA PÁGINA ---
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPONENTES PRIVADOS DE LA PÁGINA (Sin Cambios Visuales)
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -187,7 +187,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = Text('Órdenes', style: AppTypography.h1);
     final btn = ElevatedButton.icon(
-      onPressed: () {}, // Aquí irá el showOrderFormDrawer
+      onPressed: () {},
       icon: const Icon(Icons.add, size: 18),
       label: Text(isMobile ? 'Nueva' : 'Nueva Orden'),
     );
@@ -301,8 +301,6 @@ class _FilterChips extends StatelessWidget {
   }
 }
 
-// --- COMPONENTES DE TABLA Y LISTA ---
-
 class _DesktopPagination extends StatelessWidget {
   final int currentPage, totalPages, totalItems, itemsPerPage;
   final ValueChanged<int> onPageChanged;
@@ -344,7 +342,6 @@ class _DesktopPagination extends StatelessWidget {
   }
 }
 
-// --- KPI ROW (Basado en tu diseño de Usuarios) ---
 class _KpiRow extends StatelessWidget {
   final bool isMobile;
   const _KpiRow({required this.isMobile});
@@ -399,12 +396,16 @@ class _KpiRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DESKTOP TABLE — header + filas
+// VISTAS DE DATOS ACTUALIZADAS A ORDENMODEL REAL
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VISTAS DE DATOS (REFLEJO FIEL A LA BD)
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DesktopTable extends StatelessWidget {
   const _DesktopTable({required this.orders});
-  final List<OrderMock> orders;
+  final List<OrdenModel> orders;
 
   @override
   Widget build(BuildContext context) {
@@ -416,7 +417,6 @@ class _DesktopTable extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header adaptado a tus nuevos campos
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
@@ -428,11 +428,10 @@ class _DesktopTable extends StatelessWidget {
             child: Row(
               children: [
                 _col('CÓDIGO', 2),
-                _col('CLIENTE', 3),
-                _col('PRODUCTO', 3),
-                _col('CANT.', 1),
+                _col('ID CLIENTE', 4), // Más ancho para el UUID
+                _col('F. ORDEN', 2), // Agregamos la fecha de orden real
                 _col('ENTREGA', 2),
-                _col('ESTADO', 2),
+                _col('ESTADOS', 2),
                 _col('TOTAL', 2),
                 const SizedBox(
                   width: 80,
@@ -450,7 +449,6 @@ class _DesktopTable extends StatelessWidget {
               ],
             ),
           ),
-          // Filas
           for (var i = 0; i < orders.length; i++) ...[
             _OrderListRow(order: orders[i]),
             if (i < orders.length - 1)
@@ -474,16 +472,16 @@ class _DesktopTable extends StatelessWidget {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FILA DE TABLA DESKTOP
-// ══════════════════════════════════════════════════════════════════════════════
-
 class _OrderListRow extends StatelessWidget {
-  final OrderMock order;
+  final OrdenModel order;
   const _OrderListRow({required this.order});
 
   @override
   Widget build(BuildContext context) {
+    String displayCode = order.numOrden.length > 8
+        ? order.numOrden.substring(0, 8)
+        : order.numOrden;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -495,48 +493,27 @@ class _OrderListRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              order.numOrden.substring(0, 8).toUpperCase(),
+              displayCode.toUpperCase(),
               style: AppTypography.small.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          // CLIENTE
+
+          // ID CLIENTE (Crudo, sin texto extra)
           Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  order.clienteNombre,
-                  style: AppTypography.body,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'CI: ${order.clienteCi}',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
+            flex: 4,
+            child: Text(order.idCliente, style: AppTypography.caption),
           ),
-          // PRODUCTO
+
+          // FECHA ORDEN
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Text(
-              order.producto,
-              style: AppTypography.body,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              '${order.fechaOrden.day}/${order.fechaOrden.month}/${order.fechaOrden.year}',
+              style: AppTypography.small,
             ),
           ),
-          // CANTIDAD
-          Expanded(
-            flex: 1,
-            child: Text('${order.cantidad} un.', style: AppTypography.small),
-          ),
-          // ENTREGA
+
+          // FECHA ENTREGA
           Expanded(
             flex: 2,
             child: Text(
@@ -544,18 +521,23 @@ class _OrderListRow extends StatelessWidget {
               style: AppTypography.small,
             ),
           ),
-          // ESTADO (Doble badge)
+
+          // ESTADOS (Orden y Pago)
+          // ESTADOS (Orden y Pago)
           Expanded(
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _StatusBadge(status: order.estadoOrden),
+                _StatusBadge(idEstado: order.idEstado),
                 const SizedBox(height: 4),
-                _PagoBadge(pago: order.estadoPago),
+                // Le pasamos el número directamente (puede ser nulo)
+                _PagoBadge(idPago: order.idEstadoPago),
               ],
             ),
           ),
+
           // TOTAL
           Expanded(
             flex: 2,
@@ -564,13 +546,13 @@ class _OrderListRow extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
+
           // ACCIONES
           SizedBox(
             width: 80,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Un botón de menú genérico para "Acciones" (Editar, Imprimir, Eliminar)
                 IconButton(
                   icon: const Icon(
                     Icons.more_vert,
@@ -592,7 +574,7 @@ class _OrderListRow extends StatelessWidget {
 
 class _MobileList extends StatelessWidget {
   const _MobileList({required this.orders});
-  final List<OrderMock> orders;
+  final List<OrdenModel> orders; // CAMBIADO A OrdenModel
 
   @override
   Widget build(BuildContext context) {
@@ -607,16 +589,16 @@ class _MobileList extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// TARJETA MÓVIL
-// ══════════════════════════════════════════════════════════════════════════════
-
 class _OrderCard extends StatelessWidget {
-  final OrderMock order;
+  final OrdenModel order; // CAMBIADO A OrdenModel
   const _OrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
+    String displayCode = order.numOrden.length > 8
+        ? order.numOrden.substring(0, 8)
+        : order.numOrden;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -631,22 +613,21 @@ class _OrderCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                order.numOrden.substring(0, 8).toUpperCase(),
+                displayCode.toUpperCase(),
                 style: AppTypography.small.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Row(
                 children: [
-                  _PagoBadge(pago: order.estadoPago),
+                  _PagoBadge(idPago: order.idEstadoPago),
                   const SizedBox(width: 4),
-                  _StatusBadge(status: order.estadoOrden),
+                  _StatusBadge(idEstado: order.idEstado),
                 ],
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          // Cliente
           Row(
             children: [
               const Icon(
@@ -657,7 +638,7 @@ class _OrderCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  order.clienteNombre,
+                  'ID: ${order.idCliente}',
                   style: AppTypography.body,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -665,7 +646,6 @@ class _OrderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          // Producto y Cantidad
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -677,7 +657,7 @@ class _OrderCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${order.producto} (x${order.cantidad})',
+                  'Producto BD',
                   style: AppTypography.small.copyWith(
                     color: AppColors.textMuted,
                   ),
@@ -707,34 +687,80 @@ class _OrderCard extends StatelessWidget {
     );
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
-// BADGES (ESTADOS)
+// Añadido para mostrar estados de pago
 // ══════════════════════════════════════════════════════════════════════════════
 
-// --- BADGE DE ESTADO DE PRODUCCIÓN ---
+class _PagoBadge extends StatelessWidget {
+  final int? idPago; // Ahora recibe un número que puede ser nulo
+  const _PagoBadge({required this.idPago});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color = AppColors.neutral500; // Color por defecto (gris)
+    String label = 'N/A';
+
+    // Mapeamos los IDs de tu base de datos
+    if (idPago == 1) {
+      color = AppColors.error; // Rojo
+      label = 'PENDIENTE';
+    } else if (idPago == 2) {
+      color = AppColors.warning; // Naranja
+      label = 'PARCIAL';
+    } else if (idPago == 3) {
+      color = AppColors.success; // Verde
+      label = 'PAGADO';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        border: Border.all(color: color.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        '\$ $label',
+        style: AppTypography.caption.copyWith(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 9,
+        ),
+      ),
+    );
+  }
+}
+// ══════════════════════════════════════════════════════════════════════════════
+// BADGES ADAPTADOS (Reciben datos de Supabase en lugar de los Mocks)
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _StatusBadge extends StatelessWidget {
-  final EstadoOrden status; // Ahora usa el enum correcto
-  const _StatusBadge({required this.status});
+  final int idEstado; // Recibe número de base de datos
+  const _StatusBadge({required this.idEstado});
 
   @override
   Widget build(BuildContext context) {
     Color color = AppColors.neutral500;
-    String label = status.name.toUpperCase();
-    switch (status) {
-      case EstadoOrden.pendiente:
+    String label = 'ESTADO $idEstado';
+
+    switch (idEstado) {
+      case 1:
         color = AppColors.warning;
+        label = 'PENDIENTE';
         break;
-      case EstadoOrden.produccion:
+      case 2:
         color = AppColors.info;
+        label = 'PRODUCCIÓN';
         break;
-      case EstadoOrden.entregado:
+      case 3:
         color = AppColors.success;
+        label = 'ENTREGADO';
         break;
-      case EstadoOrden.cancelado:
+      case 4:
         color = AppColors.error;
+        label = 'CANCELADO';
         break;
     }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -753,37 +779,27 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// --- BADGE DE ESTADO DE PAGO (NUEVO) ---
+/*
+// ══════════════════════════════════════════════════════════════════════════════
+// Se replico este mismo empezando desde la Linea 690 
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _PagoBadge extends StatelessWidget {
-  final EstadoPago pago;
+  final String pago; // Recibe un String fijo por ahora
   const _PagoBadge({required this.pago});
 
   @override
   Widget build(BuildContext context) {
-    Color color = AppColors.neutral500;
-    String label = pago.name.toUpperCase();
-
-    switch (pago) {
-      case EstadoPago.pendiente:
-        color = AppColors.error; // Rojo si no han pagado nada
-        break;
-      case EstadoPago.parcial:
-        color = AppColors.warning; // Naranja si dejaron seña/adelanto
-        break;
-      case EstadoPago.pagado:
-        color = AppColors.success; // Verde si está liquidado
-        break;
-    }
+    Color color = AppColors.warning; // Naranja genérico
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        // Este tiene borde en lugar de fondo para que no compita visualmente con el estado de la orden
         border: Border.all(color: color.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
-        '\$ $label',
+        '\$ $pago',
         style: AppTypography.caption.copyWith(
           color: color,
           fontWeight: FontWeight.bold,
@@ -792,9 +808,8 @@ class _PagoBadge extends StatelessWidget {
       ),
     );
   }
-}
+}*/
 
-// --- BOTÓN CARGAR MÁS (Tu módulo exacto) ---
 class _LoadMoreButton extends StatelessWidget {
   const _LoadMoreButton({required this.hasMore, required this.onPressed});
   final bool hasMore;

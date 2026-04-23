@@ -2,7 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart'; // Para kIsWeb
 import 'dart:io'; // Se mantiene para Android/Desktop
 import '../../presentation/providers/orden_form_provider.dart';
+
 import 'package:http/http.dart' as http; // Necesario para leer la imagen en Web
+
+import '../../domain/models/orden_model.dart';
 
 class OrdenRepositoryImpl {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -69,9 +72,32 @@ class OrdenRepositoryImpl {
       if (tallasParaInsertar.isNotEmpty) {
         await _supabase.from('desglose_tallas').insert(tallasParaInsertar);
       }
+
+      //Vista Parte ordenes
     } catch (e) {
       debugPrint('❌ Error detallado: $e');
       throw Exception('Error en Supabase: $e');
+    }
+  }
+
+  // =================================================================
+  // CÓDIGO: LECTURA DE ÓRDENES PARA LA VISTA
+  // =================================================================
+  Future<List<OrdenModel>> fetchOrdenes() async {
+    try {
+      // Hacemos la consulta a la tabla 'orden'
+      final response = await _supabase
+          .from('orden')
+          .select(
+            'num_orden, id_cliente, fecha_orden, fecha_entrega, id_estado, id_estado_pago, costo_total',
+          )
+          .order('fecha_entrega', ascending: true);
+
+      return (response as List<dynamic>)
+          .map((json) => OrdenModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener la lista de órdenes: $e');
     }
   }
 }
