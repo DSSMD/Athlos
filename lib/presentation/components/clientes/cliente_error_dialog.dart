@@ -52,7 +52,9 @@ Future<void> showClienteErrorDialog(
               Text(
                 mensaje,
                 textAlign: TextAlign.center,
-                style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
               SizedBox(
@@ -60,7 +62,9 @@ Future<void> showClienteErrorDialog(
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     side: const BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),

@@ -6,7 +6,6 @@ import '../../domain/models/cliente_model.dart';
 class ClienteService {
   final _supabase = Supabase.instance.client;
 
-
   // ══════════════════════════════════════════════════════════════════════════
   // CREACIÓN
   // ══════════════════════════════════════════════════════════════════════════
@@ -32,7 +31,7 @@ class ClienteService {
       throw Exception('Error inesperado al registrar el cliente: $e');
     }
   }
-  
+
   // ══════════════════════════════════════════════════════════════════════════
   // LECTURA
   // ══════════════════════════════════════════════════════════════════════════
@@ -50,6 +49,4 @@ class ClienteService {
       throw Exception('Error al obtener clientes: $e');
     }
   }
-
-  
 }

@@ -151,7 +151,7 @@ class _UserListRowState extends State<UserListRow> {
 
 /// Fila de permisos con corte "+N" cuando exceden el espacio disponible.
 /// La dejamos comentada/inactiva hasta que tu base de datos maneje permisos por separado.
-/// 
+///
 
 class _PermissionsRow extends StatelessWidget {
   const _PermissionsRow({required this.permissions});
@@ -173,4 +173,3 @@ class _PermissionsRow extends StatelessWidget {
     );
   }
 }
-

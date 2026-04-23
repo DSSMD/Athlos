@@ -62,7 +62,9 @@ class ClienteContactCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Al hacer clic se abre chat de WhatsApp con este número',
-                    style: AppTypography.caption.copyWith(color: AppColors.success),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.success,
+                    ),
                   ),
                 ),
               ],
@@ -71,7 +73,7 @@ class ClienteContactCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           // Fila 2: Email + Dirección
           _Row2(
-          left: CustomTextField(
+            left: CustomTextField(
               controller: emailController,
               label: 'Email',
               isOptional: true,
@@ -109,7 +111,7 @@ class _PhoneRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
-        child: CustomTextField(
+          child: CustomTextField(
             controller: telefonoController,
             label: 'Teléfono / WhatsApp',
             isRequired: true,
@@ -200,7 +202,11 @@ class _Row2 extends StatelessWidget {
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [left, const SizedBox(height: AppSpacing.lg), right],
+        children: [
+          left,
+          const SizedBox(height: AppSpacing.lg),
+          right,
+        ],
       );
     }
     return Row(

@@ -27,9 +27,9 @@ class LoadingSpinner extends StatelessWidget {
 
   /// Spinner centrado sobre overlay oscuro. Útil para cargas a pantalla completa.
   const LoadingSpinner.fullScreen({super.key, this.message})
-      : size = LoadingSize.lg,
-        color = null,
-        strokeWidth = null;
+    : size = LoadingSize.lg,
+      color = null,
+      strokeWidth = null;
 
   final LoadingSize size;
   final Color? color;

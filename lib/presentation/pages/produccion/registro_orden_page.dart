@@ -31,7 +31,6 @@ class RegistroOrdenPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             // 1. Selector de Cliente (UUID manual por ahora)
             TextFormField(
               decoration: const InputDecoration(

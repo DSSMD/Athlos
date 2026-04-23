@@ -1,10 +1,8 @@
-
 // lib/presentation/theme/app_theme.dart
 // Este archivo define el tema global de tu app, incluyendo colores, tipografía, estilos de componentes y otros aspectos visuales.
 // Está construido sobre la base de los colores, espaciados y tipografías definidos en los archivos correspondientes, para mantener una estructura modular y fácil de mantener.
 // Puedes ajustar los estilos a tu marca y necesidades específicas. La idea es tener un tema consistente que puedas usar en toda la app,
 // y que facilite la aplicación de cambios globales en el diseño sin tener que modificar cada componente individualmente.
-
 
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
@@ -61,7 +59,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.borderFocus, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.borderFocus,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -69,14 +70,19 @@ class AppTheme {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.borderError, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.borderError,
+            width: 1.5,
+          ),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.neutral100),
         ),
         hintStyle: AppTypography.small.copyWith(color: AppColors.textMuted),
-        labelStyle: AppTypography.small.copyWith(color: AppColors.textSecondary),
+        labelStyle: AppTypography.small.copyWith(
+          color: AppColors.textSecondary,
+        ),
         errorStyle: AppTypography.caption.copyWith(color: AppColors.error),
       ),
 
@@ -139,12 +145,15 @@ class AppTheme {
       // Switch (toggle activo/inactivo)
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return AppColors.neutral400;
+          if (states.contains(WidgetState.disabled))
+            return AppColors.neutral400;
           return AppColors.brandWhite;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) return AppColors.neutral200;
-          if (states.contains(WidgetState.selected)) return AppColors.primary500;
+          if (states.contains(WidgetState.disabled))
+            return AppColors.neutral200;
+          if (states.contains(WidgetState.selected))
+            return AppColors.primary500;
           return AppColors.neutral400;
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),

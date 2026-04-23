@@ -73,10 +73,7 @@ class ClienteIdentificationCard extends StatelessWidget {
 }
 
 class _TipoClienteDropdown extends StatelessWidget {
-  const _TipoClienteDropdown({
-    required this.value,
-    required this.onChanged,
-  });
+  const _TipoClienteDropdown({required this.value, required this.onChanged});
 
   final TipoCliente value;
   final ValueChanged<TipoCliente> onChanged;
@@ -105,20 +102,26 @@ class _TipoClienteDropdown extends StatelessWidget {
             child: DropdownButton<TipoCliente>(
               value: value,
               isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textMuted),
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.textMuted,
+              ),
               style: AppTypography.body.copyWith(color: AppColors.textPrimary),
               onChanged: (v) {
                 if (v != null) onChanged(v);
               },
               items: TipoCliente.values
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                          child: Text(t.label),
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.sm,
                         ),
-                      ))
+                        child: Text(t.label),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),

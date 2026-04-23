@@ -1,10 +1,8 @@
-
-
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
-import '../widgets/auth_profile_menu.dart'; 
+import '../widgets/auth_profile_menu.dart';
 
 /// Agrupa un item de navegación con su sección visual.
 /// El mapeo label -> sección se hace en main_layout.dart.
@@ -62,7 +60,7 @@ class AthlosSidebar extends StatelessWidget {
     );
   }
 
- // ─────────────────────────────────────────────────────────────── LOGO ──
+  // ─────────────────────────────────────────────────────────────── LOGO ──
   Widget _buildLogoWithToggle() {
     const logoAsset = 'assets/images/logoAthLogMovilyPagEscritorio.png';
 
@@ -117,9 +115,9 @@ class AthlosSidebar extends StatelessWidget {
     // Agrupar items por sección preservando el índice original
     final Map<SidebarSection, List<_IndexedItem>> grouped = {};
     for (var i = 0; i < items.length; i++) {
-      grouped.putIfAbsent(items[i].section, () => []).add(
-            _IndexedItem(index: i, item: items[i]),
-          );
+      grouped
+          .putIfAbsent(items[i].section, () => [])
+          .add(_IndexedItem(index: i, item: items[i]));
     }
 
     const sectionOrder = [
@@ -143,7 +141,10 @@ class AthlosSidebar extends StatelessWidget {
             if (sectionLabels[section] != null && !collapsed)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.xs,
                 ),
                 child: ClipRect(
                   child: Text(
@@ -161,12 +162,14 @@ class AthlosSidebar extends StatelessWidget {
               )
             else
               const SizedBox(height: AppSpacing.sm),
-            ...grouped[section]!.map((entry) => _SidebarItemTile(
-                  item: entry.item,
-                  selected: entry.index == selectedIndex,
-                  collapsed: collapsed,
-                  onTap: () => onItemSelected(entry.index),
-                )),
+            ...grouped[section]!.map(
+              (entry) => _SidebarItemTile(
+                item: entry.item,
+                selected: entry.index == selectedIndex,
+                collapsed: collapsed,
+                onTap: () => onItemSelected(entry.index),
+              ),
+            ),
           ],
       ],
     );
@@ -181,10 +184,7 @@ class AthlosSidebar extends StatelessWidget {
       ),
       // ¡AQUÍ ESTÁ LA MAGIA! Llamamos al widget inteligente.
       // Le pasamos el estado "collapsed" del sidebar para que se adapte.
-      child: AuthProfileMenu(
-        isCollapsed: collapsed, 
-        showFullInfo: true,
-      ),
+      child: AuthProfileMenu(isCollapsed: collapsed, showFullInfo: true),
     );
   }
 }
@@ -224,12 +224,10 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
     final bg = widget.selected
         ? AppColors.primary500.withValues(alpha: 0.15)
         : _hovered
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.transparent;
+        ? Colors.white.withValues(alpha: 0.05)
+        : Colors.transparent;
 
-    final fg = widget.selected
-        ? AppColors.brandWhite
-        : AppColors.neutral400;
+    final fg = widget.selected ? AppColors.brandWhite : AppColors.neutral400;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -255,7 +253,9 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
                   border: widget.selected
                       ? const Border(
                           left: BorderSide(
-                              color: AppColors.primary500, width: 3),
+                            color: AppColors.primary500,
+                            width: 3,
+                          ),
                         )
                       : null,
                 ),
@@ -293,8 +293,7 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.primary500,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.sm),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
                             '${widget.item.badge}',

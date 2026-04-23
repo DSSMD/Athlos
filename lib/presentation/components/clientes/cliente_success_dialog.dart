@@ -51,7 +51,9 @@ Future<void> showClienteSuccessDialog(
               Text(
                 mensaje,
                 textAlign: TextAlign.center,
-                style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
               SizedBox(
@@ -60,7 +62,9 @@ Future<void> showClienteSuccessDialog(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary500,
                     foregroundColor: AppColors.brandWhite,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),

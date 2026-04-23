@@ -1,4 +1,3 @@
-
 // lib/presentation/theme/app_typography.dart
 // Este archivo define la tipografía de tu app, organizada por estilos para facilitar su uso y mantenimiento.
 // Puedes ajustar los estilos a tu marca y necesidades específicas. La idea es tener un sistema de tipografía consistente que puedas usar en toda la app.

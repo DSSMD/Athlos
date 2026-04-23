@@ -4,7 +4,7 @@ class NavigationNotifier extends Notifier<int> {
   // El método build define el estado inicial (0 = Dashboard)
   @override
   int build() {
-    return 0; 
+    return 0;
   }
 
   // Método opcional pero recomendado para cambiar el valor

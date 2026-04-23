@@ -11,12 +11,12 @@ final clienteServiceProvider = Provider<ClienteService>((ref) {
 });
 
 // 2. Proveedor de la Lista de Clientes (AsyncNotifier)
-final clientesProvider = AsyncNotifierProvider<ClientesNotifier, List<ClienteModel>>(() {
-  return ClientesNotifier();
-});
+final clientesProvider =
+    AsyncNotifierProvider<ClientesNotifier, List<ClienteModel>>(() {
+      return ClientesNotifier();
+    });
 
 class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
-  
   @override
   Future<List<ClienteModel>> build() async {
     return _fetchClientes();
@@ -25,7 +25,7 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
   // Lógica interna para obtener los datos
   Future<List<ClienteModel>> _fetchClientes() async {
     final service = ref.read(clienteServiceProvider);
-    return await service.obtenerClientes(); 
+    return await service.obtenerClientes();
   }
 
   // Refrescar manualmente
@@ -37,7 +37,7 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
   // ══════════════════════════════════════════════════════════════════════════
   // ACCIÓN: Registrar Cliente
   // ══════════════════════════════════════════════════════════════════════════
-  // Retornamos un Future<void> y lanzamos excepción si falla, 
+  // Retornamos un Future<void> y lanzamos excepción si falla,
   // para que el Formulario (UI) pueda atrapar el error (ej: CI duplicado).
   Future<void> registrarCliente(ClienteModel cliente) async {
     final service = ref.read(clienteServiceProvider);
@@ -49,7 +49,7 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
       return _fetchClientes();
     });
 
-    // Nota: Si 'registrarCliente' del service falla, AsyncValue.guard captura 
+    // Nota: Si 'registrarCliente' del service falla, AsyncValue.guard captura
     // el error y pone el Provider en estado de AsyncError.
   }
 }

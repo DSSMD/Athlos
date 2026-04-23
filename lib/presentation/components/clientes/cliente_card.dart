@@ -1,8 +1,9 @@
 // ============================================================================
-// user_card.dart
-// Ubicación sugerida: lib/presentation/components/user_card.dart
-// Descripción: Card de usuario para vista Mobile del listado.
-// Layout vertical compacto con avatar + info + permisos + estado.
+// cliente_card.dart
+// Ubicación: lib/presentation/components/clientes/cliente_card.dart
+// Descripción: Card de cliente para vista Mobile del listado.
+// Layout vertical compacto con avatar + info + teléfono + dirección.
+// Sigue el mismo patrón que user_card.dart para mantener consistencia.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -11,19 +12,17 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
-import '../../widgets/users/permission_chip.dart';
-import '../../widgets/users/role_badge.dart';
-import '../../widgets/users/status_badge.dart';
-
 import '../../widgets/user_avatar.dart';
-import '../../../domain/models/usuario_model.dart';
+import '../../../domain/models/cliente_model.dart';
 
-//import '../../widgets/users/user_avatar.dart';
+class ClienteCard extends StatelessWidget {
+  const ClienteCard({
+    super.key,
+    required this.cliente,
+    required this.onTap,
+  });
 
-class UserCard extends StatelessWidget {
-  const UserCard({super.key, required this.user, required this.onTap});
-
-  final UsuarioModel user;
+  final ClienteModel cliente;
   final VoidCallback onTap;
 
   @override
@@ -43,16 +42,14 @@ class UserCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: avatar + nombre/email + role badge a la derecha
+              // Header: avatar + nombre + CI
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   UserAvatar(
-                    name: user.name,
+                    name: cliente.nombreCompleto,
                     size: 44,
-                    showPresence: true,
-                    isOnline:
-                        false, // Aquí podrías usar user.status para determinarlo
+                    showPresence: false,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -61,7 +58,7 @@ class UserCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          user.name,
+                          cliente.nombreCompleto,
                           style: AppTypography.body.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -69,7 +66,7 @@ class UserCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          user.email,
+                          'CI: ${cliente.ciCliente}',
                           style: AppTypography.caption,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -77,28 +74,36 @@ class UserCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  RoleBadge(role: user.role),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // Permisos (si tiene)
-              // Aquí usamos el getter permissions del modelo para mostrar los permisos correspondientes
-              if (user.permissions.isNotEmpty)
-                _PermissionsWrap(permissions: user.permissions),
+              // Teléfono
+              if (cliente.numTelefono != null)
+                _InfoRow(
+                  icon: Icons.phone_outlined,
+                  text: cliente.numTelefono!,
+                ),
+
+              // Dirección
+              if (cliente.direccion != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                _InfoRow(
+                  icon: Icons.location_on_outlined,
+                  text: cliente.direccion!,
+                ),
+              ],
+
               const SizedBox(height: AppSpacing.md),
 
-              // Footer: estado + último acceso
+              // Footer: fecha de registro
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  StatusBadge(status: user.status),
-                  // Formateamos el DateTime a texto. Si es null, mostramos 'Nunca'
                   Text(
-                    user.lastAccess != null
-                        ? '${user.lastAccess!.day}/${user.lastAccess!.month}/${user.lastAccess!.year}'
-                        : 'Nunca',
+                    cliente.createdAt != null
+                        ? 'Registrado: ${cliente.createdAt!.day.toString().padLeft(2, '0')}/${cliente.createdAt!.month.toString().padLeft(2, '0')}/${cliente.createdAt!.year}'
+                        : '',
                     style: AppTypography.caption,
                   ),
                 ],
@@ -111,22 +116,26 @@ class UserCard extends StatelessWidget {
   }
 }
 
-class _PermissionsWrap extends StatelessWidget {
-  const _PermissionsWrap({required this.permissions});
-  final List<String> permissions;
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    const maxVisible = 3;
-    final visible = permissions.take(maxVisible).toList();
-    final hidden = permissions.length - visible.length;
-
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
+    return Row(
       children: [
-        ...visible.map((p) => PermissionChip(label: p)),
-        if (hidden > 0) PermissionChip(label: '+$hidden'),
+        Icon(icon, size: 16, color: AppColors.textMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTypography.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

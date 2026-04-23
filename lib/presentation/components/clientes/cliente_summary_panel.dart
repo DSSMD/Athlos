@@ -179,11 +179,7 @@ class _ResumenFinancieroCard extends StatelessWidget {
 }
 
 class _FilaMonto extends StatelessWidget {
-  const _FilaMonto({
-    required this.label,
-    required this.valor,
-    this.valorColor,
-  });
+  const _FilaMonto({required this.label, required this.valor, this.valorColor});
 
   final String label;
   final double valor;
@@ -360,11 +356,7 @@ class _FilaOrden extends StatelessWidget {
 // ──────────────────────────────────────────────────────── BADGE ──
 
 class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({
-    required this.label,
-    required this.bg,
-    required this.fg,
-  });
+  const _MiniBadge({required this.label, required this.bg, required this.fg});
 
   final String label;
   final Color bg;

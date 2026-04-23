@@ -72,7 +72,7 @@ class ClienteCreditCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           // Límite + Días
-         _Row2(
+          _Row2(
             left: CustomTextField(
               controller: limiteController,
               label: 'Límite de crédito',
@@ -143,7 +143,9 @@ class ClienteCreditCard extends StatelessWidget {
             style: AppTypography.body.copyWith(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Notas internas sobre el cliente...',
-              hintStyle: AppTypography.body.copyWith(color: AppColors.textMuted),
+              hintStyle: AppTypography.body.copyWith(
+                color: AppColors.textMuted,
+              ),
               filled: true,
               fillColor: AppColors.brandWhite,
               contentPadding: const EdgeInsets.all(AppSpacing.md),
@@ -158,7 +160,9 @@ class ClienteCreditCard extends StatelessWidget {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(
-                    color: AppColors.borderFocus, width: 1.5),
+                  color: AppColors.borderFocus,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -179,7 +183,11 @@ class _Row2 extends StatelessWidget {
     if (isMobile) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [left, const SizedBox(height: AppSpacing.lg), right],
+        children: [
+          left,
+          const SizedBox(height: AppSpacing.lg),
+          right,
+        ],
       );
     }
     return Row(

@@ -6,15 +6,9 @@
 // @denshel: reemplazar por ClienteModel real al conectar con Supabase.
 // ============================================================================
 
-enum ClienteFormMode {
-  crear,
-  editar,
-}
+enum ClienteFormMode { crear, editar }
 
-enum TipoCliente {
-  empresa,
-  persona,
-}
+enum TipoCliente { empresa, persona }
 
 extension TipoClienteLabel on TipoCliente {
   String get label {
@@ -143,9 +137,24 @@ ClienteMock ejemploClienteMaria() {
     clienteDesde: DateTime(2023, 1, 15),
     activo: true,
     ultimasOrdenes: const [
-      OrdenResumen(numero: 'ORD-2847', total: 1250, tipoPago: 'Contado', estado: 'Completada'),
-      OrdenResumen(numero: 'ORD-2835', total: 2800, tipoPago: 'Crédito', estado: 'Completada'),
-      OrdenResumen(numero: 'ORD-2820', total: 980, tipoPago: 'Contado', estado: 'Completada'),
+      OrdenResumen(
+        numero: 'ORD-2847',
+        total: 1250,
+        tipoPago: 'Contado',
+        estado: 'Completada',
+      ),
+      OrdenResumen(
+        numero: 'ORD-2835',
+        total: 2800,
+        tipoPago: 'Crédito',
+        estado: 'Completada',
+      ),
+      OrdenResumen(
+        numero: 'ORD-2820',
+        total: 980,
+        tipoPago: 'Contado',
+        estado: 'Completada',
+      ),
     ],
   );
 }

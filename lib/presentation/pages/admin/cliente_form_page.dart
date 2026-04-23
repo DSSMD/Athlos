@@ -68,15 +68,19 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     final c = widget.initialCliente;
     _nitCiCtrl = TextEditingController(text: c?.nitCi ?? '');
     _razonSocialCtrl = TextEditingController(text: c?.razonSocial ?? '');
-    _representanteCtrl = TextEditingController(text: c?.representanteLegal ?? '');
+    _representanteCtrl = TextEditingController(
+      text: c?.representanteLegal ?? '',
+    );
     _telefonoCtrl = TextEditingController(text: c?.telefono ?? '');
     _telefonoSecCtrl = TextEditingController(text: c?.telefonoSecundario ?? '');
     _emailCtrl = TextEditingController(text: c?.email ?? '');
     _direccionCtrl = TextEditingController(text: c?.direccion ?? '');
     _limiteCtrl = TextEditingController(
-        text: c != null ? c.limiteCredito.toStringAsFixed(2) : '');
+      text: c != null ? c.limiteCredito.toStringAsFixed(2) : '',
+    );
     _diasCtrl = TextEditingController(
-        text: c != null ? c.diasPlazoPago.toString() : '30');
+      text: c != null ? c.diasPlazoPago.toString() : '30',
+    );
     _notasCtrl = TextEditingController(text: c?.notas ?? '');
 
     _tipoCliente = c?.tipoCliente ?? TipoCliente.empresa;
@@ -211,8 +215,11 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         margin: const EdgeInsets.all(AppSpacing.lg),
         content: Row(
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: AppColors.error, size: 20),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.error,
+              size: 20,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
@@ -434,10 +441,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          flex: 2,
-          child: _buildFormColumn(),
-        ),
+        Expanded(flex: 2, child: _buildFormColumn()),
         if (mostrarPanel) ...[
           const SizedBox(width: AppSpacing.xl),
           Expanded(
@@ -465,8 +469,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     return Column(
       children: [
         _FlashWrap(
-          isFlashing: _flashingField == 'nitCi' ||
-              _flashingField == 'representante',
+          isFlashing:
+              _flashingField == 'nitCi' || _flashingField == 'representante',
           child: ClienteIdentificationCard(
             key: _representanteKey,
             nitCiController: _nitCiCtrl,
@@ -478,8 +482,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         ),
         const SizedBox(height: AppSpacing.lg),
         _FlashWrap(
-          isFlashing: _flashingField == 'telefono' ||
-              _flashingField == 'email',
+          isFlashing: _flashingField == 'telefono' || _flashingField == 'email',
           child: ClienteContactCard(
             key: _telefonoKey,
             telefonoController: _telefonoCtrl,
