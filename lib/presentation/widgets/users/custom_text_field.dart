@@ -64,28 +64,41 @@ class _CustomTextFieldState extends State<CustomTextField> {
       children: [
         _buildLabel(),
         const SizedBox(height: AppSpacing.xs),
-        TextField(
+
+        TextFormField(
           controller: widget.controller,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
           enabled: widget.enabled,
           style: AppTypography.small,
+
+          validator: widget.validator,
+
           onChanged: (value) {
-            _touched = true;
+            setState(() => _touched = true);
             _validate(value);
             widget.onChanged?.call(value);
           },
           decoration: InputDecoration(
             hintText: widget.hint,
-            errorText: hasError ? _errorText : null,
-            suffixIcon: widget.suffix ??
+
+            // TextFormField ya se encarga de mostrar el texto de error automáticamente
+            // debajo de la caja cuando la validación falla.
+            suffixIcon:
+                widget.suffix ??
                 (showCheck
-                    ? const Icon(Icons.check_circle,
-                        color: AppColors.success, size: 20)
+                    ? const Icon(
+                        Icons.check_circle,
+                        color: AppColors.success,
+                        size: 20,
+                      )
                     : hasError
-                        ? const Icon(Icons.error_outline,
-                            color: AppColors.error, size: 20)
-                        : null),
+                    ? const Icon(
+                        Icons.error_outline,
+                        color: AppColors.error,
+                        size: 20,
+                      )
+                    : null),
           ),
         ),
       ],
@@ -109,9 +122,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           if (widget.isOptional)
             TextSpan(
               text: ' (opcional)',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textMuted,
-              ),
+              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
             ),
         ],
       ),
