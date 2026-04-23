@@ -9,26 +9,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/navigation_provider.dart';
-import '../widgets/auth_profile_menu.dart';
-import 'athlos_sidebar.dart';
+import '../widgets/auth_profile_menu.dart'; // El widget que creamos antes
 //import 'package:supabase_flutter/supabase_flutter.dart';
-
-// Creamos el Notifier que manejará el estado del Sidebar
-class SidebarCollapsedNotifier extends Notifier<bool> {
-  @override
-  bool build() => false; // Estado inicial: expandido (false)
-
-  // Función limpia para cambiar el estado
-  void toggle() {
-    state = !state;
-  }
-}
-
-// Declaramos el provider usando la nueva sintaxis
-final sidebarCollapsedProvider =
-    NotifierProvider<SidebarCollapsedNotifier, bool>(
-      SidebarCollapsedNotifier.new,
-    );
 
 class MainLayout extends ConsumerWidget {
   final List<Widget> pages;
@@ -59,44 +41,87 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-  // DISEÑO DESKTOP (Nuevo Sidebar)
+  // DISEÑO DESKTOP (Sidebar Oscura)
   Widget _buildDesktopLayout(
     BuildContext context,
     WidgetRef ref,
     int selectedIndex,
     bool isExtended,
   ) {
-    // Convertimos temporalmente tus railDestinations antiguos al nuevo formato SidebarItem
-    // NOTA: Lo ideal a futuro es que desde el router le pases directamente una lista de SidebarItem
-    final isManuallyCollapsed = ref.watch(sidebarCollapsedProvider);
-    final shouldCollapse = !isExtended || isManuallyCollapsed;
-    final sidebarItems = railDestinations.map((dest) {
-      return SidebarItem(
-        icon: (dest.icon as Icon).icon ?? Icons.circle,
-        selectedIcon:
-            (dest.selectedIcon as Icon?)?.icon ??
-            (dest.icon as Icon).icon ??
-            Icons.circle,
-        label: (dest.label as Text).data ?? '',
-        // Asignamos todo a "principal" por ahora para que compile y funcione
-        section: SidebarSection.principal,
-      );
-    }).toList();
-
     return Scaffold(
       body: Row(
         children: [
-          // TU NUEVO BARRA LATERAL ATHLOS
-          AthlosSidebar(
-            items: sidebarItems,
-            selectedIndex: selectedIndex,
-            collapsed: shouldCollapse,
-            onItemSelected: (index) {
-              ref.read(navigationIndexProvider.notifier).changeIndex(index);
-            },
-            onToggleCollapsed: () {
-              ref.read(sidebarCollapsedProvider.notifier).toggle();
-            },
+          // BARRA LATERAL
+          Container(
+            width: isExtended ? 260 : 80,
+            color: const Color(0xFF121212), // Fondo negro
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                // 1. LOGO ATHLOS (Arriba)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: isExtended
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.flash_on,
+                        color: Colors.red,
+                        size: 30,
+                      ), // Tu Logo
+                      if (isExtended) ...[
+                        const SizedBox(width: 10),
+                        const Text(
+                          'ATHLOS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // 2. MENÚ DE NAVEGACIÓN (Centro)
+                Expanded(
+                  child: NavigationRail(
+                    backgroundColor: Colors
+                        .transparent, // Importante: Transparente para ver el fondo del Container
+                    unselectedIconTheme: const IconThemeData(
+                      color: Colors.white60,
+                    ),
+                    selectedIconTheme: const IconThemeData(color: Colors.red),
+                    unselectedLabelTextStyle: const TextStyle(
+                      color: Colors.white60,
+                    ),
+                    selectedLabelTextStyle: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    selectedIndex: selectedIndex,
+                    extended: isExtended,
+                    onDestinationSelected: (index) {
+                      ref
+                          .read(navigationIndexProvider.notifier)
+                          .changeIndex(index);
+                    },
+                    destinations: railDestinations,
+                  ),
+                ),
+
+                // 3. PERFIL Y CIERRE DE SESIÓN (Abajo)
+                const Divider(color: Colors.white24, indent: 20, endIndent: 20),
+                AuthProfileMenu(
+                  isCollapsed: !isExtended,
+                ), // El perfil con nombre y rol
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
 
           // CONTENIDO CENTRAL
