@@ -119,7 +119,7 @@ class _InactivityDetectorState extends State<InactivityDetector> {
       onPointerSignal: (_) => _resetTimer(),
       child: Focus(
         autofocus: true,
-        onKeyEvent: (_, __) {
+        onKeyEvent: (_, _) {
           _resetTimer();
           return KeyEventResult.ignored;
         },
