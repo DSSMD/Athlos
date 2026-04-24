@@ -12,6 +12,7 @@ import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
+import '../../presentation/pages/produccion/ordenes_page.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
@@ -170,27 +171,31 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: const [
-            Center(child: Text('Dashboard Cajas')),
-            Center(child: Text('Punto de Venta (POS)')),
+            Center(child: Text('Dashboard Cajas')), // Página 1: Dashboard
+            OrdenesPage(), // Página 2: Tu nueva vista de Órdenes
           ],
           railDestinations: const [
             NavigationRailDestination(
-              icon: Icon(Icons.point_of_sale),
-              label: Text('Cajas'),
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: Text('Inicio'),
             ),
             NavigationRailDestination(
-              icon: Icon(Icons.shopping_cart),
-              label: Text('Ventas'),
+              icon: Icon(Icons.assignment_outlined), // Ícono de lista/orden
+              selectedIcon: Icon(Icons.assignment),
+              label: Text('Órdenes'),
             ),
           ],
           bottomNavItems: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.point_of_sale),
-              label: 'Cajas',
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Inicio',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart),
-              label: 'Ventas',
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment),
+              label: 'Órdenes',
             ),
           ],
         ),

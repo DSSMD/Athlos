@@ -21,14 +21,15 @@ class OrdenFormState {
     this.idCliente,
   });
 
-  int get totalPrendas => tallas.values.fold(0, (sum, cantidad) => sum + cantidad);
+  int get totalPrendas =>
+      tallas.values.fold(0, (sum, cantidad) => sum + cantidad);
 
   bool get esValido {
-    return nombreModelo.trim().isNotEmpty && 
-           imagePath != null && 
-           totalPrendas > 0 &&
-           fechaEntrega != null &&
-           (idCliente != null && idCliente!.trim().isNotEmpty);
+    return nombreModelo.trim().isNotEmpty &&
+        imagePath != null &&
+        totalPrendas > 0 &&
+        fechaEntrega != null &&
+        (idCliente != null && idCliente!.trim().isNotEmpty);
   }
 
   OrdenFormState copyWith({
@@ -93,8 +94,7 @@ class OrdenFormNotifier extends Notifier<OrdenFormState> {
       debugPrint('✅ Flujo de guardado completado en la BD real.');
 
       // Limpiamos el formulario tras guardar exitosamente
-      state = OrdenFormState(); 
-      
+      state = OrdenFormState();
     } catch (e) {
       debugPrint('❌ Falló el guardado: $e');
     }
@@ -104,6 +104,8 @@ class OrdenFormNotifier extends Notifier<OrdenFormState> {
 // ==========================================
 // 3. PROVIDER (Para inyectarlo en la vista)
 // ==========================================
-final ordenFormProvider = NotifierProvider<OrdenFormNotifier, OrdenFormState>(() {
-  return OrdenFormNotifier();
-});
+final ordenFormProvider = NotifierProvider<OrdenFormNotifier, OrdenFormState>(
+  () {
+    return OrdenFormNotifier();
+  },
+);
