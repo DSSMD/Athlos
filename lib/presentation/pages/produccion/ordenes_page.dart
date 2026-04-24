@@ -127,7 +127,18 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _KpiRow(isMobile: isMobile),
+                        _KpiRow(
+                          isMobile: isMobile,
+                          pendientes: listaDeOrdenesReales
+                              .where((o) => o.idEstado == 1)
+                              .length,
+                          enProduccion: listaDeOrdenesReales
+                              .where((o) => o.idEstado == 2)
+                              .length,
+                          totalVentas: listaDeOrdenesReales
+                              .fold<double>(0, (sum, o) => sum + o.costoTotal)
+                              .toInt(),
+                        ),
                         const SizedBox(height: AppSpacing.xl),
 
                         FilterChips(
@@ -140,10 +151,18 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                           ],
                           counts: [
                             listaDeOrdenesReales.length,
-                            listaDeOrdenesReales.where((o) => o.idEstado == 1).length,
-                            listaDeOrdenesReales.where((o) => o.idEstado == 2).length,
-                            listaDeOrdenesReales.where((o) => o.idEstado == 3).length,
-                            listaDeOrdenesReales.where((o) => o.idEstado == 4).length,
+                            listaDeOrdenesReales
+                                .where((o) => o.idEstado == 1)
+                                .length,
+                            listaDeOrdenesReales
+                                .where((o) => o.idEstado == 2)
+                                .length,
+                            listaDeOrdenesReales
+                                .where((o) => o.idEstado == 3)
+                                .length,
+                            listaDeOrdenesReales
+                                .where((o) => o.idEstado == 4)
+                                .length,
                           ],
                           selected: _selectedFilter,
                           onChanged: (i) => setState(() {
@@ -157,7 +176,8 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                           const EmptyState(
                             icon: Icons.inbox_outlined,
                             title: 'No se encontraron órdenes',
-                            subtitle: 'Probá con otro filtro o creá una nueva orden.',
+                            subtitle:
+                                'Probá con otro filtro o creá una nueva orden.',
                           )
                         else if (isMobile)
                           _MobileList(orders: paginatedOrders)
@@ -199,54 +219,60 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 // ══════════════════════════════════════════════════════════════════════════════
 class _KpiRow extends StatelessWidget {
   final bool isMobile;
-  const _KpiRow({required this.isMobile});
+  final int pendientes;
+  final int enProduccion;
+  final int totalVentas;
+
+  const _KpiRow({
+    required this.isMobile,
+    required this.pendientes,
+    required this.enProduccion,
+    required this.totalVentas,
+  });
 
   @override
   Widget build(BuildContext context) {
     final kpis = [
       KpiCard(
-        value: '12',
+        value: '$pendientes',
         label: 'Pendientes',
         description: 'Por iniciar',
         valueColor: AppColors.warning,
       ),
       KpiCard(
-        value: '5',
-        label: 'Producción',
+        value: '$enProduccion',
+        label: 'En producción',
         description: 'En taller',
         valueColor: AppColors.info,
       ),
       KpiCard(
-        value: 'Bs. 4500',
+        value: 'Bs. $totalVentas',
         label: 'Ventas',
-        description: 'Este mes',
+        description: 'Acumulado',
         valueColor: AppColors.success,
       ),
     ];
 
-    return isMobile
-        ? Column(
-            children: kpis
-                .map(
-                  (k) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: k,
-                  ),
-                )
-                .toList(),
-          )
-        : Row(
-            children: kpis
-                .map(
-                  (k) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: k,
-                    ),
-                  ),
-                )
-                .toList(),
-          );
+    if (isMobile) {
+      return Column(
+        children: kpis
+            .map(
+              (k) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: k,
+              ),
+            )
+            .toList(),
+      );
+    }
+    return Row(
+      children: [
+        for (var i = 0; i < kpis.length; i++) ...[
+          Expanded(child: kpis[i]),
+          if (i < kpis.length - 1) const SizedBox(width: AppSpacing.lg),
+        ],
+      ],
+    );
   }
 }
 
@@ -283,21 +309,21 @@ class _DesktopTable extends StatelessWidget {
             child: Row(
               children: [
                 _col('CÓDIGO', 2),
-                _col('ID CLIENTE', 4), // Más ancho para el UUID
-                _col('F. ORDEN', 2), // Agregamos la fecha de orden real
-                _col('ENTREGA', 2),
-                _col('ESTADOS', 2),
+                _col('CLIENTE', 3),
+                _col('PRODUCTO', 3),
+                _col('CANTIDAD', 2),
                 _col('TOTAL', 2),
-                const SizedBox(
-                  width: 80,
-                  child: Center(
-                    child: Text(
-                      'ACCIONES',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textMuted,
-                      ),
+                _col('ENTREGA', 2),
+                _col('ESTADO', 2),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    'ACCIONES',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textMuted,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -333,9 +359,19 @@ class _OrderListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String displayCode = order.numOrden.length > 8
-        ? order.numOrden.substring(0, 8)
-        : order.numOrden;
+    // Código abreviado para mostrar: "ORD-2846" en vez del UUID completo
+    final String displayCode = order.numOrden.length > 8
+        ? order.numOrden.substring(0, 8).toUpperCase()
+        : order.numOrden.toUpperCase();
+
+    // TODO(SCRUM-72): Los campos 'nombreCliente', 'producto' y 'cantidad' no
+    // existen en OrdenModel actualmente. Requieren joins con la tabla 'cliente'
+    // y con las tablas de líneas/items de la orden. Por ahora se muestra un
+    // placeholder derivado del id_cliente. Quitar este TODO cuando backend
+    // expanda el modelo.
+    final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
+    const String productoDisplay = '—';
+    const String cantidadDisplay = '—';
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -348,48 +384,42 @@ class _OrderListRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              displayCode.toUpperCase(),
-              style: AppTypography.small.copyWith(fontWeight: FontWeight.bold),
+              '#$displayCode',
+              style: AppTypography.small.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary500,
+              ),
             ),
           ),
 
-          // ID CLIENTE (Crudo, sin texto extra)
+          // CLIENTE (placeholder hasta que haya join)
           Expanded(
-            flex: 4,
-            child: Text(order.idCliente, style: AppTypography.caption),
+            flex: 3,
+            child: Text(
+              clienteDisplay,
+              style: AppTypography.small,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
 
-          // FECHA ORDEN
+          // PRODUCTO (placeholder)
+          Expanded(
+            flex: 3,
+            child: Text(
+              productoDisplay,
+              style: AppTypography.small.copyWith(color: AppColors.textMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          // CANTIDAD (placeholder)
           Expanded(
             flex: 2,
             child: Text(
-              '${order.fechaOrden.day}/${order.fechaOrden.month}/${order.fechaOrden.year}',
-              style: AppTypography.small,
-            ),
-          ),
-
-          // FECHA ENTREGA
-          Expanded(
-            flex: 2,
-            child: Text(
-              '${order.fechaEntrega.day}/${order.fechaEntrega.month}/${order.fechaEntrega.year}',
-              style: AppTypography.small,
-            ),
-          ),
-
-          // ESTADOS (Orden y Pago)
-          // ESTADOS (Orden y Pago)
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _StatusBadge(idEstado: order.idEstado),
-                const SizedBox(height: 4),
-                // Le pasamos el número directamente (puede ser nulo)
-                _PagoBadge(idPago: order.idEstadoPago),
-              ],
+              cantidadDisplay,
+              style: AppTypography.small.copyWith(color: AppColors.textMuted),
             ),
           ),
 
@@ -398,27 +428,43 @@ class _OrderListRow extends StatelessWidget {
             flex: 2,
             child: Text(
               'Bs. ${order.costoTotal.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
 
-          // ACCIONES
+          // ENTREGA
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${order.fechaEntrega.day.toString().padLeft(2, '0')}/'
+              '${order.fechaEntrega.month.toString().padLeft(2, '0')}/'
+              '${order.fechaEntrega.year}',
+              style: AppTypography.small,
+            ),
+          ),
+
+          // ESTADO
+          Expanded(flex: 2, child: _StatusBadge(idEstado: order.idEstado)),
+
+          // ACCIONES — botón "Ver"
           SizedBox(
-            width: 80,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: AppColors.textMuted,
-                    size: 20,
+            width: 60,
+            child: Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                onPressed: () {
+                  // TODO(SCRUM-72): abrir pantalla de detalle de orden
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              ],
+                child: const Text('Ver'),
+              ),
             ),
           ),
         ],
@@ -445,140 +491,136 @@ class _MobileList extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  final OrdenModel order; // CAMBIADO A OrdenModel
+  final OrdenModel order;
   const _OrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
-    String displayCode = order.numOrden.length > 8
-        ? order.numOrden.substring(0, 8)
-        : order.numOrden;
+    final String displayCode = order.numOrden.length > 8
+        ? order.numOrden.substring(0, 8).toUpperCase()
+        : order.numOrden.toUpperCase();
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                displayCode.toUpperCase(),
-                style: AppTypography.small.copyWith(
-                  fontWeight: FontWeight.bold,
+    // Ver TODO en _OrderListRow sobre los joins pendientes.
+    final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
+
+    return InkWell(
+      onTap: () {
+        // TODO(SCRUM-72): abrir pantalla de detalle de orden
+      },
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: código + estado
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '#$displayCode',
+                  style: AppTypography.small.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary500,
+                  ),
                 ),
-              ),
-              Row(
-                children: [
-                  _PagoBadge(idPago: order.idEstadoPago),
-                  const SizedBox(width: 4),
-                  _StatusBadge(idEstado: order.idEstado),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              const Icon(
-                Icons.person_outline,
-                size: 16,
-                color: AppColors.textMuted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'ID: ${order.idCliente}',
-                  style: AppTypography.body,
-                  overflow: TextOverflow.ellipsis,
+                _StatusBadge(idEstado: order.idEstado),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Cliente
+            Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: AppColors.textMuted,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                size: 16,
-                color: AppColors.textMuted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Producto BD',
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    clienteDisplay,
+                    style: AppTypography.body,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Producto (placeholder)
+            Row(
+              children: [
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    '—',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Fecha de entrega
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Entrega: '
+                  '${order.fechaEntrega.day.toString().padLeft(2, '0')}/'
+                  '${order.fechaEntrega.month.toString().padLeft(2, '0')}/'
+                  '${order.fechaEntrega.year}',
                   style: AppTypography.small.copyWith(
                     color: AppColors.textMuted,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const Divider(height: AppSpacing.xl),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total:',
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
-              ),
-              Text(
-                'Bs. ${order.costoTotal.toStringAsFixed(2)}',
-                style: AppTypography.body.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary500,
+              ],
+            ),
+
+            const Divider(height: AppSpacing.xl),
+
+            // Total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total',
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.textMuted,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-// ══════════════════════════════════════════════════════════════════════════════
-// Añadido para mostrar estados de pago
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _PagoBadge extends StatelessWidget {
-  final int? idPago; // Ahora recibe un número que puede ser nulo
-  const _PagoBadge({required this.idPago});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = AppColors.neutral500; // Color por defecto (gris)
-    String label = 'N/A';
-
-    // Mapeamos los IDs de tu base de datos
-    if (idPago == 1) {
-      color = AppColors.error; // Rojo
-      label = 'PENDIENTE';
-    } else if (idPago == 2) {
-      color = AppColors.warning; // Naranja
-      label = 'PARCIAL';
-    } else if (idPago == 3) {
-      color = AppColors.success; // Verde
-      label = 'PAGADO';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        '\$ $label',
-        style: AppTypography.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 9,
+                Text(
+                  'Bs. ${order.costoTotal.toStringAsFixed(2)}',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -633,34 +675,3 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
-
-/*
-// ══════════════════════════════════════════════════════════════════════════════
-// Se replico este mismo empezando desde la Linea 690 
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _PagoBadge extends StatelessWidget {
-  final String pago; // Recibe un String fijo por ahora
-  const _PagoBadge({required this.pago});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = AppColors.warning; // Naranja genérico
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        '\$ $pago',
-        style: AppTypography.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 9,
-        ),
-      ),
-    );
-  }
-}*/
