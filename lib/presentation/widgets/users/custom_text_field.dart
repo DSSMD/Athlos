@@ -64,20 +64,26 @@ class _CustomTextFieldState extends State<CustomTextField> {
       children: [
         _buildLabel(),
         const SizedBox(height: AppSpacing.xs),
-        TextField(
+
+        TextFormField(
           controller: widget.controller,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
           enabled: widget.enabled,
           style: AppTypography.small,
+
+          validator: widget.validator,
+
           onChanged: (value) {
-            _touched = true;
+            setState(() => _touched = true);
             _validate(value);
             widget.onChanged?.call(value);
           },
           decoration: InputDecoration(
             hintText: widget.hint,
-            errorText: hasError ? _errorText : null,
+
+            // TextFormField ya se encarga de mostrar el texto de error automáticamente
+            // debajo de la caja cuando la validación falla.
             suffixIcon:
                 widget.suffix ??
                 (showCheck

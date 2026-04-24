@@ -319,10 +319,16 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                         !_isEditing, // 💡 Opcional: Bloquear email en edición
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) {
-                      if (v == null || v.isEmpty) {
+                      if (v == null || v.trim().isEmpty) {
                         return 'El email es obligatorio';
                       }
-                      if (!v.contains('@')) return 'Email inválido';
+                      // 💡 MEJORA: Validación robusta con RegEx para correos
+                      final emailRegEx = RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      );
+                      if (!emailRegEx.hasMatch(v.trim())) {
+                        return 'Ingresa un email válido (ej: nombre@dominio.com)';
+                      }
                       return null;
                     },
                   ),
@@ -333,6 +339,19 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                     isOptional: true,
                     controller: _telefonoCtrl,
                     keyboardType: TextInputType.phone,
+                    validator: (v) {
+                      // 💡 MEJORA: Si escriben algo, validamos que sean números o el signo '+'
+                      if (v != null && v.trim().isNotEmpty) {
+                        final phoneRegEx = RegExp(r'^\+?[0-9\s]+$');
+                        if (!phoneRegEx.hasMatch(v)) {
+                          return 'Solo se permiten números y el signo +';
+                        }
+                        if (v.length < 7) {
+                          return 'El número es muy corto';
+                        }
+                      }
+                      return null; // Como es opcional, si está vacío está bien
+                    },
                   ),
                 ],
               ),
@@ -380,6 +399,9 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                         ),
                       ),
                       validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Debes confirmar la contraseña';
+                        }
                         if (v != _passCtrl.text) {
                           return 'Las contraseñas no coinciden';
                         }
