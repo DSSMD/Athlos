@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Agregado Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// --- TUS IMPORTS DE DISEÑO ---
-// Asegúrate de que las rutas a tu theme y widgets sean correctas
+// Tema
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../widgets/users/kpi_card.dart';
-import '../../widgets/users/search_input.dart';
 
-// --- TUS IMPORTS DE DATOS (Rutas largas como definimos) ---
+// Widgets compartidos (reutilizables entre módulos)
+import '../../widgets/shared/empty_state.dart';
+import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/sticky_topbar.dart';
+
+// Widgets específicos de usuarios (KpiCard — se comparte sin mover por ahora)
+import '../../widgets/users/kpi_card.dart';
+
+// Datos
 import '../../../domain/models/orden_model.dart';
-import '../../../presentation/providers/orden_list_provider.dart';
+import '../../providers/orden_list_provider.dart';
 
 /* // ══════════════════════════════════════════════════════════════════════════════
 // CÓDIGO DE PRUEBA (MOCKS) COMENTADO - YA NO SE USA PORQUE TENEMOS SUPABASE
@@ -101,10 +107,17 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
             return Column(
               children: [
-                _StickyTopbar(
+                StickyTopbar(
                   isMobile: isMobile,
+                  title: 'Órdenes',
+                  searchHint: 'Buscar orden, cliente...',
                   searchController: _searchController,
                   onSearchChanged: (_) => setState(() => _currentPage = 1),
+                  newButtonLabelMobile: 'Nueva',
+                  newButtonLabelDesktop: 'Nueva orden',
+                  onNewPressed: () {
+                    // TODO: abrir pantalla "Nueva orden" (SCRUM-75)
+                  },
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -117,7 +130,21 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                         _KpiRow(isMobile: isMobile),
                         const SizedBox(height: AppSpacing.xl),
 
-                        _FilterChips(
+                        FilterChips(
+                          labels: const [
+                            'Todas',
+                            'Pendientes',
+                            'Producción',
+                            'Entregadas',
+                            'Canceladas',
+                          ],
+                          counts: [
+                            listaDeOrdenesReales.length,
+                            listaDeOrdenesReales.where((o) => o.idEstado == 1).length,
+                            listaDeOrdenesReales.where((o) => o.idEstado == 2).length,
+                            listaDeOrdenesReales.where((o) => o.idEstado == 3).length,
+                            listaDeOrdenesReales.where((o) => o.idEstado == 4).length,
+                          ],
                           selected: _selectedFilter,
                           onChanged: (i) => setState(() {
                             _selectedFilter = i;
@@ -126,13 +153,11 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
 
-                        // --- LISTA / TABLA REAL ---
                         if (paginatedOrders.isEmpty)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.xl2),
-                              child: Text("No se encontraron órdenes"),
-                            ),
+                          const EmptyState(
+                            icon: Icons.inbox_outlined,
+                            title: 'No se encontraron órdenes',
+                            subtitle: 'Probá con otro filtro o creá una nueva orden.',
                           )
                         else if (isMobile)
                           _MobileList(orders: paginatedOrders)
@@ -141,20 +166,20 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
                         const SizedBox(height: AppSpacing.xl),
 
-                        // --- PAGINACIÓN DINÁMICA ---
                         if (isMobile)
-                          _LoadMoreButton(
+                          LoadMoreButton(
                             hasMore: _currentPage < totalPages,
                             onPressed: () => setState(() => _currentPage++),
                           )
                         else
-                          _DesktopPagination(
+                          DesktopPagination(
                             currentPage: _currentPage,
                             totalPages: totalPages,
                             totalItems: totalItems,
                             itemsPerPage: _itemsPerPage,
                             onPageChanged: (page) =>
                                 setState(() => _currentPage = page),
+                            recordsLabel: 'órdenes',
                           ),
                       ],
                     ),
@@ -172,176 +197,6 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 // ══════════════════════════════════════════════════════════════════════════════
 // COMPONENTES PRIVADOS DE LA PÁGINA (Sin Cambios Visuales)
 // ══════════════════════════════════════════════════════════════════════════════
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.isMobile,
-    required this.searchController,
-    required this.onSearchChanged,
-  });
-  final bool isMobile;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = Text('Órdenes', style: AppTypography.h1);
-    final btn = ElevatedButton.icon(
-      onPressed: () {},
-      icon: const Icon(Icons.add, size: 18),
-      label: Text(isMobile ? 'Nueva' : 'Nueva Orden'),
-    );
-
-    if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(child: title),
-              btn,
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SearchInput(
-            hintText: 'Buscar orden...',
-            controller: searchController,
-            onChanged: onSearchChanged,
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        title,
-        const Spacer(),
-        SizedBox(
-          width: 320,
-          child: SearchInput(
-            hintText: 'Buscar orden...',
-            controller: searchController,
-            onChanged: onSearchChanged,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        btn,
-      ],
-    );
-  }
-}
-
-class _StickyTopbar extends StatelessWidget {
-  const _StickyTopbar({
-    required this.isMobile,
-    required this.searchController,
-    required this.onSearchChanged,
-  });
-  final bool isMobile;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-        vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
-      ),
-      child: _Header(
-        isMobile: isMobile,
-        searchController: searchController,
-        onSearchChanged: onSearchChanged,
-      ),
-    );
-  }
-}
-
-class _FilterChips extends StatelessWidget {
-  final int selected;
-  final ValueChanged<int> onChanged;
-  const _FilterChips({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final labels = [
-      'Todas',
-      'Pendientes',
-      'Producción',
-      'Entregadas',
-      'Canceladas',
-    ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(
-          labels.length,
-          (i) => Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(labels[i]),
-              selected: selected == i,
-              onSelected: (_) => onChanged(i),
-              // ignore: deprecated_member_use
-              selectedColor: AppColors.primary500.withOpacity(0.1),
-              labelStyle: TextStyle(
-                color: selected == i
-                    ? AppColors.primary500
-                    : AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DesktopPagination extends StatelessWidget {
-  final int currentPage, totalPages, totalItems, itemsPerPage;
-  final ValueChanged<int> onPageChanged;
-  const _DesktopPagination({
-    required this.currentPage,
-    required this.totalPages,
-    required this.totalItems,
-    required this.itemsPerPage,
-    required this.onPageChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Mostrando ${(currentPage - 1) * itemsPerPage + 1} a ${currentPage * itemsPerPage > totalItems ? totalItems : currentPage * itemsPerPage} de $totalItems órdenes',
-        ),
-        Row(
-          children: [
-            IconButton(
-              onPressed: currentPage > 1
-                  ? () => onPageChanged(currentPage - 1)
-                  : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Text('Página $currentPage de $totalPages'),
-            IconButton(
-              onPressed: currentPage < totalPages
-                  ? () => onPageChanged(currentPage + 1)
-                  : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class _KpiRow extends StatelessWidget {
   final bool isMobile;
   const _KpiRow({required this.isMobile});
@@ -715,7 +570,7 @@ class _PagoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
@@ -764,7 +619,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
@@ -809,26 +664,3 @@ class _PagoBadge extends StatelessWidget {
     );
   }
 }*/
-
-class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({required this.hasMore, required this.onPressed});
-  final bool hasMore;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!hasMore) return const SizedBox.shrink();
-    return Center(
-      child: TextButton(
-        onPressed: onPressed,
-        child: Text(
-          'Cargar más...',
-          style: AppTypography.small.copyWith(
-            color: AppColors.primary500,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
