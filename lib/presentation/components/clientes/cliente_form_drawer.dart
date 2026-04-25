@@ -1,18 +1,78 @@
-//
+// lib/presentation/components/clientes/cliente_form_page.dart
 
 import 'package:flutter/material.dart';
-import '../../components/clientes/cliente_contact_card.dart';
-import '../../components/clientes/cliente_credit_card.dart';
-import '../../components/clientes/cliente_error_dialog.dart';
-import '../../components/clientes/cliente_identification_card.dart';
-import '../../components/clientes/cliente_preferences_card.dart';
-import '../../components/clientes/cliente_success_dialog.dart';
-import '../../components/clientes/cliente_summary_panel.dart';
-import '../../models/cliente_mock.dart';
+
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+
+import 'cliente_contact_card.dart';
+import 'cliente_credit_card.dart';
+import 'cliente_error_dialog.dart';
+import 'cliente_identification_card.dart';
+import 'cliente_preferences_card.dart';
+import 'cliente_success_dialog.dart';
+import 'cliente_summary_panel.dart';
+
+import '../../models/cliente_mock.dart';
 import '../../widgets/loading_spinner.dart';
+
+/// API pública — llamar con `showClienteFormDrawer(context, initialCliente: ...)`.
+Future<void> showClienteFormDrawer(
+  BuildContext context, {
+  ClienteFormMode mode = ClienteFormMode.crear,
+  ClienteMock? initialCliente,
+}) {
+  final isMobile = MediaQuery.of(context).size.width < 900;
+
+  if (isMobile) {
+    // Mobile: pantalla completa que sube desde abajo
+    return Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false, // Importante para que se vea el fondo oscuro
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (_, _, _) =>
+            ClienteFormPage(mode: mode, initialCliente: initialCliente),
+        transitionsBuilder: (_, animation, _, child) {
+          return SlideTransition(
+            position: animation.drive(
+              Tween(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).chain(CurveTween(curve: Curves.easeOutCubic)),
+            ),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  // Desktop: drawer lateral derecho con overlay
+  return showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Cerrar',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (_, _, _) => Align(
+      alignment: Alignment.centerRight,
+      child: ClienteFormPage(mode: mode, initialCliente: initialCliente),
+    ),
+    transitionBuilder: (_, animation, _, child) {
+      return SlideTransition(
+        position: animation.drive(
+          Tween(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        ),
+        child: child,
+      );
+    },
+  );
+}
 
 class ClienteFormPage extends StatefulWidget {
   const ClienteFormPage({
@@ -235,239 +295,70 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     );
   }
 
-  // ───────────────────────────────────────────────────── UI ──
+  // ══════════════════════════════════════════════════════════════════════════════
+  // BUILD PRINCIPAL
+  // ══════════════════════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 1024;
-    final isEditar = widget.mode == ClienteFormMode.editar;
-    final mostrarPanel = isEditar && widget.initialCliente != null;
+    // 1. Detectamos si es móvil para el tamaño
+    final isMobile = MediaQuery.of(context).size.width < 900;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Column(
-        children: [
-          _buildTopbar(isEditar),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: isMobile
-                  ? _buildMobileLayout(mostrarPanel)
-                  : _buildDesktopLayout(mostrarPanel),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    // 2. EL TAMAÑO: 100% en móvil, 500px de ancho en escritorio
+    final double formWidth = isMobile ? double.infinity : 600.0;
 
-  Widget _buildTopbar(bool isEditar) {
-    final isMobile = MediaQuery.of(context).size.width < 700;
+    // 👇 1. AÑADE ESTE WIDGET 'Material' AQUÍ 👇
+    return Material(
+      color:
+          AppColors.background, // Movemos el color de fondo hacia el Material
+      elevation:
+          16, // Opcional: Le da una sombra muy elegante a tu Drawer flotante
 
-    // TODO @denshel: este patrón (topbar blanco en desktop / negro en mobile)
-    // se repite en UI-02 y SCRUM-69. Al extraer el Shell adaptativo,
-    // considerá crear un AppTopbar reutilizable con variantes configurables.
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: isMobile ? AppColors.neutral950 : AppColors.brandWhite,
-        border: isMobile
-            ? null
-            : const Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: isMobile
-          ? _buildTopbarMobile(isEditar)
-          : _buildTopbarDesktop(isEditar),
-    );
-  }
-
-  Widget _buildTopbarDesktop(bool isEditar) {
-    return Row(
-      children: [
-        Expanded(child: _buildBreadcrumb(isEditar, isMobile: false)),
-        _buildCancelButton(isMobile: false),
-        const SizedBox(width: AppSpacing.md),
-        _buildSaveButton(isEditar, isMobile: false),
-      ],
-    );
-  }
-
-  Widget _buildTopbarMobile(bool isEditar) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildBreadcrumb(isEditar, isMobile: true),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(child: _buildCancelButton(isMobile: true)),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: _buildSaveButton(isEditar, isMobile: true)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBreadcrumb(bool isEditar, {required bool isMobile}) {
-    if (isMobile) {
-      return Row(
-        children: [
-          InkWell(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.primary500,
-                  size: 18,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Clientes',
-                  style: AppTypography.small.copyWith(
-                    color: AppColors.primary500,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              isEditar ? 'Editar cliente' : 'Nuevo cliente',
-              style: AppTypography.body.copyWith(
-                color: AppColors.brandWhite,
-                fontWeight: FontWeight.w700,
+      child: SizedBox(
+        width: formWidth, // Mantenemos el límite de tamaño
+        // color: AppColors.background, <-- ⚠️ BORRA el color de aquí porque ya está arriba
+        child: SafeArea(
+          child: Column(
+            children: [
+              _Header(
+                isEditing: widget.mode == ClienteFormMode.editar,
+                onClose: () => Navigator.of(context).pop(),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const Spacer(),
-          const SizedBox(width: 80),
-        ],
-      );
-    }
 
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            'Clientes',
-            style: AppTypography.body.copyWith(color: AppColors.textMuted),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Text('/'),
-        ),
-        Flexible(
-          child: Text(
-            isEditar ? 'Editar cliente' : 'Nuevo cliente',
-            style: AppTypography.h3.copyWith(color: AppColors.textPrimary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCancelButton({required bool isMobile}) {
-    return OutlinedButton(
-      onPressed: _isSaving ? null : () => Navigator.of(context).maybePop(),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        side: BorderSide(
-          color: isMobile ? AppColors.neutral600 : AppColors.border,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-      ),
-      child: Text(
-        'Cancelar',
-        style: AppTypography.small.copyWith(
-          color: isMobile ? AppColors.brandWhite : AppColors.textSecondary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveButton(bool isEditar, {required bool isMobile}) {
-    return ElevatedButton(
-      onPressed: _isSaving ? null : _handleGuardar,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary500,
-        foregroundColor: AppColors.brandWhite,
-        disabledBackgroundColor: AppColors.primary200,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        elevation: 0,
-      ),
-      child: _isSaving
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: LoadingSpinner(size: LoadingSize.sm),
-            )
-          : Text(
-              isEditar ? 'Guardar cambios' : 'Crear cliente',
-              style: AppTypography.small.copyWith(
-                color: AppColors.brandWhite,
-                fontWeight: FontWeight.w600,
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: _buildFormColumn(),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-    );
-  }
 
-  Widget _buildDesktopLayout(bool mostrarPanel) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 2, child: _buildFormColumn()),
-        if (mostrarPanel) ...[
-          const SizedBox(width: AppSpacing.xl),
-          Expanded(
-            flex: 1,
-            child: ClienteSummaryPanel(cliente: widget.initialCliente!),
+              _Footer(
+                isEditing: widget.mode == ClienteFormMode.editar,
+                isSaving: _isSaving,
+                onCancel: () => Navigator.of(context).pop(),
+                onSave: () {
+                  if (_validar()) {
+                    // Lógica para guardar
+                  }
+                },
+              ),
+            ],
           ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildMobileLayout(bool mostrarPanel) {
-    return Column(
-      children: [
-        if (mostrarPanel) ...[
-          ClienteSummaryPanel(cliente: widget.initialCliente!),
-          const SizedBox(height: AppSpacing.xl),
-        ],
-        _buildFormColumn(),
-      ],
+        ),
+      ),
     );
   }
 
   Widget _buildFormColumn() {
     return Column(
       children: [
+        if (widget.mode == ClienteFormMode.editar &&
+            widget.initialCliente != null) ...[
+          ClienteSummaryPanel(cliente: widget.initialCliente!),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+
         _FlashWrap(
           isFlashing:
               _flashingField == 'nitCi' || _flashingField == 'representante',
@@ -521,6 +412,119 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         ),
         const SizedBox(height: AppSpacing.xl3),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HEADER
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _Header extends StatelessWidget {
+  const _Header({required this.isEditing, required this.onClose});
+  final bool isEditing;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.lg,
+      ),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Usuarios',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                Text(
+                  isEditing ? 'Editar usuario' : 'Nuevo usuario',
+                  style: AppTypography.h3,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close),
+            color: AppColors.textSecondary,
+            tooltip: 'Cerrar',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FOOTER
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _Footer extends StatelessWidget {
+  const _Footer({
+    required this.onCancel,
+    required this.onSave,
+    required this.isEditing,
+    this.isSaving = false,
+  });
+
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+  final bool isEditing;
+  final bool isSaving;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.lg,
+      ),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: isSaving ? null : onCancel,
+              child: const Text('Cancelar'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: isSaving ? null : onSave,
+              child: isSaving
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const LoadingSpinner(
+                          size: LoadingSize.sm,
+                          color: AppColors.brandWhite,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(isEditing ? 'Guardando...' : 'Creando...'),
+                      ],
+                    )
+                  : Text(isEditing ? 'Guardar cambios' : 'Crear usuario'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

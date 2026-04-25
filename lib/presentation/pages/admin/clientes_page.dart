@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../components/clientes/cliente_form_drawer.dart';
 import '../../components/clientes/cliente_card.dart';
 import '../../components/clientes/cliente_list_row.dart';
 
@@ -29,7 +30,6 @@ import '../../../domain/models/cliente_model.dart';
 import '../../providers/cliente_provider.dart';
 
 import '../../models/cliente_mock.dart' show ClienteFormMode;
-import 'cliente_form_page.dart';
 
 /// Modo de vista interno de la página de clientes.
 /// Permite alternar entre listado y formulario sin cambiar de ruta,
@@ -69,7 +69,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     }).toList();
   }
 
-  void _abrirCrear() {
+  /*void _abrirCrear() {
     setState(() {
       _viewMode = _ClientesViewMode.form;
     });
@@ -78,16 +78,29 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   // TODO: El form actual (cliente_form_page.dart) usa ClienteMock, no ClienteModel.
   // Cuando el backend/modelo unifique esos tipos, pasar el cliente como initialCliente
   // y cambiar el modo a editar. Por ahora abre el form vacío para no romper tipos.
+  
   void _abrirEditar(ClienteModel cliente) {
     setState(() {
       _viewMode = _ClientesViewMode.form;
     });
   }
 
-  void _volverAlListado() {
-    setState(() {
-      _viewMode = _ClientesViewMode.listado;
-    });
+  */
+
+  // ─────────────────────────────────────────────────────────── ACCIONES ──
+  void _abrirCrear() {
+    showClienteFormDrawer(context, mode: ClienteFormMode.crear);
+  }
+
+  void _abrirEditar(ClienteModel cliente) {
+    showClienteFormDrawer(
+      context,
+      mode: ClienteFormMode.editar,
+      // OJO AL TODO: Si ya unificaste ClienteModel, pásalo aquí:
+      // Lo dejamos sin 'initialCliente' por ahora para no romper los tipos,
+      // tal como lo tenías planeado.
+      //initialCliente: cliente,
+    );
   }
 
   @override
@@ -96,40 +109,11 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
 
-        // Cuando está en modo formulario, renderizamos el form dentro del shell
-        // con un header que permite volver al listado, preservando el sidebar.
-        if (_viewMode != _ClientesViewMode.listado) {
-          return Column(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.background,
-                  border: Border(bottom: BorderSide(color: AppColors.border)),
-                ),
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-                  vertical: AppSpacing.md,
-                ),
-                child: Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: _volverAlListado,
-                      icon: const Icon(Icons.arrow_back, size: 18),
-                      label: const Text('Volver al listado'),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Text('Nuevo cliente', style: AppTypography.h3),
-                  ],
-                ),
-              ),
-              const Expanded(
-                child: ClienteFormPage(mode: ClienteFormMode.crear),
-              ),
-            ],
-          );
-        }
+        // ¡Adiós al if (_viewMode != _ClientesViewMode.listado)!
+        // Ahora la página SIEMPRE renderiza la lista. El formulario
+        // aparecerá flotando encima cuando llamemos al Drawer.
 
-        // Modo listado: consumimos el provider
+        // Consumimos el provider directamente
         final clientesAsync = ref.watch(clientesProvider);
 
         return clientesAsync.when(
@@ -148,7 +132,6 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       },
     );
   }
-
   // ─────────────────────────────────────────────────────────── LISTADO ──
 
   Widget _buildListado({
@@ -164,9 +147,9 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     final paginatedClientes = isMobile
         ? clientes.take(_currentPage * _itemsPerPage).toList()
         : clientes
-            .skip((_currentPage - 1) * _itemsPerPage)
-            .take(_itemsPerPage)
-            .toList();
+              .skip((_currentPage - 1) * _itemsPerPage)
+              .take(_itemsPerPage)
+              .toList();
 
     return Column(
       children: [
@@ -188,10 +171,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _KpiRow(
-                  isMobile: isMobile,
-                  totalClientes: allClientes.length,
-                ),
+                _KpiRow(isMobile: isMobile, totalClientes: allClientes.length),
                 const SizedBox(height: AppSpacing.xl),
 
                 if (clientes.isEmpty)
@@ -201,10 +181,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                     subtitle: 'Probá con otro término de búsqueda.',
                   )
                 else if (isMobile)
-                  _MobileList(
-                    clientes: paginatedClientes,
-                    onEdit: _abrirEditar,
-                  )
+                  _MobileList(clientes: paginatedClientes, onEdit: _abrirEditar)
                 else
                   _DesktopTable(
                     clientes: paginatedClientes,
@@ -333,16 +310,16 @@ class _DesktopTable extends StatelessWidget {
   }
 
   Widget _col(String label, int flex) => Expanded(
-        flex: flex,
-        child: Text(
-          label,
-          style: AppTypography.caption.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textMuted,
-            letterSpacing: 0.5,
-          ),
-        ),
-      );
+    flex: flex,
+    child: Text(
+      label,
+      style: AppTypography.caption.copyWith(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textMuted,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -360,10 +337,7 @@ class _MobileList extends StatelessWidget {
     return Column(
       children: [
         for (var i = 0; i < clientes.length; i++) ...[
-          ClienteCard(
-            cliente: clientes[i],
-            onTap: () => onEdit(clientes[i]),
-          ),
+          ClienteCard(cliente: clientes[i], onTap: () => onEdit(clientes[i])),
           if (i < clientes.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
