@@ -251,18 +251,27 @@ class _KpiRow extends StatelessWidget {
       ),
     ];
 
+    // MOBILE: grilla 2x2 con altura uniforme. La 3ra KPI ocupa toda la fila inferior.
     if (isMobile) {
       return Column(
-        children: kpis
-            .map(
-              (k) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: k,
-              ),
-            )
-            .toList(),
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: kpis[0]),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: kpis[1]),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          kpis[2], // tercer KPI a ancho completo
+        ],
       );
     }
+
+    // DESKTOP: 3 columnas en una sola fila
     return Row(
       children: [
         for (var i = 0; i < kpis.length; i++) ...[
