@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'app_init_provider.dart';
 
 // Importamos el cerebro y tus providers
 import 'router_notifier.dart';
@@ -12,6 +13,7 @@ import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
+import '../../presentation/layouts/splash_screen_page.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
@@ -22,31 +24,41 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // Arrancamos en loading para evaluar la sesión tranquilamente
     initialLocation: '/loading',
 
-    redirect: (context, state) {
+   redirect: (context, state) {
+      final initAsync = ref.watch(appInitProvider);
       final authAsync = ref.read(authStateProvider);
-      final isLoggedIn = authAsync.value?.session != null;
       final path = state.uri.path;
 
-      // REGLA 1: SALVAVIDAS PARA GOOGLE (Permitimos el Deep Link)
+      // Inicialización de la app → splash siempre al arrancar
+      if (initAsync.isLoading) {
+        return path == '/loading' ? null : '/loading';
+      }
+
+      // Permitir callback externo
       if (state.uri.toString().contains('login-callback')) return null;
 
-      // REGLA 2: Sin sesión -> Al Login
+      // Auth cargando → splash
+      if (authAsync.isLoading) {
+        return path == '/loading' ? null : '/loading';
+      }
+
+      final isLoggedIn = authAsync.value?.session != null;
+
+      // No autenticado → login
       if (!isLoggedIn) {
         return path == '/login' ? null : '/login';
       }
 
-      // REGLA 3: Leemos TU provider (que devuelve un Map)
+      // Perfil
       final profileAsync = ref.read(userProfileProvider);
 
-      // REGLA 4: EL LIMBO (Si el perfil está cargando, mostramos la pantalla de carga)
       if (profileAsync.isLoading || profileAsync.value == null) {
         return path == '/loading' ? null : '/loading';
       }
 
-      // Extraemos el rol del Map de tu provider
       final role = profileAsync.value?['id_rol']?.toString();
 
-      // REGLA 5: Distribución según rol
+      // Redirección por rol
       if (path == '/login' || path == '/loading' || path == '/') {
         switch (role) {
           case '1':
@@ -62,8 +74,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      // (Opcional) Bloqueo de rutas en web
-      if (path.startsWith('/admin') && role != '1') return '/produccion';
+      // Protección de rutas
+      if (path.startsWith('/admin') && role != '1') {
+        return '/produccion';
+      }
 
       return null;
     },
@@ -71,18 +85,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // RUTA DE CARGA TRANSITORIA
       GoRoute(
-        path: '/loading',
-        builder: (context, state) => const Scaffold(
-          backgroundColor: Color(0xFF0A0A0A),
-          body: Center(
-            child: CircularProgressIndicator(color: Color(0xFFFF0000)),
-          ),
-        ),
+       path: '/loading',
+        builder: (context, state) => const SplashScreenPage(),
       ),
-
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(), // <-- Así de limpio
+        builder: (context, state) => const LoginPage(),
       ),
 
       // ROL 1: ADMINISTRADOR
