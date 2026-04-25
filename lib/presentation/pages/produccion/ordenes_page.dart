@@ -19,37 +19,10 @@ import '../../widgets/users/kpi_card.dart';
 import '../../../domain/models/orden_model.dart';
 import '../../providers/orden_list_provider.dart';
 
-/* // ══════════════════════════════════════════════════════════════════════════════
-// CÓDIGO DE PRUEBA (MOCKS) COMENTADO - YA NO SE USA PORQUE TENEMOS SUPABASE
-// ══════════════════════════════════════════════════════════════════════════════
-enum EstadoOrden { pendiente, produccion, entregado, cancelado }
-enum EstadoPago { pendiente, parcial, pagado }
+// Vistas internas
+import 'orden_detalle_page.dart';
 
-class OrderMock {
-  final String numOrden;
-  final String idCliente;
-  final String clienteNombre;
-  final String clienteCi;
-  final String producto;
-  final int cantidad;
-  final DateTime fechaOrden;
-  final DateTime fechaEntrega;
-  final double costoTotal;
-  final EstadoOrden estadoOrden;
-  final EstadoPago estadoPago;
-
-  OrderMock({
-    required this.numOrden, required this.idCliente, required this.clienteNombre,
-    required this.clienteCi, required this.producto, required this.cantidad,
-    required this.fechaOrden, required this.fechaEntrega, required this.costoTotal,
-    required this.estadoOrden, required this.estadoPago,
-  });
-}
-
-final List<OrderMock> mockOrders = List.generate(25, (index) { ... });
-*/
-
-// --- PÁGINA PRINCIPAL (Cambiado a ConsumerStatefulWidget para escuchar a Riverpod) ---
+// --- PÁGINA PRINCIPAL ---
 class OrdenesPage extends ConsumerStatefulWidget {
   const OrdenesPage({super.key});
 
@@ -61,7 +34,19 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
   final TextEditingController _searchController = TextEditingController();
   int _currentPage = 1;
   final int _itemsPerPage = 10;
-  int _selectedFilter = 0; // 0: Todas, 1: Pendientes...
+  int _selectedFilter = 0; // 0: Todas, 1: Pendientes, 2: Producción, etc.
+
+  // Estado interno: orden seleccionada para ver detalle.
+  // Si es null, se muestra el listado. Si tiene valor, se muestra el detalle.
+  OrdenModel? _ordenSeleccionada;
+
+  void _abrirDetalle(OrdenModel orden) {
+    setState(() => _ordenSeleccionada = orden);
+  }
+
+  void _volverAlListado() {
+    setState(() => _ordenSeleccionada = null);
+  }
 
   @override
   void dispose() {
@@ -71,28 +56,34 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. ESCUCHAMOS LOS DATOS REALES DE SUPABASE
+    // Si hay orden seleccionada, mostramos el detalle
+    if (_ordenSeleccionada != null) {
+      return OrdenDetallePage(
+        orden: _ordenSeleccionada!,
+        onVolver: _volverAlListado,
+      );
+    }
+
+    // Modo listado
     final ordenesAsync = ref.watch(ordenListProvider);
 
-    // 2. MANEJAMOS LOS ESTADOS DE CARGA
     return ordenesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
         child: Text('Error: $error', style: const TextStyle(color: Colors.red)),
       ),
       data: (listaDeOrdenesReales) {
-        // 3. SI HAY DATOS, CONSTRUIMOS EL DISEÑO DE TU COMPAÑERO
         return LayoutBuilder(
           builder: (context, constraints) {
             final isMobile = constraints.maxWidth < 900;
 
-            // Lógica de Filtrado con datos reales
+            // Filtrado
             final filteredOrders = listaDeOrdenesReales.where((o) {
               if (_selectedFilter == 0) return true;
               return o.idEstado == _selectedFilter;
             }).toList();
 
-            // Cálculos de Paginación
+            // Paginación
             final totalItems = filteredOrders.length;
             final totalPages = totalItems == 0
                 ? 1
@@ -180,9 +171,15 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                                 'Probá con otro filtro o creá una nueva orden.',
                           )
                         else if (isMobile)
-                          _MobileList(orders: paginatedOrders)
+                          _MobileList(
+                            orders: paginatedOrders,
+                            onVerPressed: _abrirDetalle,
+                          )
                         else
-                          _DesktopTable(orders: paginatedOrders),
+                          _DesktopTable(
+                            orders: paginatedOrders,
+                            onVerPressed: _abrirDetalle,
+                          ),
 
                         const SizedBox(height: AppSpacing.xl),
 
@@ -215,8 +212,9 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// COMPONENTES PRIVADOS DE LA PÁGINA (Sin Cambios Visuales)
+// KPI ROW
 // ══════════════════════════════════════════════════════════════════════════════
+
 class _KpiRow extends StatelessWidget {
   final bool isMobile;
   final int pendientes;
@@ -277,16 +275,13 @@ class _KpiRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// VISTAS DE DATOS ACTUALIZADAS A ORDENMODEL REAL
-// ══════════════════════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════════════════════
-// VISTAS DE DATOS (REFLEJO FIEL A LA BD)
+// DESKTOP TABLE
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DesktopTable extends StatelessWidget {
-  const _DesktopTable({required this.orders});
+  const _DesktopTable({required this.orders, required this.onVerPressed});
   final List<OrdenModel> orders;
+  final void Function(OrdenModel) onVerPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +326,10 @@ class _DesktopTable extends StatelessWidget {
             ),
           ),
           for (var i = 0; i < orders.length; i++) ...[
-            _OrderListRow(order: orders[i]),
+            _OrderListRow(
+              order: orders[i],
+              onVerPressed: () => onVerPressed(orders[i]),
+            ),
             if (i < orders.length - 1)
               const Divider(height: 1, color: AppColors.border),
           ],
@@ -353,22 +351,25 @@ class _DesktopTable extends StatelessWidget {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ORDER LIST ROW (desktop)
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _OrderListRow extends StatelessWidget {
   final OrdenModel order;
-  const _OrderListRow({required this.order});
+  final VoidCallback onVerPressed;
+
+  const _OrderListRow({required this.order, required this.onVerPressed});
 
   @override
   Widget build(BuildContext context) {
-    // Código abreviado para mostrar: "ORD-2846" en vez del UUID completo
     final String displayCode = order.numOrden.length > 8
         ? order.numOrden.substring(0, 8).toUpperCase()
         : order.numOrden.toUpperCase();
 
     // TODO(SCRUM-72): Los campos 'nombreCliente', 'producto' y 'cantidad' no
-    // existen en OrdenModel actualmente. Requieren joins con la tabla 'cliente'
-    // y con las tablas de líneas/items de la orden. Por ahora se muestra un
-    // placeholder derivado del id_cliente. Quitar este TODO cuando backend
-    // expanda el modelo.
+    // existen en OrdenModel. Requieren joins con la tabla 'cliente' y con
+    // las tablas de líneas/items. Por ahora se muestran placeholders.
     final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
     const String productoDisplay = '—';
     const String cantidadDisplay = '—';
@@ -392,7 +393,7 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // CLIENTE (placeholder hasta que haya join)
+          // CLIENTE
           Expanded(
             flex: 3,
             child: Text(
@@ -403,7 +404,7 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // PRODUCTO (placeholder)
+          // PRODUCTO
           Expanded(
             flex: 3,
             child: Text(
@@ -414,7 +415,7 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // CANTIDAD (placeholder)
+          // CANTIDAD
           Expanded(
             flex: 2,
             child: Text(
@@ -452,9 +453,7 @@ class _OrderListRow extends StatelessWidget {
             child: Align(
               alignment: Alignment.center,
               child: TextButton(
-                onPressed: () {
-                  // TODO(SCRUM-72): abrir pantalla de detalle de orden
-                },
+                onPressed: onVerPressed,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
@@ -473,16 +472,24 @@ class _OrderListRow extends StatelessWidget {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// MOBILE LIST
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _MobileList extends StatelessWidget {
-  const _MobileList({required this.orders});
-  final List<OrdenModel> orders; // CAMBIADO A OrdenModel
+  const _MobileList({required this.orders, required this.onVerPressed});
+  final List<OrdenModel> orders;
+  final void Function(OrdenModel) onVerPressed;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         for (var i = 0; i < orders.length; i++) ...[
-          _OrderCard(order: orders[i]),
+          _OrderCard(
+            order: orders[i],
+            onVerPressed: () => onVerPressed(orders[i]),
+          ),
           if (i < orders.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
@@ -490,9 +497,15 @@ class _MobileList extends StatelessWidget {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ORDER CARD (mobile)
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _OrderCard extends StatelessWidget {
   final OrdenModel order;
-  const _OrderCard({required this.order});
+  final VoidCallback onVerPressed;
+
+  const _OrderCard({required this.order, required this.onVerPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -500,13 +513,10 @@ class _OrderCard extends StatelessWidget {
         ? order.numOrden.substring(0, 8).toUpperCase()
         : order.numOrden.toUpperCase();
 
-    // Ver TODO en _OrderListRow sobre los joins pendientes.
     final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
 
     return InkWell(
-      onTap: () {
-        // TODO(SCRUM-72): abrir pantalla de detalle de orden
-      },
+      onTap: onVerPressed,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -518,7 +528,6 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: código + estado
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -534,7 +543,6 @@ class _OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
 
-            // Cliente
             Row(
               children: [
                 const Icon(
@@ -555,7 +563,6 @@ class _OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
-            // Producto (placeholder)
             Row(
               children: [
                 const Icon(
@@ -578,7 +585,6 @@ class _OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
-            // Fecha de entrega
             Row(
               children: [
                 const Icon(
@@ -601,7 +607,6 @@ class _OrderCard extends StatelessWidget {
 
             const Divider(height: AppSpacing.xl),
 
-            // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -626,12 +631,13 @@ class _OrderCard extends StatelessWidget {
     );
   }
 }
+
 // ══════════════════════════════════════════════════════════════════════════════
-// BADGES ADAPTADOS (Reciben datos de Supabase en lugar de los Mocks)
+// STATUS BADGE
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _StatusBadge extends StatelessWidget {
-  final int idEstado; // Recibe número de base de datos
+  final int idEstado;
   const _StatusBadge({required this.idEstado});
 
   @override
