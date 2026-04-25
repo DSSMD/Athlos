@@ -16,15 +16,11 @@ class ClientePreferencesCard extends StatelessWidget {
     super.key,
     required this.clientePrioritario,
     required this.onPrioritarioChanged,
-    required this.facturacionElectronica,
-    required this.onFacturacionChanged,
     this.showBadgeActualizado = false,
   });
 
   final bool clientePrioritario;
   final ValueChanged<bool> onPrioritarioChanged;
-  final bool facturacionElectronica;
-  final ValueChanged<bool> onFacturacionChanged;
   final bool showBadgeActualizado;
 
   @override
@@ -41,12 +37,6 @@ class ClientePreferencesCard extends StatelessWidget {
             onChanged: onPrioritarioChanged,
           ),
           const SizedBox(height: AppSpacing.lg),
-          _ToggleRow(
-            title: 'Facturación electrónica',
-            subtitle: 'Enviar factura automáticamente al email',
-            value: facturacionElectronica,
-            onChanged: onFacturacionChanged,
-          ),
         ],
       ),
     );

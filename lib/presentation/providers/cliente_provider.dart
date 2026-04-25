@@ -22,13 +22,18 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
     return _fetchClientes();
   }
 
-  // Lógica interna para obtener los datos
+  // ══════════════════════════════════════════════════════════════════════════
+  // MÉTODO PRIVADO PARA OBTENER CLIENTES (con opción de filtrar solo activos)
+  // ══════════════════════════════════════════════════════════════════════════
   Future<List<ClienteModel>> _fetchClientes() async {
     final service = ref.read(clienteServiceProvider);
-    return await service.obtenerClientes();
+    // Por defecto traemos solo los activos para el listado principal
+    return await service.obtenerClientes(soloActivos: true);
   }
 
-  // Refrescar manualmente
+  // ══════════════════════════════════════════════════════════════════════════
+  // MÉTODO PARA REFRESCAR LA LISTA (puede ser llamado tras acciones de CRUD)
+  // ══════════════════════════════════════════════════════════════════════════
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _fetchClientes());
@@ -37,19 +42,36 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
   // ══════════════════════════════════════════════════════════════════════════
   // ACCIÓN: Registrar Cliente
   // ══════════════════════════════════════════════════════════════════════════
-  // Retornamos un Future<void> y lanzamos excepción si falla,
-  // para que el Formulario (UI) pueda atrapar el error (ej: CI duplicado).
   Future<void> registrarCliente(ClienteModel cliente) async {
     final service = ref.read(clienteServiceProvider);
 
-    // Usamos guard para intentar crear el cliente y luego refrescar la lista
     state = await AsyncValue.guard(() async {
       await service.registrarCliente(cliente);
-      // Tras crear exitosamente, devolvemos la lista fresca de la BD
+      return _fetchClientes(); // Refrescamos la lista tras el éxito
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ACCIÓN: Actualizar Cliente
+  // ══════════════════════════════════════════════════════════════════════════
+  Future<void> actualizarCliente(ClienteModel cliente) async {
+    final service = ref.read(clienteServiceProvider);
+
+    state = await AsyncValue.guard(() async {
+      await service.actualizarCliente(cliente);
       return _fetchClientes();
     });
+  }
 
-    // Nota: Si 'registrarCliente' del service falla, AsyncValue.guard captura
-    // el error y pone el Provider en estado de AsyncError.
+  // ══════════════════════════════════════════════════════════════════════════
+  // ACCIÓN: Eliminar (Soft Delete) / Reactivar
+  // ══════════════════════════════════════════════════════════════════════════
+  Future<void> cambiarEstado(String idCliente, bool activo) async {
+    final service = ref.read(clienteServiceProvider);
+
+    state = await AsyncValue.guard(() async {
+      await service.cambiarEstadoCliente(idCliente, activo);
+      return _fetchClientes();
+    });
   }
 }

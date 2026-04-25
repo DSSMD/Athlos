@@ -10,6 +10,8 @@
 // para mantener consistencia con el sistema Athlos.
 // ============================================================================
 
+// lib/presentation/pages/clientes_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,13 +31,6 @@ import '../../widgets/shared/sticky_topbar.dart';
 import '../../../domain/models/cliente_model.dart';
 import '../../providers/cliente_provider.dart';
 
-import '../../models/cliente_mock.dart' show ClienteFormMode;
-
-/// Modo de vista interno de la página de clientes.
-/// Permite alternar entre listado y formulario sin cambiar de ruta,
-/// preservando el sidebar del shell (MainLayout).
-enum _ClientesViewMode { listado, form }
-
 class ClientesPage extends ConsumerStatefulWidget {
   const ClientesPage({super.key});
 
@@ -45,8 +40,6 @@ class ClientesPage extends ConsumerStatefulWidget {
 
 class _ClientesPageState extends ConsumerState<ClientesPage> {
   static const double _mobileBreakpoint = 900;
-
-  _ClientesViewMode _viewMode = _ClientesViewMode.listado;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -59,49 +52,41 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     super.dispose();
   }
 
+  // 1. BUSCADOR MEJORADO: Ahora busca por Razón Social, Email, etc.
   List<ClienteModel> _getFilteredClientes(List<ClienteModel> allClientes) {
     final query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) return allClientes;
+
     return allClientes.where((c) {
-      return c.nombreCompleto.toLowerCase().contains(query) ||
+      return c.nombreMostrable.toLowerCase().contains(
+            query,
+          ) || // Usa el getter inteligente
           c.ciCliente.toLowerCase().contains(query) ||
+          (c.email?.toLowerCase().contains(query) ?? false) ||
           (c.numTelefono?.toLowerCase().contains(query) ?? false);
     }).toList();
   }
 
-  /*void _abrirCrear() {
-    setState(() {
-      _viewMode = _ClientesViewMode.form;
-    });
-  }
-
-  // TODO: El form actual (cliente_form_page.dart) usa ClienteMock, no ClienteModel.
-  // Cuando el backend/modelo unifique esos tipos, pasar el cliente como initialCliente
-  // y cambiar el modo a editar. Por ahora abre el form vacío para no romper tipos.
-  
-  void _abrirEditar(ClienteModel cliente) {
-    setState(() {
-      _viewMode = _ClientesViewMode.form;
-    });
-  }
-
-  */
-
   // ─────────────────────────────────────────────────────────── ACCIONES ──
+
   void _abrirCrear() {
-    showClienteFormDrawer(context, mode: ClienteFormMode.crear);
+    // Llamamos a la función pública del drawer
+    showClienteFormDrawer(
+      context,
+      mode: ClienteFormMode.crear, // Usamos el Enum correcto
+    );
   }
 
   void _abrirEditar(ClienteModel cliente) {
+    // Ahora que el modelo está unificado, pasamos el cliente real
     showClienteFormDrawer(
       context,
       mode: ClienteFormMode.editar,
-      // OJO AL TODO: Si ya unificaste ClienteModel, pásalo aquí:
-      // Lo dejamos sin 'initialCliente' por ahora para no romper los tipos,
-      // tal como lo tenías planeado.
-      //initialCliente: cliente,
+      initialCliente: cliente,
     );
   }
+
+  // ─────────────────────────────────────────────────────────── BUILD PRINCIPAL ──
 
   @override
   Widget build(BuildContext context) {
@@ -109,11 +94,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
 
-        // ¡Adiós al if (_viewMode != _ClientesViewMode.listado)!
-        // Ahora la página SIEMPRE renderiza la lista. El formulario
-        // aparecerá flotando encima cuando llamemos al Drawer.
-
-        // Consumimos el provider directamente
+        // Consumimos el provider directamente para traer los datos reales de Supabase
         final clientesAsync = ref.watch(clientesProvider);
 
         return clientesAsync.when(
@@ -125,13 +106,14 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             return _buildListado(
               isMobile: isMobile,
               filteredClientes: filteredClientes,
-              allClientes: clientesReales,
+              allClientes: clientesReales, // Pasa todos para el KPI total
             );
           },
         );
       },
     );
   }
+
   // ─────────────────────────────────────────────────────────── LISTADO ──
 
   Widget _buildListado({
@@ -156,7 +138,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
         StickyTopbar(
           isMobile: isMobile,
           title: 'Clientes',
-          searchHint: 'Buscar por nombre, CI, teléfono...',
+          searchHint: 'Buscar por nombre, CI, teléfono, email...',
           searchController: _searchController,
           onSearchChanged: (_) => setState(() {
             _currentPage = 1;
@@ -178,11 +160,14 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                   const EmptyState(
                     icon: Icons.search_off,
                     title: 'No se encontraron clientes',
-                    subtitle: 'Probá con otro término de búsqueda.',
+                    subtitle:
+                        'Probá con otro término de búsqueda o crea uno nuevo.',
                   )
                 else if (isMobile)
+                  // ⚠️ Asegúrate de que _MobileList reciba List<ClienteModel>
                   _MobileList(clientes: paginatedClientes, onEdit: _abrirEditar)
                 else
+                  // ⚠️ Asegúrate de que _DesktopTable reciba List<ClienteModel>
                   _DesktopTable(
                     clientes: paginatedClientes,
                     onEdit: _abrirEditar,

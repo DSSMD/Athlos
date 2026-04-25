@@ -77,12 +77,14 @@ class ClienteContactCard extends StatelessWidget {
               controller: emailController,
               label: 'Email',
               isOptional: true,
+              hint: 'ejemplo@correo.com', // 👈 Añadido el placeholder
               keyboardType: TextInputType.emailAddress,
             ),
             right: CustomTextField(
               controller: direccionController,
               label: 'Dirección',
               isOptional: true,
+              hint: 'Av. Principal #123, Zona Sur', // 👈 Añadido el placeholder
             ),
           ),
         ],
@@ -115,6 +117,7 @@ class _PhoneRow extends StatelessWidget {
             controller: telefonoController,
             label: 'Teléfono / WhatsApp',
             isRequired: true,
+            hint: 'Ej: 71234567', // 👈 Añadido el placeholder
             keyboardType: TextInputType.phone,
           ),
         ),
@@ -130,7 +133,7 @@ class _PhoneRow extends StatelessWidget {
       controller: telefonoSecController,
       label: 'Teléfono secundario',
       isOptional: true,
-      hint: 'Opcional...',
+      hint: 'Opcional', // 👈 Ajustado el placeholder
       keyboardType: TextInputType.phone,
     );
 

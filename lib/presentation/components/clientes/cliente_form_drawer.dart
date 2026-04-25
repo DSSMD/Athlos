@@ -1,6 +1,7 @@
-// lib/presentation/components/clientes/cliente_form_page.dart
+// lib/presentation/components/clientes/cliente_form_drawer.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -12,28 +13,29 @@ import 'cliente_error_dialog.dart';
 import 'cliente_identification_card.dart';
 import 'cliente_preferences_card.dart';
 import 'cliente_success_dialog.dart';
-import 'cliente_summary_panel.dart';
+//import 'cliente_summary_panel.dart';
 
-import '../../models/cliente_mock.dart';
 import '../../widgets/loading_spinner.dart';
+
+import '../../../domain/models/cliente_model.dart';
+import '../../providers/cliente_provider.dart';
 
 /// API pública — llamar con `showClienteFormDrawer(context, initialCliente: ...)`.
 Future<void> showClienteFormDrawer(
   BuildContext context, {
   ClienteFormMode mode = ClienteFormMode.crear,
-  ClienteMock? initialCliente,
+  ClienteModel? initialCliente, // 👈 Usa el modelo real
 }) {
   final isMobile = MediaQuery.of(context).size.width < 900;
 
   if (isMobile) {
-    // Mobile: pantalla completa que sube desde abajo
     return Navigator.of(context).push(
       PageRouteBuilder(
-        opaque: false, // Importante para que se vea el fondo oscuro
+        opaque: false,
         barrierColor: Colors.black54,
         transitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (_, _, _) =>
-            ClienteFormPage(mode: mode, initialCliente: initialCliente),
+            ClienteFormDrawer(mode: mode, initialCliente: initialCliente),
         transitionsBuilder: (_, animation, _, child) {
           return SlideTransition(
             position: animation.drive(
@@ -49,7 +51,6 @@ Future<void> showClienteFormDrawer(
     );
   }
 
-  // Desktop: drawer lateral derecho con overlay
   return showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -58,7 +59,7 @@ Future<void> showClienteFormDrawer(
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (_, _, _) => Align(
       alignment: Alignment.centerRight,
-      child: ClienteFormPage(mode: mode, initialCliente: initialCliente),
+      child: ClienteFormDrawer(mode: mode, initialCliente: initialCliente),
     ),
     transitionBuilder: (_, animation, _, child) {
       return SlideTransition(
@@ -74,21 +75,22 @@ Future<void> showClienteFormDrawer(
   );
 }
 
-class ClienteFormPage extends StatefulWidget {
-  const ClienteFormPage({
+// 2. CAMBIO A CONSUMER PARA USAR RIVERPOD
+class ClienteFormDrawer extends ConsumerStatefulWidget {
+  const ClienteFormDrawer({
     super.key,
     this.mode = ClienteFormMode.crear,
     this.initialCliente,
   });
 
   final ClienteFormMode mode;
-  final ClienteMock? initialCliente;
+  final ClienteModel? initialCliente;
 
   @override
-  State<ClienteFormPage> createState() => _ClienteFormPageState();
+  ConsumerState<ClienteFormDrawer> createState() => _ClienteFormDrawerState();
 }
 
-class _ClienteFormPageState extends State<ClienteFormPage> {
+class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
   // ───────── Controllers
   late final TextEditingController _nitCiCtrl;
   late final TextEditingController _razonSocialCtrl;
@@ -105,12 +107,10 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   late TipoCliente _tipoCliente;
   late bool _permiteCredito;
   late bool _clientePrioritario;
-  late bool _facturacionElectronica;
 
   bool _isSaving = false;
   Map<String, String?> _errors = {};
 
-  // SCRUM-69: keys para scroll-to-error y destello rojo
   final _scrollController = ScrollController();
   final _representanteKey = GlobalKey();
   final _telefonoKey = GlobalKey();
@@ -119,34 +119,37 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
 
   String? _flashingField;
 
-  // Simulación: si el C.I. es exactamente "12345678" se trata como duplicado.
-  static const String _ciDuplicadoSimulado = '12345678';
-
   @override
   void initState() {
     super.initState();
     final c = widget.initialCliente;
-    _nitCiCtrl = TextEditingController(text: c?.nitCi ?? '');
+
+    // 3. MAPEO DE DATOS REALES AL INICIAR
+    _nitCiCtrl = TextEditingController(text: c?.ciCliente ?? '');
     _razonSocialCtrl = TextEditingController(text: c?.razonSocial ?? '');
-    _representanteCtrl = TextEditingController(
-      text: c?.representanteLegal ?? '',
-    );
-    _telefonoCtrl = TextEditingController(text: c?.telefono ?? '');
-    _telefonoSecCtrl = TextEditingController(text: c?.telefonoSecundario ?? '');
+    // Unimos nombre y apellido para el campo del representante
+    final nombreCompleto = c != null
+        ? '${c.nomCliente} ${c.apellidoCliente}'.trim()
+        : '';
+    _representanteCtrl = TextEditingController(text: nombreCompleto);
+
+    _telefonoCtrl = TextEditingController(text: c?.numTelefono ?? '');
+    _telefonoSecCtrl = TextEditingController(text: c?.numTelefono2 ?? '');
     _emailCtrl = TextEditingController(text: c?.email ?? '');
     _direccionCtrl = TextEditingController(text: c?.direccion ?? '');
     _limiteCtrl = TextEditingController(
-      text: c != null ? c.limiteCredito.toStringAsFixed(2) : '',
+      text: c != null && c.limiteCredito > 0
+          ? c.limiteCredito.toStringAsFixed(2)
+          : '',
     );
     _diasCtrl = TextEditingController(
       text: c != null ? c.diasPlazoPago.toString() : '30',
     );
     _notasCtrl = TextEditingController(text: c?.notas ?? '');
 
-    _tipoCliente = c?.tipoCliente ?? TipoCliente.empresa;
+    _tipoCliente = c?.tipoEnum ?? TipoCliente.empresa;
     _permiteCredito = c?.permiteCredito ?? false;
-    _clientePrioritario = c?.clientePrioritario ?? false;
-    _facturacionElectronica = c?.facturacionElectronica ?? false;
+    _clientePrioritario = c?.esPrioritario ?? false;
   }
 
   @override
@@ -166,21 +169,23 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   }
 
   // ───────────────────────────────────────── VALIDACIÓN LOCAL ──
-
   bool _validar() {
     final errors = <String, String?>{};
 
     if (_representanteCtrl.text.trim().isEmpty) {
-      errors['representante'] = 'El representante legal es requerido';
+      errors['representante'] = 'El representante/nombre es requerido';
     }
 
-    if (_telefonoCtrl.text.trim().isEmpty) {
+    final telefono = _telefonoCtrl.text.trim();
+    if (telefono.isEmpty) {
       errors['telefono'] = 'El teléfono es requerido';
+    } else if (telefono.replaceAll(RegExp(r'\s+'), '').length < 8) {
+      errors['telefono'] = 'El número parece ser muy corto';
     }
 
     final ci = _nitCiCtrl.text.trim();
     if (ci.isNotEmpty && !RegExp(r'^[0-9\-]+$').hasMatch(ci)) {
-      errors['nitCi'] = 'El NIT/CI debe contener solo números';
+      errors['nitCi'] = 'El NIT/CI debe contener solo números o guiones';
     }
 
     final email = _emailCtrl.text.trim();
@@ -190,12 +195,31 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     }
 
     setState(() => _errors = errors);
+    // Si errors está vacío, significa que todo está bien y devuelve true.
     return errors.isEmpty;
   }
 
-  // ───────────────────────────────────── SIMULACIÓN DE GUARDADO ──
+  // ───────────────────────────────────────── FORMATEO DE TELÉFONO ──
+  String _formatearTelefono(String numero) {
+    String tel = numero.trim();
+    if (tel.isEmpty) return ''; // Se enviará vacío a la BD
 
+    // Limpiamos espacios en blanco intermedios por si el usuario escribe "712 34 567"
+    tel = tel.replaceAll(RegExp(r'\s+'), '');
+
+    // Si ya tiene el formato correcto, lo dejamos
+    if (tel.startsWith('+591')) return tel;
+
+    // Si lo escribió como "59171234567" le agregamos el +
+    if (tel.startsWith('591')) return '+$tel';
+
+    // Si escribió solo el número "71234567", le agregamos todo
+    return '+591 $tel';
+  }
+
+  // ───────────────────────────────────── GUARDADO REAL EN BD ──
   Future<void> _handleGuardar() async {
+    // 1. SI LA VALIDACIÓN FALLA, SE DETIENE EL GUARDADO AQUÍ MISMO
     if (!_validar()) {
       _mostrarErroresSnackbar();
       _scrollToFirstError();
@@ -203,29 +227,91 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     }
 
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
 
-    final ci = _nitCiCtrl.text.trim();
-    if (ci == _ciDuplicadoSimulado) {
-      setState(() => _isSaving = false);
+    // 2. SEPARAR NOMBRE Y APELLIDO
+    final nombreParts = _representanteCtrl.text.trim().split(' ');
+    final nombre = nombreParts.isNotEmpty ? nombreParts.first : '';
+    final apellido = nombreParts.length > 1
+        ? nombreParts.sublist(1).join(' ')
+        : '';
+    final isEmpresa = _tipoCliente == TipoCliente.empresa;
+
+    // 3. LIMPIEZA DE DATOS (Evitar NULLs)
+    // Si el usuario no escribió nada, enviamos '' (String vacío) o un valor por defecto.
+    final ciLimpio = _nitCiCtrl.text.trim().isEmpty
+        ? 'S/N'
+        : _nitCiCtrl.text.trim();
+    final razonLimpia = _razonSocialCtrl.text.trim().isEmpty
+        ? ''
+        : _razonSocialCtrl.text.trim();
+    final emailLimpio = _emailCtrl.text.trim().isEmpty
+        ? ''
+        : _emailCtrl.text.trim();
+    final dirLimpia = _direccionCtrl.text.trim().isEmpty
+        ? 'Sin dirección'
+        : _direccionCtrl.text.trim();
+    final notasLimpias = _notasCtrl.text.trim().isEmpty
+        ? ''
+        : _notasCtrl.text.trim();
+
+    // 4. CONSTRUIR EL MODELO
+    final clienteGuardar = ClienteModel(
+      idCliente: widget.initialCliente?.idCliente,
+      ciCliente: ciLimpio,
+      nomCliente: nombre,
+      apellidoCliente: apellido,
+      razonSocial: isEmpresa ? razonLimpia : '', // Nunca enviará null
+      email: emailLimpio,
+      numTelefono: _formatearTelefono(
+        _telefonoCtrl.text,
+      ), // Formateado con +591
+      numTelefono2: _formatearTelefono(
+        _telefonoSecCtrl.text,
+      ), // Formateado con +591
+      direccion: dirLimpia,
+      idTipoCliente: isEmpresa ? 1 : 2,
+      permiteCredito: _permiteCredito,
+      limiteCredito: double.tryParse(_limiteCtrl.text) ?? 0.0,
+      diasPlazoPago: int.tryParse(_diasCtrl.text) ?? 30,
+      esPrioritario: _clientePrioritario,
+      notas: notasLimpias,
+    );
+
+    try {
+      if (widget.mode == ClienteFormMode.crear) {
+        await ref
+            .read(clientesProvider.notifier)
+            .registrarCliente(clienteGuardar);
+      } else {
+        await ref
+            .read(clientesProvider.notifier)
+            .actualizarCliente(clienteGuardar);
+      }
+
+      final estadoProvider = ref.read(clientesProvider);
+      if (estadoProvider.hasError) {
+        throw Exception(estadoProvider.error);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Cierra el Drawer
+
+      await showClienteSuccessDialog(
+        context,
+        mensaje: widget.mode == ClienteFormMode.crear
+            ? 'El cliente fue registrado correctamente en el sistema.'
+            : 'Los cambios se guardaron correctamente.',
+      );
+    } catch (e) {
+      if (!mounted) return;
       await showClienteErrorDialog(
         context,
-        titulo: 'C.I. duplicado',
-        mensaje:
-            'Ya existe un cliente registrado con el C.I. $ci. Por favor, '
-            'verificá los datos o busca el cliente existente.',
+        titulo: 'Error al guardar',
+        mensaje: e.toString().replaceAll('Exception: ', ''),
       );
-      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    setState(() => _isSaving = false);
-    await showClienteSuccessDialog(
-      context,
-      mensaje: widget.mode == ClienteFormMode.crear
-          ? 'El cliente fue registrado correctamente en el sistema.'
-          : 'Los cambios se guardaron correctamente.',
-    );
   }
 
   // Hace scroll al primer campo con error y lo destella en rojo.
@@ -337,11 +423,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                 isEditing: widget.mode == ClienteFormMode.editar,
                 isSaving: _isSaving,
                 onCancel: () => Navigator.of(context).pop(),
-                onSave: () {
-                  if (_validar()) {
-                    // Lógica para guardar
-                  }
-                },
+                onSave: _handleGuardar,
               ),
             ],
           ),
@@ -353,12 +435,16 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   Widget _buildFormColumn() {
     return Column(
       children: [
+        // 1. PANEL DE RESUMEN
+        /*
         if (widget.mode == ClienteFormMode.editar &&
             widget.initialCliente != null) ...[
           ClienteSummaryPanel(cliente: widget.initialCliente!),
           const SizedBox(height: AppSpacing.xl),
         ],
+        */
 
+        // 2. IDENTIFICACIÓN (CON EL FIX DEL TIPO DE CLIENTE)
         _FlashWrap(
           isFlashing:
               _flashingField == 'nitCi' || _flashingField == 'representante',
@@ -368,10 +454,13 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             razonSocialController: _razonSocialCtrl,
             representanteController: _representanteCtrl,
             tipoCliente: _tipoCliente,
+            // 👇 SOLUCIÓN AL ERROR AQUÍ: Agregamos "as TipoCliente" 👇
             onTipoChanged: (v) => setState(() => _tipoCliente = v),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+
+        // 3. CONTACTO
         _FlashWrap(
           isFlashing: _flashingField == 'telefono' || _flashingField == 'email',
           child: ClienteContactCard(
@@ -384,7 +473,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Simulación: abrir WhatsApp para ${_telefonoCtrl.text}',
+                    'Redirigiendo a WhatsApp para ${_telefonoCtrl.text}...',
                     style: AppTypography.small,
                   ),
                   duration: const Duration(seconds: 2),
@@ -395,6 +484,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+
+        // 4. CRÉDITO
         ClienteCreditCard(
           permiteCredito: _permiteCredito,
           onPermiteCreditoChanged: (v) => setState(() => _permiteCredito = v),
@@ -403,12 +494,12 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
           notasController: _notasCtrl,
         ),
         const SizedBox(height: AppSpacing.lg),
+
+        // 5. PREFERENCIAS ADICIONALES (LIMPIO)
         ClientePreferencesCard(
           clientePrioritario: _clientePrioritario,
           onPrioritarioChanged: (v) => setState(() => _clientePrioritario = v),
-          facturacionElectronica: _facturacionElectronica,
-          onFacturacionChanged: (v) =>
-              setState(() => _facturacionElectronica = v),
+          // Eliminamos facturación electrónica de aquí
         ),
         const SizedBox(height: AppSpacing.xl3),
       ],

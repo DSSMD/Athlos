@@ -5,8 +5,8 @@
 // financiero y últimas órdenes. Solo visible en modo "Editar cliente".
 // ============================================================================
 
-import 'package:flutter/material.dart';
-import '../../models/cliente_mock.dart';
+/*import 'package:flutter/material.dart';
+import '../../../domain/models/cliente_model.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -15,7 +15,7 @@ import '_section_card.dart';
 class ClienteSummaryPanel extends StatelessWidget {
   const ClienteSummaryPanel({super.key, required this.cliente});
 
-  final ClienteMock cliente;
+  final ClienteModel cliente;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +35,7 @@ class ClienteSummaryPanel extends StatelessWidget {
 
 class _ClienteHeaderCard extends StatelessWidget {
   const _ClienteHeaderCard({required this.cliente});
-  final ClienteMock cliente;
+  final ClienteModel cliente;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +142,7 @@ class _ClienteHeaderCard extends StatelessWidget {
 
 class _ResumenFinancieroCard extends StatelessWidget {
   const _ResumenFinancieroCard({required this.cliente});
-  final ClienteMock cliente;
+  final ClienteModel cliente;
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +210,7 @@ class _FilaMonto extends StatelessWidget {
 
 class _UltimasOrdenesCard extends StatelessWidget {
   const _UltimasOrdenesCard({required this.cliente});
-  final ClienteMock cliente;
+  final ClienteModel cliente;
 
   @override
   Widget build(BuildContext context) {
@@ -400,3 +400,4 @@ String _fmtDate(DateTime d) {
   final mm = d.month.toString().padLeft(2, '0');
   return '$dd/$mm/${d.year}';
 }
+*/

@@ -47,7 +47,7 @@ class ClienteCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   UserAvatar(
-                    name: cliente.nombreCompleto,
+                    name: cliente.nomCliente,
                     size: 44,
                     showPresence: false,
                   ),
@@ -58,7 +58,7 @@ class ClienteCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          cliente.nombreCompleto,
+                          cliente.nomCliente,
                           style: AppTypography.body.copyWith(
                             fontWeight: FontWeight.w600,
                           ),

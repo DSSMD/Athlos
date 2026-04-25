@@ -11,8 +11,6 @@ class ClienteService {
   // ══════════════════════════════════════════════════════════════════════════
   Future<ClienteModel> registrarCliente(ClienteModel cliente) async {
     try {
-      // .insert() agrega, .select().single() nos devuelve el objeto ya creado
-      // con su id_cliente y created_at generados por la base de datos.
       final response = await _supabase
           .from('cliente')
           .insert(cliente.toJson())
@@ -21,10 +19,9 @@ class ClienteService {
 
       return ClienteModel.fromJson(response);
     } on PostgrestException catch (e) {
-      // Manejo específico del UNIQUE de ci_cliente
       if (e.code == '23505') {
-        // 23505 es el código SQL para unique_violation
-        throw Exception('Ya existe un cliente registrado con este CI.');
+        // unique_violation
+        throw Exception('Ya existe un cliente registrado con este CI/NIT.');
       }
       throw Exception('Error de base de datos: ${e.message}');
     } catch (e) {
@@ -35,18 +32,65 @@ class ClienteService {
   // ══════════════════════════════════════════════════════════════════════════
   // LECTURA
   // ══════════════════════════════════════════════════════════════════════════
-  Future<List<ClienteModel>> obtenerClientes() async {
+  Future<List<ClienteModel>> obtenerClientes({bool soloActivos = true}) async {
     try {
-      final response = await _supabase
-          .from('cliente')
-          .select()
-          .order('created_at', ascending: false); // Ordenados por más recientes
+      var query = _supabase.from('cliente').select();
+
+      // Si soloActivos es true, filtramos los eliminados lógicamente
+      if (soloActivos) {
+        query = query.eq('activo', true);
+      }
+
+      final response = await query.order('created_at', ascending: false);
 
       return (response as List)
           .map((json) => ClienteModel.fromJson(json))
           .toList();
     } catch (e) {
       throw Exception('Error al obtener clientes: $e');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ACTUALIZACIÓN
+  // ══════════════════════════════════════════════════════════════════════════
+  Future<ClienteModel> actualizarCliente(ClienteModel cliente) async {
+    if (cliente.idCliente == null) {
+      throw Exception('No se puede actualizar un cliente sin su ID.');
+    }
+
+    try {
+      final response = await _supabase
+          .from('cliente')
+          .update(cliente.toJson())
+          .eq('id_cliente', cliente.idCliente!)
+          .select()
+          .single();
+
+      return ClienteModel.fromJson(response);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        // unique_violation
+        throw Exception('El CI/NIT ingresado ya pertenece a otro cliente.');
+      }
+      throw Exception('Error de base de datos: ${e.message}');
+    } catch (e) {
+      throw Exception('Error inesperado al actualizar el cliente: $e');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // BORRADO LÓGICO (SOFT DELETE) / REACTIVACIÓN
+  // ══════════════════════════════════════════════════════════════════════════
+  Future<void> cambiarEstadoCliente(String idCliente, bool activo) async {
+    try {
+      await _supabase
+          .from('cliente')
+          .update({'activo': activo})
+          .eq('id_cliente', idCliente);
+    } catch (e) {
+      final accion = activo ? 'reactivar' : 'eliminar';
+      throw Exception('Error al $accion el cliente: $e');
     }
   }
 }

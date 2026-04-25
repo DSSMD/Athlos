@@ -145,15 +145,18 @@ class AppTheme {
       // Switch (toggle activo/inactivo)
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled))
+          if (states.contains(WidgetState.disabled)) {
             return AppColors.neutral400;
+          }
           return AppColors.brandWhite;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled))
+          if (states.contains(WidgetState.disabled)) {
             return AppColors.neutral200;
-          if (states.contains(WidgetState.selected))
+          }
+          if (states.contains(WidgetState.selected)) {
             return AppColors.primary500;
+          }
           return AppColors.neutral400;
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),

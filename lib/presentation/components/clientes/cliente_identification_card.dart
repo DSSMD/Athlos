@@ -6,12 +6,12 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
-import '../../models/cliente_mock.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/custom_text_field.dart';
 import '_section_card.dart';
+import '../../../domain/models/cliente_model.dart';
 
 class ClienteIdentificationCard extends StatelessWidget {
   const ClienteIdentificationCard({
@@ -45,7 +45,7 @@ class ClienteIdentificationCard extends StatelessWidget {
               controller: nitCiController,
               label: 'NIT / CI',
               isOptional: true,
-              hint: 'Sin NIT / CI',
+              hint: 'Ej: 1234567',
             ),
             right: _TipoClienteDropdown(
               value: tipoCliente,
@@ -59,11 +59,13 @@ class ClienteIdentificationCard extends StatelessWidget {
               controller: razonSocialController,
               label: 'Razón social / Nombre',
               isOptional: true,
+              hint: 'Ej: Empresa S.A.',
             ),
             right: CustomTextField(
               controller: representanteController,
               label: 'Representante legal',
               isRequired: true,
+              hint: 'Ej: Juan Pérez',
             ),
           ),
         ],

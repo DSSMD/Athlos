@@ -53,14 +53,14 @@ class _ClienteListRowState extends State<ClienteListRow> {
               child: Row(
                 children: [
                   UserAvatar(
-                    name: c.nombreCompleto,
+                    name: c.nomCliente,
                     size: 40,
                     showPresence: false,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
-                      c.nombreCompleto,
+                      c.nomCliente,
                       style: AppTypography.small.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
