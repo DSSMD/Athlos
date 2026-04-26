@@ -22,6 +22,8 @@ import '../../providers/orden_list_provider.dart';
 // Vistas internas
 import 'orden_detalle_page.dart';
 
+import '../../components/ordenes/orden_create_form.dart';
+
 // --- PÁGINA PRINCIPAL ---
 class OrdenesPage extends ConsumerStatefulWidget {
   const OrdenesPage({super.key});
@@ -39,6 +41,16 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
   // Estado interno: orden seleccionada para ver detalle.
   // Si es null, se muestra el listado. Si tiene valor, se muestra el detalle.
   OrdenModel? _ordenSeleccionada;
+  // SCRUM-75: modo crear orden. Si es true, se muestra el form de creación.
+  bool _modoCrear = false;
+
+  void _abrirCrear() {
+    setState(() => _modoCrear = true);
+  }
+
+  void _cerrarCrear() {
+    setState(() => _modoCrear = false);
+  }
 
   void _abrirDetalle(OrdenModel orden) {
     setState(() => _ordenSeleccionada = orden);
@@ -56,6 +68,10 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
   @override
   Widget build(BuildContext context) {
+    // SCRUM-75: modo crear tiene prioridad sobre listado/detalle
+    if (_modoCrear) {
+      return OrdenCreateForm(onVolver: _cerrarCrear);
+    }
     // Si hay orden seleccionada, mostramos el detalle
     if (_ordenSeleccionada != null) {
       return OrdenDetallePage(
@@ -106,9 +122,7 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                   onSearchChanged: (_) => setState(() => _currentPage = 1),
                   newButtonLabelMobile: 'Nueva',
                   newButtonLabelDesktop: 'Nueva orden',
-                  onNewPressed: () {
-                    // TODO: abrir pantalla "Nueva orden" (SCRUM-75)
-                  },
+                  onNewPressed: _abrirCrear,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
