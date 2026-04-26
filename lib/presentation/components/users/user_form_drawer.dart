@@ -205,14 +205,41 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
         );
       }
     } catch (e) {
-      // Si hay error (ej: el email ya existe)
+     // 1. Mensaje por defecto por si falla otra cosa
+      String mensajeError = 'Ocurrió un error inesperado al guardar el usuario.';
+      // 2. Interceptamos el error exacto de Supabase
+      if (e.toString().contains('already been registered')) {
+        mensajeError = 'Este correo electrónico ya pertenece a una cuenta registrada.';
+      } else {
+        // Mantenemos el error original para otros casos
+        mensajeError = e.toString().replaceAll('Exception: ', '');
+      }
+      // 3. Mostramos la notificación flotante con el estilo Athlos
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error: ${e.toString().replaceAll('Exception: ', '')}',
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    mensajeError,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            margin: const EdgeInsets.all(AppSpacing.lg),
+            duration: const Duration(seconds: 4),
           ),
         );
       }

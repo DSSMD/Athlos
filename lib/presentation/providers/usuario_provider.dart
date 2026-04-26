@@ -42,11 +42,16 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required String password,
     required String? telefono,
     required UserRole rol,
-  }) async {
-    final service = ref.read(usuarioServiceProvider);
+  }) async {final service = ref.read(usuarioServiceProvider);
 
-    // AsyncValue.guard captura automáticamente errores de la red o del servidor
-    state = await AsyncValue.guard(() async {
+    // 1.  EL TRUCO: Guardamos la lista de usuarios que está actualmente en pantalla
+    final estadoAnterior = state; 
+
+    // Ponemos el estado en carga mientras trabaja
+    state = const AsyncValue.loading();
+
+    try {
+      // Intentamos crear el usuario
       await service.crearUsuario(
         nombre: nombre,
         apellido: apellido,
@@ -55,9 +60,20 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         telefono: telefono,
         rol: rol,
       );
-      // Tras crear, devolvemos la lista fresca de la DB
-      return _fetchUsuarios();
-    });
+      
+      // Si sale bien, recargamos la lista desde la base de datos
+      state = await AsyncValue.guard(() async {
+        return _fetchUsuarios();
+      });
+
+    } catch (e, stack) {
+      // 2. 💡 LA CORRECCIÓN: Si falla, NO ponemos estado de error. 
+      // Restauramos la tabla normal que guardamos al principio.
+      state = estadoAnterior; 
+      
+      // 3. Escupimos el error hacia el Frontend para que tu SnackBar lo atrape
+      rethrow; 
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
