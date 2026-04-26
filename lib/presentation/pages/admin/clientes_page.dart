@@ -1,16 +1,13 @@
 // lib/presentation/pages/admin/clientes_page.dart
-
-// Página principal de gestión de clientes para el admin. Contiene:
-// - Header con título, buscador y botón de nuevo cliente
-// - KPI card con conteo total
-// - Listado de clientes en formato tabla (desktop) o cards (mobile)
-// - Paginación (desktop) o botón "Cargar más" (mobile)
-// - Form integrado en el mismo espacio del shell (sin navegar a otra ruta)
-// El diseño es responsive y sigue el mismo patrón que usuarios_page.dart
-// para mantener consistencia con el sistema Athlos.
 // ============================================================================
-
-// lib/presentation/pages/clientes_page.dart
+// Página principal de gestión de clientes para el admin. Contiene:
+// - Header con título, buscador, botón Exportar y botón Nuevo cliente
+// - 4 KPIs (Total, Activos este mes, Nuevos este mes, Deuda total)
+// - 4 Filter chips (Todos, Activos, Con deuda, Inactivos)
+// - Listado en formato tabla (desktop) o cards (mobile)
+// - Paginación (desktop) o "Cargar más" (mobile)
+// - Drawer lateral para crear/editar (decisión de Den + cliente)
+// ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +22,7 @@ import '../../theme/app_typography.dart';
 
 import '../../widgets/users/kpi_card.dart';
 import '../../widgets/shared/empty_state.dart';
+import '../../widgets/shared/filter_chips.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 
@@ -46,21 +44,43 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
 
+  // Filtros: 0=Todos, 1=Activos, 2=Con deuda, 3=Inactivos
+  int _selectedFilter = 0;
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  // 1. BUSCADOR MEJORADO: Ahora busca por Razón Social, Email, etc.
-  List<ClienteModel> _getFilteredClientes(List<ClienteModel> allClientes) {
-    final query = _searchController.text.toLowerCase().trim();
-    if (query.isEmpty) return allClientes;
+  // ─────────────────────────────────────────────────────── BÚSQUEDA + FILTRO ──
 
-    return allClientes.where((c) {
-      return c.nombreMostrable.toLowerCase().contains(
-            query,
-          ) || // Usa el getter inteligente
+  /// Aplica búsqueda + filtro chip al listado completo.
+  List<ClienteModel> _aplicarBusquedaYFiltro(List<ClienteModel> all) {
+    var resultado = all;
+
+    // 1. Filter chip
+    switch (_selectedFilter) {
+      case 1: // Activos
+        resultado = resultado.where((c) => c.activo).toList();
+        break;
+      case 2: // Con deuda
+        // TODO(SCRUM-69): cuando backend exponga deuda, filtrar por > 0.
+        // Por ahora retornamos lista vacía para reflejar que no hay datos.
+        resultado = [];
+        break;
+      case 3: // Inactivos
+        resultado = resultado.where((c) => !c.activo).toList();
+        break;
+      // case 0: Todos → sin filtro
+    }
+
+    // 2. Búsqueda
+    final query = _searchController.text.toLowerCase().trim();
+    if (query.isEmpty) return resultado;
+
+    return resultado.where((c) {
+      return c.nombreMostrable.toLowerCase().contains(query) ||
           c.ciCliente.toLowerCase().contains(query) ||
           (c.email?.toLowerCase().contains(query) ?? false) ||
           (c.numTelefono?.toLowerCase().contains(query) ?? false);
@@ -70,31 +90,39 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   // ─────────────────────────────────────────────────────────── ACCIONES ──
 
   void _abrirCrear() {
-    // Llamamos a la función pública del drawer
-    showClienteFormDrawer(
-      context,
-      mode: ClienteFormMode.crear, // Usamos el Enum correcto
-    );
+    showClienteFormDrawer(context, mode: ClienteFormMode.crear);
   }
 
+  // Llamada a la que se le hace click en "Ver" del listado:
+  // abre el drawer directamente en el tab "Resumen" (lectura primero,
+  // edición después si el usuario lo elige).
   void _abrirEditar(ClienteModel cliente) {
-    // Ahora que el modelo está unificado, pasamos el cliente real
     showClienteFormDrawer(
       context,
       mode: ClienteFormMode.editar,
       initialCliente: cliente,
+      initialTab: 1, // 1 = Resumen
     );
   }
 
-  // ─────────────────────────────────────────────────────────── BUILD PRINCIPAL ──
+  void _exportar() {
+    // TODO(SCRUM-69): implementar exportación a Excel/CSV. Pendiente de
+    // confirmación de Denshelmer sobre formato y campos a exportar.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exportar — funcionalidad pendiente'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────── BUILD ──
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
-
-        // Consumimos el provider directamente para traer los datos reales de Supabase
         final clientesAsync = ref.watch(clientesProvider);
 
         return clientesAsync.when(
@@ -102,11 +130,11 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
           error: (error, stack) =>
               Center(child: Text('Error al cargar clientes: $error')),
           data: (clientesReales) {
-            final filteredClientes = _getFilteredClientes(clientesReales);
+            final filteredClientes = _aplicarBusquedaYFiltro(clientesReales);
             return _buildListado(
               isMobile: isMobile,
               filteredClientes: filteredClientes,
-              allClientes: clientesReales, // Pasa todos para el KPI total
+              allClientes: clientesReales,
             );
           },
         );
@@ -121,28 +149,32 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     required List<ClienteModel> filteredClientes,
     required List<ClienteModel> allClientes,
   }) {
-    final clientes = filteredClientes;
-
-    final totalItems = clientes.length;
-    final totalPages = (totalItems / _itemsPerPage).ceil();
+    final totalItems = filteredClientes.length;
+    final totalPages = totalItems == 0
+        ? 1
+        : (totalItems / _itemsPerPage).ceil();
 
     final paginatedClientes = isMobile
-        ? clientes.take(_currentPage * _itemsPerPage).toList()
-        : clientes
+        ? filteredClientes.take(_currentPage * _itemsPerPage).toList()
+        : filteredClientes
               .skip((_currentPage - 1) * _itemsPerPage)
               .take(_itemsPerPage)
               .toList();
+
+    // Conteos para los filter chips (sobre la lista completa, no filtrada)
+    final activosCount = allClientes.where((c) => c.activo).length;
+    final inactivosCount = allClientes.where((c) => !c.activo).length;
+    // TODO(SCRUM-69): cuando backend exponga deuda, calcular el real.
+    const conDeudaCount = 0;
 
     return Column(
       children: [
         StickyTopbar(
           isMobile: isMobile,
           title: 'Clientes',
-          searchHint: 'Buscar por nombre, CI, teléfono, email...',
+          searchHint: 'Buscar por nombre, NIT, teléfono...',
           searchController: _searchController,
-          onSearchChanged: (_) => setState(() {
-            _currentPage = 1;
-          }),
+          onSearchChanged: (_) => setState(() => _currentPage = 1),
           newButtonLabelMobile: 'Nuevo',
           newButtonLabelDesktop: 'Nuevo cliente',
           onNewPressed: _abrirCrear,
@@ -153,24 +185,94 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _KpiRow(isMobile: isMobile, totalClientes: allClientes.length),
+                // KPIs (4 tarjetas)
+                _KpiRow(isMobile: isMobile, allClientes: allClientes),
                 const SizedBox(height: AppSpacing.xl),
 
-                if (clientes.isEmpty)
-                  const EmptyState(
+                // Filter chips + botón Exportar (en desktop, en una fila)
+                if (isMobile) ...[
+                  FilterChips(
+                    labels: const [
+                      'Todos',
+                      'Activos',
+                      'Con deuda',
+                      'Inactivos',
+                    ],
+                    counts: [
+                      allClientes.length,
+                      activosCount,
+                      conDeudaCount,
+                      inactivosCount,
+                    ],
+                    selected: _selectedFilter,
+                    onChanged: (i) => setState(() {
+                      _selectedFilter = i;
+                      _currentPage = 1;
+                    }),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _exportar,
+                      icon: const Icon(Icons.file_download_outlined, size: 18),
+                      label: const Text('Exportar'),
+                    ),
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilterChips(
+                          labels: const [
+                            'Todos',
+                            'Activos',
+                            'Con deuda',
+                            'Inactivos',
+                          ],
+                          counts: [
+                            allClientes.length,
+                            activosCount,
+                            conDeudaCount,
+                            inactivosCount,
+                          ],
+                          selected: _selectedFilter,
+                          onChanged: (i) => setState(() {
+                            _selectedFilter = i;
+                            _currentPage = 1;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      OutlinedButton.icon(
+                        onPressed: _exportar,
+                        icon: const Icon(
+                          Icons.file_download_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Exportar'),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                if (paginatedClientes.isEmpty)
+                  EmptyState(
                     icon: Icons.search_off,
-                    title: 'No se encontraron clientes',
-                    subtitle:
-                        'Probá con otro término de búsqueda o crea uno nuevo.',
+                    title: _selectedFilter == 2
+                        ? 'No hay clientes con deuda'
+                        : 'No se encontraron clientes',
+                    subtitle: _selectedFilter == 2
+                        ? 'La información de deuda se mostrará cuando esté disponible.'
+                        : 'Probá con otro filtro o crea un cliente nuevo.',
                   )
                 else if (isMobile)
-                  // ⚠️ Asegúrate de que _MobileList reciba List<ClienteModel>
-                  _MobileList(clientes: paginatedClientes, onEdit: _abrirEditar)
+                  _MobileList(clientes: paginatedClientes, onView: _abrirEditar)
                 else
-                  // ⚠️ Asegúrate de que _DesktopTable reciba List<ClienteModel>
                   _DesktopTable(
                     clientes: paginatedClientes,
-                    onEdit: _abrirEditar,
+                    onView: _abrirEditar,
                   ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -200,46 +302,111 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// KPI ROW — tarjeta con conteo total de clientes
-// TODO: cuando el modelo tenga campo 'activo', expandir a 2-3 KPIs
-// (Total / Activos / Con deuda) como muestra el Figma.
+// KPI ROW — 4 tarjetas según Figma
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _KpiRow extends StatelessWidget {
-  const _KpiRow({required this.isMobile, required this.totalClientes});
+  const _KpiRow({required this.isMobile, required this.allClientes});
 
   final bool isMobile;
-  final int totalClientes;
+  final List<ClienteModel> allClientes;
 
   @override
   Widget build(BuildContext context) {
-    final card = KpiCard(
-      value: '$totalClientes',
-      label: 'Total clientes',
-      description: 'Registrados en el sistema',
-    );
+    final now = DateTime.now();
+    final primerDiaMes = DateTime(now.year, now.month, 1);
+
+    final total = allClientes.length;
+    final activosEsteMes = allClientes
+        .where(
+          (c) =>
+              c.activo &&
+              c.updatedAt != null &&
+              c.updatedAt!.isAfter(primerDiaMes),
+        )
+        .length;
+    final nuevosEsteMes = allClientes
+        .where((c) => c.createdAt != null && c.createdAt!.isAfter(primerDiaMes))
+        .length;
+    // TODO(SCRUM-69): calcular deuda real cuando backend la exponga.
+    const deudaTotal = 0;
+
+    final kpis = [
+      KpiCard(
+        value: '$total',
+        label: 'Total clientes',
+        description: 'Registrados',
+      ),
+      KpiCard(
+        value: '$activosEsteMes',
+        label: 'Activos este mes',
+        description: 'Con actividad',
+        valueColor: AppColors.info,
+      ),
+      KpiCard(
+        value: '$nuevosEsteMes',
+        label: 'Nuevos este mes',
+        description: 'Recientes',
+        valueColor: AppColors.success,
+      ),
+      KpiCard(
+        value: 'Bs. $deudaTotal',
+        label: 'Deuda total',
+        description: 'Pendiente',
+        valueColor: AppColors.error,
+      ),
+    ];
 
     if (isMobile) {
-      return card;
+      // Grilla 2x2 en mobile (consistente con SCRUM-72)
+      return Column(
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: kpis[0]),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: kpis[1]),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: kpis[2]),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: kpis[3]),
+              ],
+            ),
+          ),
+        ],
+      );
     }
+
+    // Desktop: 4 KPIs en una fila
     return Row(
       children: [
-        Expanded(child: card),
-        const Spacer(flex: 3),
+        for (var i = 0; i < kpis.length; i++) ...[
+          Expanded(child: kpis[i]),
+          if (i < kpis.length - 1) const SizedBox(width: AppSpacing.lg),
+        ],
       ],
     );
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DESKTOP TABLE — header + filas
+// DESKTOP TABLE
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DesktopTable extends StatelessWidget {
-  const _DesktopTable({required this.clientes, required this.onEdit});
+  const _DesktopTable({required this.clientes, required this.onView});
 
   final List<ClienteModel> clientes;
-  final void Function(ClienteModel) onEdit;
+  final void Function(ClienteModel) onView;
 
   @override
   Widget build(BuildContext context) {
@@ -260,31 +427,24 @@ class _DesktopTable extends StatelessWidget {
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _col('CLIENTE', 3),
-                _col('CI', 2),
+                _col('CLIENTE', 4),
+                _col('NIT / CI', 2),
                 _col('TELÉFONO', 2),
-                _col('DIRECCIÓN', 3),
-                _col('REGISTRADO', 2),
-                SizedBox(
-                  width: 80,
-                  child: Text(
-                    'ACCIONES',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
+                _col('ÓRDENES', 2, align: TextAlign.center),
+                _col('TOTAL\nCOMPRADO', 2, align: TextAlign.center),
+                _col('DEUDA', 1, align: TextAlign.center),
+                _col('ÚLTIMO\nPEDIDO', 2, align: TextAlign.center),
+                _col('ESTADO', 2),
+                const SizedBox(width: 60),
               ],
             ),
           ),
           for (var i = 0; i < clientes.length; i++) ...[
             ClienteListRow(
               cliente: clientes[i],
-              onEdit: () => onEdit(clientes[i]),
+              onView: () => onView(clientes[i]),
             ),
             if (i < clientes.length - 1)
               const Divider(height: 1, color: AppColors.border),
@@ -294,35 +454,37 @@ class _DesktopTable extends StatelessWidget {
     );
   }
 
-  Widget _col(String label, int flex) => Expanded(
-    flex: flex,
-    child: Text(
-      label,
-      style: AppTypography.caption.copyWith(
-        fontWeight: FontWeight.w600,
-        color: AppColors.textMuted,
-        letterSpacing: 0.5,
-      ),
-    ),
-  );
+  Widget _col(String label, int flex, {TextAlign align = TextAlign.left}) =>
+      Expanded(
+        flex: flex,
+        child: Text(
+          label,
+          textAlign: align,
+          style: AppTypography.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MOBILE LIST — stack vertical de cards
+// MOBILE LIST
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _MobileList extends StatelessWidget {
-  const _MobileList({required this.clientes, required this.onEdit});
+  const _MobileList({required this.clientes, required this.onView});
 
   final List<ClienteModel> clientes;
-  final void Function(ClienteModel) onEdit;
+  final void Function(ClienteModel) onView;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         for (var i = 0; i < clientes.length; i++) ...[
-          ClienteCard(cliente: clientes[i], onTap: () => onEdit(clientes[i])),
+          ClienteCard(cliente: clientes[i], onTap: () => onView(clientes[i])),
           if (i < clientes.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],

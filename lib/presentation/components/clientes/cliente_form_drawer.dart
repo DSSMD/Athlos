@@ -12,8 +12,8 @@ import 'cliente_credit_card.dart';
 import 'cliente_error_dialog.dart';
 import 'cliente_identification_card.dart';
 import 'cliente_preferences_card.dart';
+import 'cliente_resumen_view.dart';
 import 'cliente_success_dialog.dart';
-//import 'cliente_summary_panel.dart';
 
 import '../../widgets/loading_spinner.dart';
 
@@ -24,7 +24,9 @@ import '../../providers/cliente_provider.dart';
 Future<void> showClienteFormDrawer(
   BuildContext context, {
   ClienteFormMode mode = ClienteFormMode.crear,
-  ClienteModel? initialCliente, // 👈 Usa el modelo real
+  ClienteModel? initialCliente,
+  // 0 = Editar, 1 = Resumen. Solo aplica en modo editar (sino se ignora).
+  int initialTab = 0,
 }) {
   final isMobile = MediaQuery.of(context).size.width < 900;
 
@@ -34,8 +36,11 @@ Future<void> showClienteFormDrawer(
         opaque: false,
         barrierColor: Colors.black54,
         transitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (_, _, _) =>
-            ClienteFormDrawer(mode: mode, initialCliente: initialCliente),
+        pageBuilder: (_, _, _) => ClienteFormDrawer(
+          mode: mode,
+          initialCliente: initialCliente,
+          initialTab: initialTab,
+        ),
         transitionsBuilder: (_, animation, _, child) {
           return SlideTransition(
             position: animation.drive(
@@ -59,7 +64,11 @@ Future<void> showClienteFormDrawer(
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (_, _, _) => Align(
       alignment: Alignment.centerRight,
-      child: ClienteFormDrawer(mode: mode, initialCliente: initialCliente),
+      child: ClienteFormDrawer(
+        mode: mode,
+        initialCliente: initialCliente,
+        initialTab: initialTab,
+      ),
     ),
     transitionBuilder: (_, animation, _, child) {
       return SlideTransition(
@@ -75,23 +84,29 @@ Future<void> showClienteFormDrawer(
   );
 }
 
-// 2. CAMBIO A CONSUMER PARA USAR RIVERPOD
 class ClienteFormDrawer extends ConsumerStatefulWidget {
   const ClienteFormDrawer({
     super.key,
     this.mode = ClienteFormMode.crear,
     this.initialCliente,
+    this.initialTab = 0,
   });
 
   final ClienteFormMode mode;
   final ClienteModel? initialCliente;
+  final int initialTab;
 
   @override
   ConsumerState<ClienteFormDrawer> createState() => _ClienteFormDrawerState();
 }
 
-class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
-  // ───────── Controllers
+class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
+    with SingleTickerProviderStateMixin {
+  // ───────── Tabs (solo en modo editar)
+  TabController? _tabController;
+  bool get _showTabs => widget.mode == ClienteFormMode.editar;
+
+  // ───────── Controllers de texto
   late final TextEditingController _nitCiCtrl;
   late final TextEditingController _razonSocialCtrl;
   late final TextEditingController _representanteCtrl;
@@ -124,10 +139,9 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
     super.initState();
     final c = widget.initialCliente;
 
-    // 3. MAPEO DE DATOS REALES AL INICIAR
+    // Mapeo de datos reales al iniciar
     _nitCiCtrl = TextEditingController(text: c?.ciCliente ?? '');
     _razonSocialCtrl = TextEditingController(text: c?.razonSocial ?? '');
-    // Unimos nombre y apellido para el campo del representante
     final nombreCompleto = c != null
         ? '${c.nomCliente} ${c.apellidoCliente}'.trim()
         : '';
@@ -150,10 +164,20 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
     _tipoCliente = c?.tipoEnum ?? TipoCliente.empresa;
     _permiteCredito = c?.permiteCredito ?? false;
     _clientePrioritario = c?.esPrioritario ?? false;
+
+    // Inicializar tabs solo si estamos en modo editar
+    if (_showTabs) {
+      _tabController = TabController(
+        length: 2,
+        vsync: this,
+        initialIndex: widget.initialTab.clamp(0, 1),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _tabController?.dispose();
     _scrollController.dispose();
     _nitCiCtrl.dispose();
     _razonSocialCtrl.dispose();
@@ -195,31 +219,21 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
     }
 
     setState(() => _errors = errors);
-    // Si errors está vacío, significa que todo está bien y devuelve true.
     return errors.isEmpty;
   }
 
   // ───────────────────────────────────────── FORMATEO DE TELÉFONO ──
   String _formatearTelefono(String numero) {
     String tel = numero.trim();
-    if (tel.isEmpty) return ''; // Se enviará vacío a la BD
-
-    // Limpiamos espacios en blanco intermedios por si el usuario escribe "712 34 567"
+    if (tel.isEmpty) return '';
     tel = tel.replaceAll(RegExp(r'\s+'), '');
-
-    // Si ya tiene el formato correcto, lo dejamos
     if (tel.startsWith('+591')) return tel;
-
-    // Si lo escribió como "59171234567" le agregamos el +
     if (tel.startsWith('591')) return '+$tel';
-
-    // Si escribió solo el número "71234567", le agregamos todo
     return '+591 $tel';
   }
 
   // ───────────────────────────────────── GUARDADO REAL EN BD ──
   Future<void> _handleGuardar() async {
-    // 1. SI LA VALIDACIÓN FALLA, SE DETIENE EL GUARDADO AQUÍ MISMO
     if (!_validar()) {
       _mostrarErroresSnackbar();
       _scrollToFirstError();
@@ -228,7 +242,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
 
     setState(() => _isSaving = true);
 
-    // 2. SEPARAR NOMBRE Y APELLIDO
     final nombreParts = _representanteCtrl.text.trim().split(' ');
     final nombre = nombreParts.isNotEmpty ? nombreParts.first : '';
     final apellido = nombreParts.length > 1
@@ -236,8 +249,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
         : '';
     final isEmpresa = _tipoCliente == TipoCliente.empresa;
 
-    // 3. LIMPIEZA DE DATOS (Evitar NULLs)
-    // Si el usuario no escribió nada, enviamos '' (String vacío) o un valor por defecto.
     final ciLimpio = _nitCiCtrl.text.trim().isEmpty
         ? 'S/N'
         : _nitCiCtrl.text.trim();
@@ -254,20 +265,15 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
         ? ''
         : _notasCtrl.text.trim();
 
-    // 4. CONSTRUIR EL MODELO
     final clienteGuardar = ClienteModel(
       idCliente: widget.initialCliente?.idCliente,
       ciCliente: ciLimpio,
       nomCliente: nombre,
       apellidoCliente: apellido,
-      razonSocial: isEmpresa ? razonLimpia : '', // Nunca enviará null
+      razonSocial: isEmpresa ? razonLimpia : '',
       email: emailLimpio,
-      numTelefono: _formatearTelefono(
-        _telefonoCtrl.text,
-      ), // Formateado con +591
-      numTelefono2: _formatearTelefono(
-        _telefonoSecCtrl.text,
-      ), // Formateado con +591
+      numTelefono: _formatearTelefono(_telefonoCtrl.text),
+      numTelefono2: _formatearTelefono(_telefonoSecCtrl.text),
       direccion: dirLimpia,
       idTipoCliente: isEmpresa ? 1 : 2,
       permiteCredito: _permiteCredito,
@@ -294,7 +300,7 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // Cierra el Drawer
+      Navigator.of(context).pop();
 
       await showClienteSuccessDialog(
         context,
@@ -314,7 +320,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
     }
   }
 
-  // Hace scroll al primer campo con error y lo destella en rojo.
   void _scrollToFirstError() {
     final orderedKeys = [
       ('nitCi', _nitCiKey),
@@ -387,44 +392,133 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Detectamos si es móvil para el tamaño
     final isMobile = MediaQuery.of(context).size.width < 900;
 
-    // 2. EL TAMAÑO: 100% en móvil, 500px de ancho en escritorio
-    final double formWidth = isMobile ? double.infinity : 600.0;
+    // Ancho: en modo editar usamos 700 para acomodar mejor el contenido
+    // del tab Resumen. En crear queda en 600 (más cómodo para el form).
+    final double formWidth = isMobile
+        ? double.infinity
+        : (_showTabs ? 700.0 : 600.0);
 
-    // 👇 1. AÑADE ESTE WIDGET 'Material' AQUÍ 👇
     return Material(
-      color:
-          AppColors.background, // Movemos el color de fondo hacia el Material
-      elevation:
-          16, // Opcional: Le da una sombra muy elegante a tu Drawer flotante
-
+      color: AppColors.background,
+      elevation: 16,
       child: SizedBox(
-        width: formWidth, // Mantenemos el límite de tamaño
-        // color: AppColors.background, <-- ⚠️ BORRA el color de aquí porque ya está arriba
+        width: formWidth,
         child: SafeArea(
           child: Column(
             children: [
-              _Header(
-                isEditing: widget.mode == ClienteFormMode.editar,
-                onClose: () => Navigator.of(context).pop(),
-              ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: _buildFormColumn(),
+              // Header dinámico: en modo editar el título cambia según el tab activo.
+              if (_showTabs && _tabController != null)
+                AnimatedBuilder(
+                  animation: _tabController!,
+                  builder: (context, _) {
+                    final title = _tabController!.index == 0
+                        ? 'Editar cliente'
+                        : 'Detalle del cliente';
+                    return _Header(
+                      title: title,
+                      onClose: () => Navigator.of(context).pop(),
+                    );
+                  },
+                )
+              else
+                _Header(
+                  title: 'Nuevo cliente',
+                  onClose: () => Navigator.of(context).pop(),
                 ),
-              ),
 
-              _Footer(
-                isEditing: widget.mode == ClienteFormMode.editar,
-                isSaving: _isSaving,
-                onCancel: () => Navigator.of(context).pop(),
-                onSave: _handleGuardar,
-              ),
+              // Si estamos en modo editar, mostramos los tabs
+              if (_showTabs && _tabController != null) ...[
+                Container(
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppColors.border)),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: AppColors.primary500,
+                    unselectedLabelColor: AppColors.textMuted,
+                    indicatorColor: AppColors.primary500,
+                    indicatorWeight: 2,
+                    labelStyle: AppTypography.small.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: AppTypography.small,
+                    tabs: const [
+                      Tab(text: 'Editar'),
+                      Tab(text: 'Resumen'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Tab Editar
+                      SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        child: _buildFormColumn(),
+                      ),
+                      // Tab Resumen
+                      SingleChildScrollView(
+                        child: ClienteResumenView(
+                          cliente: widget.initialCliente!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Footer dinámico según el tab activo
+                AnimatedBuilder(
+                  animation: _tabController!,
+                  builder: (context, _) {
+                    if (_tabController!.index == 0) {
+                      return _Footer(
+                        isEditing: true,
+                        isSaving: _isSaving,
+                        onCancel: () => Navigator.of(context).pop(),
+                        onSave: _handleGuardar,
+                      );
+                    }
+                    // Tab Resumen: solo botón Cerrar
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                        vertical: AppSpacing.lg,
+                      ),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cerrar'),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ] else ...[
+                // Modo crear: sin tabs, formulario directo
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: _buildFormColumn(),
+                  ),
+                ),
+                _Footer(
+                  isEditing: false,
+                  isSaving: _isSaving,
+                  onCancel: () => Navigator.of(context).pop(),
+                  onSave: _handleGuardar,
+                ),
+              ],
             ],
           ),
         ),
@@ -435,16 +529,7 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
   Widget _buildFormColumn() {
     return Column(
       children: [
-        // 1. PANEL DE RESUMEN
-        /*
-        if (widget.mode == ClienteFormMode.editar &&
-            widget.initialCliente != null) ...[
-          ClienteSummaryPanel(cliente: widget.initialCliente!),
-          const SizedBox(height: AppSpacing.xl),
-        ],
-        */
-
-        // 2. IDENTIFICACIÓN (CON EL FIX DEL TIPO DE CLIENTE)
+        // 1. IDENTIFICACIÓN
         _FlashWrap(
           isFlashing:
               _flashingField == 'nitCi' || _flashingField == 'representante',
@@ -454,13 +539,12 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
             razonSocialController: _razonSocialCtrl,
             representanteController: _representanteCtrl,
             tipoCliente: _tipoCliente,
-            // 👇 SOLUCIÓN AL ERROR AQUÍ: Agregamos "as TipoCliente" 👇
             onTipoChanged: (v) => setState(() => _tipoCliente = v),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // 3. CONTACTO
+        // 2. CONTACTO
         _FlashWrap(
           isFlashing: _flashingField == 'telefono' || _flashingField == 'email',
           child: ClienteContactCard(
@@ -485,7 +569,7 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // 4. CRÉDITO
+        // 3. CRÉDITO
         ClienteCreditCard(
           permiteCredito: _permiteCredito,
           onPermiteCreditoChanged: (v) => setState(() => _permiteCredito = v),
@@ -495,11 +579,10 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // 5. PREFERENCIAS ADICIONALES (LIMPIO)
+        // 4. PREFERENCIAS
         ClientePreferencesCard(
           clientePrioritario: _clientePrioritario,
           onPrioritarioChanged: (v) => setState(() => _clientePrioritario = v),
-          // Eliminamos facturación electrónica de aquí
         ),
         const SizedBox(height: AppSpacing.xl3),
       ],
@@ -512,8 +595,9 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer> {
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isEditing, required this.onClose});
-  final bool isEditing;
+  const _Header({required this.title, required this.onClose});
+
+  final String title;
   final VoidCallback onClose;
 
   @override
@@ -539,10 +623,7 @@ class _Header extends StatelessWidget {
                     color: AppColors.textMuted,
                   ),
                 ),
-                Text(
-                  isEditing ? 'Editar cliente' : 'Nuevo cliente',
-                  style: AppTypography.h3,
-                ),
+                Text(title, style: AppTypography.h3),
               ],
             ),
           ),
@@ -621,9 +702,7 @@ class _Footer extends StatelessWidget {
 }
 
 // ============================================================================
-// _FlashWrap: envuelve un widget y le aplica un destello rojo cuando
-// isFlashing = true. Se usa para llamar la atención del usuario al primer
-// campo con error tras una validación fallida.
+// _FlashWrap: destello rojo al primer campo con error.
 // ============================================================================
 class _FlashWrap extends StatelessWidget {
   const _FlashWrap({required this.child, required this.isFlashing});
