@@ -27,8 +27,9 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
   // ══════════════════════════════════════════════════════════════════════════
   Future<List<ClienteModel>> _fetchClientes() async {
     final service = ref.read(clienteServiceProvider);
-    // Por defecto traemos solo los activos para el listado principal
-    return await service.obtenerClientes(soloActivos: true);
+    // Traemos todos (activos e inactivos) para que el filter chip
+    // "Inactivos" funcione. El filtrado por estado se hace en la UI.
+    return await service.obtenerClientes(soloActivos: false);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

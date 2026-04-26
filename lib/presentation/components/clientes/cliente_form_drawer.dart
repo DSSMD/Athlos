@@ -534,13 +534,13 @@ class _Header extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Usuarios',
+                  'Clientes',
                   style: AppTypography.caption.copyWith(
                     color: AppColors.textMuted,
                   ),
                 ),
                 Text(
-                  isEditing ? 'Editar usuario' : 'Nuevo usuario',
+                  isEditing ? 'Editar cliente' : 'Nuevo cliente',
                   style: AppTypography.h3,
                 ),
               ],
@@ -611,7 +611,7 @@ class _Footer extends StatelessWidget {
                         Text(isEditing ? 'Guardando...' : 'Creando...'),
                       ],
                     )
-                  : Text(isEditing ? 'Guardar cambios' : 'Crear usuario'),
+                  : Text(isEditing ? 'Guardar cambios' : 'Crear cliente'),
             ),
           ),
         ],
