@@ -3,7 +3,7 @@
 // Ubicación sugerida: lib/presentation/widgets/kpi_card.dart
 // Descripción: Tarjeta para mostrar un KPI (Key Performance Indicator) con un valor destacado, una etiqueta descriptiva y un texto adicional opcional.
 // El diseño es limpio y moderno, con un fondo claro, bordes redondeados y una tipografía grande para el valor del KPI.
-// Se puede usar para mostrar métricas clave en el dashboard de usuarios o en otras secciones de la aplicación.   
+// Se puede usar para mostrar métricas clave en el dashboard de usuarios o en otras secciones de la aplicación.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -61,9 +61,7 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               description!,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textMuted,
-              ),
+              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
               textAlign: TextAlign.center,
             ),
           ],
