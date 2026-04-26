@@ -1,12 +1,17 @@
 // ============================================================================
 // custom_text_field.dart
-// Ubicación sugerida: lib/presentation/widgets/custom_text_field.dart
+// Ubicación: lib/presentation/widgets/custom_text_field.dart
 // Descripción: TextField reutilizable con label superior, (opcional)/*required,
 // validación visual (borde rojo + mensaje de error + ícono check/error) y
 // soporte para suffix custom (ej: botón "Mostrar" en contraseñas).
+//
+// IMPORTANTE: el campo acepta un `errorText` externo. Cuando viene un error
+// desde afuera (típicamente desde el form padre tras validación), el campo
+// muestra el mensaje y el ícono de error. Si no hay error externo y el campo
+// tiene contenido válido, muestra el check verde.
 // ============================================================================
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -25,6 +30,8 @@ class CustomTextField extends StatefulWidget {
     this.onChanged,
     this.suffix,
     this.enabled = true,
+    this.errorText,
+    this.inputFormatters,
   });
 
   final String label;
@@ -39,25 +46,36 @@ class CustomTextField extends StatefulWidget {
   final Widget? suffix;
   final bool enabled;
 
+  /// Mensaje de error externo. Si está presente, anula el validator interno
+  /// y se muestra inmediatamente.
+  final String? errorText;
+
+  /// Filtros de entrada para restringir caracteres (números, letras, etc.).
+  final List<TextInputFormatter>? inputFormatters;
+
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
 }
 
 class _CustomTextFieldState extends State<CustomTextField> {
-  String? _errorText;
+  String? _internalError;
   bool _touched = false;
 
   void _validate(String value) {
     if (widget.validator != null) {
       final error = widget.validator!(value);
-      setState(() => _errorText = error);
+      setState(() => _internalError = error);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasError = _touched && _errorText != null;
+    // El error externo (del form padre) tiene prioridad sobre el interno.
+    final effectiveError = widget.errorText ?? _internalError;
+    final hasError = effectiveError != null;
     final hasValue = widget.controller?.text.isNotEmpty ?? false;
+    // Check verde solo si: el usuario tocó el campo, no hay error de ningún tipo,
+    // y hay valor escrito.
     final showCheck = _touched && !hasError && hasValue;
 
     return Column(
@@ -70,6 +88,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
           enabled: widget.enabled,
+          inputFormatters: widget.inputFormatters,
           style: AppTypography.small,
           onChanged: (value) {
             _touched = true;
@@ -78,7 +97,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           },
           decoration: InputDecoration(
             hintText: widget.hint,
-            errorText: hasError ? _errorText : null,
+            errorText: hasError ? effectiveError : null,
             suffixIcon:
                 widget.suffix ??
                 (showCheck

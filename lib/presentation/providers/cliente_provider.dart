@@ -43,25 +43,34 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
   // ══════════════════════════════════════════════════════════════════════════
   // ACCIÓN: Registrar Cliente
   // ══════════════════════════════════════════════════════════════════════════
+  /// Registra un cliente. Si falla, conserva el estado actual de la lista
+  /// (no la rompe) y relanza la excepción para que el formulario la muestre.
   Future<void> registrarCliente(ClienteModel cliente) async {
     final service = ref.read(clienteServiceProvider);
-
-    state = await AsyncValue.guard(() async {
+    try {
       await service.registrarCliente(cliente);
-      return _fetchClientes(); // Refrescamos la lista tras el éxito
-    });
+      // Si el guardado fue exitoso, refrescamos la lista
+      state = await AsyncValue.guard(() => _fetchClientes());
+    } catch (e) {
+      // Si falla, NO tocamos el state (la lista queda intacta)
+      // y relanzamos para que el form muestre el error.
+      rethrow;
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // ACCIÓN: Actualizar Cliente
   // ══════════════════════════════════════════════════════════════════════════
+  /// Actualiza un cliente. Si falla, conserva el estado actual de la lista
+  /// (no la rompe) y relanza la excepción para que el formulario la muestre.
   Future<void> actualizarCliente(ClienteModel cliente) async {
     final service = ref.read(clienteServiceProvider);
-
-    state = await AsyncValue.guard(() async {
+    try {
       await service.actualizarCliente(cliente);
-      return _fetchClientes();
-    });
+      state = await AsyncValue.guard(() => _fetchClientes());
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

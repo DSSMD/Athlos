@@ -125,12 +125,14 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
 
   bool _isSaving = false;
   Map<String, String?> _errors = {};
+  String? _bannerError; // Mensaje de error general visible arriba del form
 
   final _scrollController = ScrollController();
   final _representanteKey = GlobalKey();
   final _telefonoKey = GlobalKey();
   final _nitCiKey = GlobalKey();
   final _emailKey = GlobalKey();
+  final _creditoKey = GlobalKey();
 
   String? _flashingField;
 
@@ -196,10 +198,18 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
   bool _validar() {
     final errors = <String, String?>{};
 
+    // 1. Representante/Nombre — requerido
     if (_representanteCtrl.text.trim().isEmpty) {
       errors['representante'] = 'El representante/nombre es requerido';
     }
 
+    // 2. Razón social — requerida si tipo es Empresa
+    if (_tipoCliente == TipoCliente.empresa &&
+        _razonSocialCtrl.text.trim().isEmpty) {
+      errors['razonSocial'] = 'La razón social es requerida para empresas';
+    }
+
+    // 3. Teléfono — requerido + mínimo 8 dígitos
     final telefono = _telefonoCtrl.text.trim();
     if (telefono.isEmpty) {
       errors['telefono'] = 'El teléfono es requerido';
@@ -207,15 +217,29 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
       errors['telefono'] = 'El número parece ser muy corto';
     }
 
+    // 4. NIT/CI — si se llena, solo números o guiones
     final ci = _nitCiCtrl.text.trim();
     if (ci.isNotEmpty && !RegExp(r'^[0-9\-]+$').hasMatch(ci)) {
       errors['nitCi'] = 'El NIT/CI debe contener solo números o guiones';
     }
 
+    // 5. Email — si se llena, formato válido
     final email = _emailCtrl.text.trim();
     if (email.isNotEmpty &&
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+').hasMatch(email)) {
       errors['email'] = 'Email inválido';
+    }
+
+    // 6. Si crédito activo: límite y días deben ser > 0
+    if (_permiteCredito) {
+      final limite = double.tryParse(_limiteCtrl.text) ?? 0.0;
+      if (limite <= 0) {
+        errors['limite'] = 'El límite de crédito debe ser mayor a 0';
+      }
+      final dias = int.tryParse(_diasCtrl.text) ?? 0;
+      if (dias <= 0) {
+        errors['dias'] = 'Los días de plazo deben ser mayor a 0';
+      }
     }
 
     setState(() => _errors = errors);
@@ -235,7 +259,7 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
   // ───────────────────────────────────── GUARDADO REAL EN BD ──
   Future<void> _handleGuardar() async {
     if (!_validar()) {
-      _mostrarErroresSnackbar();
+      _mostrarBannerError();
       _scrollToFirstError();
       return;
     }
@@ -249,9 +273,10 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
         : '';
     final isEmpresa = _tipoCliente == TipoCliente.empresa;
 
-    final ciLimpio = _nitCiCtrl.text.trim().isEmpty
-        ? 'S/N'
-        : _nitCiCtrl.text.trim();
+    // NOTA: si está vacío enviamos string vacío (no "S/N") para evitar
+    // duplicados en BD. Den/backend deciden cómo manejarlo.
+    final ciLimpio = _nitCiCtrl.text.trim();
+
     final razonLimpia = _razonSocialCtrl.text.trim().isEmpty
         ? ''
         : _razonSocialCtrl.text.trim();
@@ -324,8 +349,11 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
     final orderedKeys = [
       ('nitCi', _nitCiKey),
       ('representante', _representanteKey),
+      ('razonSocial', _representanteKey), // misma key — está en el mismo card
       ('telefono', _telefonoKey),
       ('email', _emailKey),
+      ('limite', _creditoKey),
+      ('dias', _creditoKey),
     ];
 
     for (final (errorKey, widgetKey) in orderedKeys) {
@@ -353,37 +381,15 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
     });
   }
 
-  void _mostrarErroresSnackbar() {
+  void _mostrarBannerError() {
     if (_errors.isEmpty) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.neutral950,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        margin: const EdgeInsets.all(AppSpacing.lg),
-        content: Row(
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: AppColors.error,
-              size: 20,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                'Revisá los campos marcados en rojo',
-                style: AppTypography.small.copyWith(
-                  color: AppColors.brandWhite,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    setState(() {
+      _bannerError = 'Revisá los campos marcados en rojo';
+    });
+    // Auto-ocultar tras 4 segundos
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _bannerError = null);
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -427,6 +433,9 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
                   title: 'Nuevo cliente',
                   onClose: () => Navigator.of(context).pop(),
                 ),
+
+              // Banner de error general (debajo del header, encima del contenido)
+              if (_bannerError != null) _ErrorBanner(message: _bannerError!),
 
               // Si estamos en modo editar, mostramos los tabs
               if (_showTabs && _tabController != null) ...[
@@ -540,6 +549,7 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
             representanteController: _representanteCtrl,
             tipoCliente: _tipoCliente,
             onTipoChanged: (v) => setState(() => _tipoCliente = v),
+            errors: _errors,
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -553,29 +563,23 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
             telefonoSecController: _telefonoSecCtrl,
             emailController: _emailCtrl,
             direccionController: _direccionCtrl,
-            onWhatsappTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Redirigiendo a WhatsApp para ${_telefonoCtrl.text}...',
-                    style: AppTypography.small,
-                  ),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            errors: _errors,
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
         // 3. CRÉDITO
-        ClienteCreditCard(
-          permiteCredito: _permiteCredito,
-          onPermiteCreditoChanged: (v) => setState(() => _permiteCredito = v),
-          limiteController: _limiteCtrl,
-          diasController: _diasCtrl,
-          notasController: _notasCtrl,
+        _FlashWrap(
+          isFlashing: _flashingField == 'limite' || _flashingField == 'dias',
+          child: ClienteCreditCard(
+            key: _creditoKey,
+            permiteCredito: _permiteCredito,
+            onPermiteCreditoChanged: (v) => setState(() => _permiteCredito = v),
+            limiteController: _limiteCtrl,
+            diasController: _diasCtrl,
+            notasController: _notasCtrl,
+            errors: _errors,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
@@ -728,6 +732,51 @@ class _FlashWrap extends StatelessWidget {
             : [],
       ),
       child: child,
+    );
+  }
+}
+
+// ============================================================================
+// _ErrorBanner: banner rojo dentro del drawer para mostrar errores generales.
+// Se usa en lugar de SnackBar porque el SnackBar global queda detrás del drawer.
+// ============================================================================
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        border: Border(
+          bottom: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.error,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.small.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

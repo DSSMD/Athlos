@@ -6,6 +6,7 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -21,6 +22,7 @@ class ClienteCreditCard extends StatelessWidget {
     required this.diasController,
     required this.notasController,
     this.showBadgeActualizado = false,
+    this.errors = const {},
   });
 
   final bool permiteCredito;
@@ -29,6 +31,7 @@ class ClienteCreditCard extends StatelessWidget {
   final TextEditingController diasController;
   final TextEditingController notasController;
   final bool showBadgeActualizado;
+  final Map<String, String?> errors;
 
   @override
   Widget build(BuildContext context) {
@@ -78,14 +81,21 @@ class ClienteCreditCard extends StatelessWidget {
               label: 'Límite de crédito',
               keyboardType: TextInputType.number,
               enabled: permiteCredito,
-              hint: '\$0.00',
+              isRequired: permiteCredito,
+              errorText: permiteCredito ? errors['limite'] : null,
+              inputFormatters: [
+                // Permite números con punto decimal
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
             ),
             right: CustomTextField(
               controller: diasController,
               label: 'Días de plazo para pago',
               keyboardType: TextInputType.number,
               enabled: permiteCredito,
-              hint: '30',
+              isRequired: permiteCredito,
+              errorText: permiteCredito ? errors['dias'] : null,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -140,6 +150,7 @@ class ClienteCreditCard extends StatelessWidget {
           TextField(
             controller: notasController,
             maxLines: 3,
+            maxLength: 500,
             style: AppTypography.body.copyWith(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Notas internas sobre el cliente...',

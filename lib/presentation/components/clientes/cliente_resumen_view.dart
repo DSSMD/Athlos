@@ -140,15 +140,30 @@ class _InfoContactoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tieneTelefono =
+        cliente.numTelefono != null && cliente.numTelefono!.isNotEmpty;
+
     return _Card(
       title: 'Información de contacto',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _InfoRow(
-            icon: Icons.phone_outlined,
-            label: 'Teléfono principal',
-            value: cliente.numTelefono ?? '—',
+          // Teléfono principal con botón WhatsApp si existe
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _InfoRow(
+                  icon: Icons.phone_outlined,
+                  label: 'Teléfono principal',
+                  value: cliente.numTelefono ?? '—',
+                ),
+              ),
+              if (tieneTelefono) ...[
+                const SizedBox(width: AppSpacing.sm),
+                _WhatsappMiniButton(telefono: cliente.numTelefono!),
+              ],
+            ],
           ),
           if (cliente.numTelefono2 != null && cliente.numTelefono2!.isNotEmpty)
             _InfoRow(
@@ -395,4 +410,51 @@ String _fmtDate(DateTime d) {
   final dd = d.day.toString().padLeft(2, '0');
   final mm = d.month.toString().padLeft(2, '0');
   return '$dd/$mm/${d.year}';
+}
+
+class _WhatsappMiniButton extends StatelessWidget {
+  const _WhatsappMiniButton({required this.telefono});
+  final String telefono;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        // TODO(SCRUM-69): integrar API real de WhatsApp Web/Click-to-Chat.
+        // Por ahora notificamos visualmente.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Redirigiendo a WhatsApp para $telefono...'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.success,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.chat, color: AppColors.brandWhite, size: 16),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              'WhatsApp',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.brandWhite,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

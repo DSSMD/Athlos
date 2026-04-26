@@ -6,6 +6,7 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -22,6 +23,7 @@ class ClienteIdentificationCard extends StatelessWidget {
     required this.tipoCliente,
     required this.onTipoChanged,
     this.showBadgeActualizado = false,
+    this.errors = const {},
   });
 
   final TextEditingController nitCiController;
@@ -30,6 +32,7 @@ class ClienteIdentificationCard extends StatelessWidget {
   final TipoCliente tipoCliente;
   final ValueChanged<TipoCliente> onTipoChanged;
   final bool showBadgeActualizado;
+  final Map<String, String?> errors;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +48,11 @@ class ClienteIdentificationCard extends StatelessWidget {
               controller: nitCiController,
               label: 'NIT / CI',
               isOptional: true,
-              hint: 'Ej: 1234567',
+              errorText: errors['nitCi'],
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9\-]')),
+              ],
             ),
             right: _TipoClienteDropdown(
               value: tipoCliente,
@@ -58,14 +65,21 @@ class ClienteIdentificationCard extends StatelessWidget {
             left: CustomTextField(
               controller: razonSocialController,
               label: 'Razón social / Nombre',
-              isOptional: true,
-              hint: 'Ej: Empresa S.A.',
+              isOptional: tipoCliente != TipoCliente.empresa,
+              isRequired: tipoCliente == TipoCliente.empresa,
+              errorText: errors['razonSocial'],
             ),
             right: CustomTextField(
               controller: representanteController,
               label: 'Representante legal',
               isRequired: true,
-              hint: 'Ej: Juan Pérez',
+              errorText: errors['representante'],
+              inputFormatters: [
+                // Solo letras, espacios y tildes
+                FilteringTextInputFormatter.allow(
+                  RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                ),
+              ],
             ),
           ),
         ],
@@ -133,7 +147,6 @@ class _TipoClienteDropdown extends StatelessWidget {
   }
 }
 
-/// Helper: renderiza 2 widgets en fila en desktop, apilados en mobile.
 class _Row2 extends StatelessWidget {
   const _Row2({required this.left, required this.right});
   final Widget left;
