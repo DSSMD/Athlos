@@ -18,6 +18,10 @@ import 'orden_draft.dart';
 import 'orden_info_card.dart';
 import 'orden_productos_card.dart';
 import 'orden_materiales_card.dart';
+import 'orden_resumen_card.dart';
+import 'orden_prioridad_card.dart';
+import 'orden_anticipo_card.dart';
+import 'orden_calendario_card.dart';
 
 class OrdenCreateForm extends StatefulWidget {
   /// Callback cuando el usuario cancela o termina de crear.
@@ -121,12 +125,14 @@ class _OrdenCreateFormState extends State<OrdenCreateForm> {
           flex: 1,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
-              // TODO(SCRUM-75 Bloque 3): card "Resumen"
-              // TODO(SCRUM-75 Bloque 4): card "Calendario de entregas"
-              // TODO(SCRUM-75 Bloque 3): card "Prioridad"
-              // TODO(SCRUM-75 Bloque 3): card "Anticipo"
-              _PlaceholderCard(label: 'Columna lateral (cards en Bloque 3-4)'),
+            children: [
+              OrdenResumenCard(draft: _draft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenCalendarioCard(draft: _draft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
             ],
           ),
         ),
@@ -147,7 +153,13 @@ class _OrdenCreateFormState extends State<OrdenCreateForm> {
         const SizedBox(height: AppSpacing.lg),
         OrdenMaterialesCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),
-        const _PlaceholderCard(label: 'Columna lateral (Bloques 3-4)'),
+        OrdenResumenCard(draft: _draft),
+        const SizedBox(height: AppSpacing.lg),
+        OrdenCalendarioCard(draft: _draft),
+        const SizedBox(height: AppSpacing.lg),
+        OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
+        const SizedBox(height: AppSpacing.lg),
+        OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
       ],
     );
   }
@@ -254,32 +266,6 @@ class _Header extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PLACEHOLDER — temporal, se borra cuando se agregan los cards reales
-// ═══════════════════════════════════════════════════════════════════════════
-class _PlaceholderCard extends StatelessWidget {
-  final String label;
-  const _PlaceholderCard({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl2),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border, style: BorderStyle.solid),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: AppTypography.small.copyWith(color: AppColors.textMuted),
-        ),
-      ),
     );
   }
 }
