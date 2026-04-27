@@ -15,6 +15,9 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 import 'orden_draft.dart';
+import 'orden_info_card.dart';
+import 'orden_productos_card.dart';
+import 'orden_materiales_card.dart';
 
 class OrdenCreateForm extends StatefulWidget {
   /// Callback cuando el usuario cancela o termina de crear.
@@ -103,11 +106,12 @@ class _OrdenCreateFormState extends State<OrdenCreateForm> {
           flex: 2,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
-              // TODO(SCRUM-75 Bloque 2): card "Información del pedido"
-              // TODO(SCRUM-75 Bloque 2): card "Productos de la orden"
-              // TODO(SCRUM-75 Bloque 2): card "Materiales requeridos"
-              _PlaceholderCard(label: 'Columna principal (cards en Bloque 2)'),
+            children: [
+              OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenMaterialesCard(draft: _draft, onChanged: _updateDraft),
             ],
           ),
         ),
@@ -134,9 +138,17 @@ class _OrdenCreateFormState extends State<OrdenCreateForm> {
   // LAYOUT MOBILE — stack vertical, todas las cards una abajo de la otra
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildMobile() {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [_PlaceholderCard(label: 'Cards apiladas (mobile, Bloque 6)')],
+      children: [
+        OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
+        const SizedBox(height: AppSpacing.lg),
+        OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
+        const SizedBox(height: AppSpacing.lg),
+        OrdenMaterialesCard(draft: _draft, onChanged: _updateDraft),
+        const SizedBox(height: AppSpacing.lg),
+        const _PlaceholderCard(label: 'Columna lateral (Bloques 3-4)'),
+      ],
     );
   }
 }

@@ -218,10 +218,7 @@ class _OrdenItemsEditorState extends State<OrdenItemsEditor> {
             ),
 
           for (var i = 0; i < _items.length; i++)
-            _ItemRow(
-              item: _items[i],
-              onDelete: () => _eliminarItem(i),
-            ),
+            _ItemRow(item: _items[i], onDelete: () => _eliminarItem(i)),
 
           if (_items.isNotEmpty) ...[
             const Divider(),
@@ -269,9 +266,7 @@ class _ItemRow extends StatelessWidget {
             flex: 3,
             child: Text(item.nombre, style: AppTypography.small),
           ),
-          Expanded(
-            child: Text('${item.cantidad}', style: AppTypography.small),
-          ),
+          Expanded(child: Text('${item.cantidad}', style: AppTypography.small)),
           Expanded(
             flex: 2,
             child: Text(
