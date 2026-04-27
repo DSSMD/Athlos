@@ -1,3 +1,9 @@
+class TallaDetalle {
+  final String nombreTalla;
+  final int cantidad;
+  TallaDetalle({required this.nombreTalla, required this.cantidad});
+}
+
 class OrdenModel {
   final String numOrden;
 
@@ -20,6 +26,10 @@ class OrdenModel {
   final int cantidad;
   final String? notas;
 
+  // NUEVOS CAMPOS AÑADIDOS:
+  final List<TallaDetalle> desgloseTallas;
+  final String? imagenUrl;
+
   OrdenModel({
     required this.numOrden,
     required this.idCliente,
@@ -35,6 +45,9 @@ class OrdenModel {
     required this.producto,
     required this.cantidad,
     this.notas,
+
+    required this.desgloseTallas,
+    this.imagenUrl,
   });
 
   factory OrdenModel.fromJson(Map<String, dynamic> json) {
@@ -47,18 +60,31 @@ class OrdenModel {
     final eOrden = json['estado_orden'] as Map<String, dynamic>?;
     final ePago = json['estado_pago'] as Map<String, dynamic>?;
 
-    // Manejo de Producto y Cantidad (como en el anterior)
     String productoNombre = 'Sin especificar';
+    String? img;
+
+    // Manejo de Producto y Cantidad (como en el anterior)
     if (json['ficha_tecnica'] != null &&
         (json['ficha_tecnica'] as List).isNotEmpty) {
-      final tipo = json['ficha_tecnica'][0]['tipo_prenda'];
+      final ficha = json['ficha_tecnica'][0];
+      final tipo = ficha['tipo_prenda'];
       productoNombre = tipo?['nombre_prenda'] ?? 'Prenda';
+      img = ficha['imagen_modelo']; // Sacamos la foto
     }
 
     int totalCant = 0;
+    List<TallaDetalle> tallasReales = [];
+
     if (json['desglose_tallas'] != null) {
       for (var t in (json['desglose_tallas'] as List)) {
-        totalCant += (t['cantidad'] as num).toInt();
+        int cant = (t['cantidad'] as num).toInt();
+        totalCant += cant;
+        tallasReales.add(
+          TallaDetalle(
+            nombreTalla: t['tallas']?['nombre_talla'] ?? '?',
+            cantidad: cant,
+          ),
+        );
       }
     }
 
@@ -77,6 +103,8 @@ class OrdenModel {
       producto: productoNombre,
       cantidad: totalCant,
       notas: json['notas_adicionales'],
+      desgloseTallas: tallasReales,
+      imagenUrl: img,
     );
   }
 }

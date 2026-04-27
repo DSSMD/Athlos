@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:workspace/domain/models/orden_model.dart';
+import 'package:workspace/presentation/components/ordenes/orden_draft.dart';
 import '../../presentation/providers/orden_form_provider.dart'; // Importamos tu form state
 
 class OrdenService {
@@ -136,6 +137,85 @@ class OrdenService {
           .eq('num_orden', numOrden);
     } catch (e) {
       throw Exception('Error al actualizar el pago de la orden: $e');
+    }
+  }
+
+  // =================================================================
+  // CREACIÓN DE ORDEN DESDE DRAFT (UI NUEVA SCRUM-75)
+  // =================================================================
+  Future<void> crearOrdenDesdeDraft(OrdenDraft draft) async {
+    try {
+      // Validaciones básicas de seguridad
+      if (draft.idCliente == null) throw Exception('El cliente es obligatorio');
+      if (draft.fechaEntrega == null) {
+        throw Exception('La fecha es obligatoria');
+      }
+
+      // Unimos las notas con la prioridad para no perder ese dato de la UI
+      String notasCompletas =
+          'Prioridad: ${draft.prioridad.name.toUpperCase()}\n';
+      if (draft.descripcion.isNotEmpty) {
+        notasCompletas += 'Notas: ${draft.descripcion}\n';
+      }
+      notasCompletas += 'Moneda: ${draft.moneda.name}';
+
+      // --- PASO 1 y 2: Insertar Cabecera (Tabla 'orden') ---
+      final ordenResponse = await _supabase
+          .from('orden')
+          .insert({
+            'id_cliente': draft.idCliente,
+            'id_estado': 1, // 1 = Nuevo / Pendiente
+            'id_estado_pago': draft.anticipo > 0
+                ? 2
+                : 1, // Si dio anticipo, estado pasa a Pago Parcial
+            'fecha_entrega': draft.fechaEntrega!.toIso8601String(),
+            'costo_total': draft.subtotal,
+            'notas_adicionales': notasCompletas,
+          })
+          .select('num_orden')
+          .single();
+
+      final String numOrdenId = ordenResponse['num_orden'];
+
+      // --- PASO 3: Definición del Producto (Tabla 'ficha_tecnica') ---
+      // Usamos el "productoRapidoNombre" de la UI como nombre de la ficha
+      await _supabase.from('ficha_tecnica').insert({
+        'num_orden': numOrdenId,
+        'especificaciones': 'Pedido: ${draft.productoRapidoNombre}',
+        'id_tipo_prenda':
+            1, // Por defecto hasta que la UI tenga un selector real
+      });
+
+      // --- PASO 4: Escandallo de Cantidades (Tabla 'desglose_tallas') ---
+      // Como la UI envía productos genéricos, mapearemos cada producto a un registro
+      List<Map<String, dynamic>> tallasParaInsertar = [];
+
+      for (var producto in draft.productos) {
+        if (producto.cantidad > 0) {
+          tallasParaInsertar.add({
+            'num_orden': numOrdenId,
+            'id_talla': 1, // Asignamos ID de Talla Única/General por ahora
+            'cantidad': producto.cantidad,
+          });
+        }
+      }
+
+      if (tallasParaInsertar.isNotEmpty) {
+        await _supabase.from('desglose_tallas').insert(tallasParaInsertar);
+      }
+
+      // --- PASO EXTRA: Si hay anticipo, lo guardamos en la tabla de pagos ---
+      if (draft.anticipo > 0) {
+        await _supabase.from('pago_cliente').insert({
+          'id_cliente': draft.idCliente,
+          'id_orden': numOrdenId,
+          'monto': draft.anticipo,
+          'metodo_pago': draft.metodoPago,
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error en creación desde draft: $e');
+      throw Exception('Error al guardar la orden: $e');
     }
   }
 }

@@ -169,7 +169,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           pages: const [
             Center(child: Text('Dashboard Cajas')),
             Center(child: Text('Punto de Venta (POS)')),
-            OrdenesPage(),
+            OrdenPage(),
           ],
           railDestinations: const [
             NavigationRailDestination(

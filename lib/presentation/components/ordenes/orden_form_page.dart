@@ -1,6 +1,6 @@
 // ============================================================================
-// orden_create_form.dart
-// Ubicación: lib/presentation/components/ordenes/orden_create_form.dart
+// orden_form_page.dart
+// Ubicación: lib/presentation/components/ordenes/orden_form_page.dart
 // Descripción: Contenedor de la pantalla "Nueva orden" (SCRUM-75).
 // Maneja el state local del OrdenDraft y compone los cards del Figma
 // en un layout de 2 columnas (desktop) / stack vertical (mobile).
@@ -23,17 +23,18 @@ import 'orden_prioridad_card.dart';
 import 'orden_anticipo_card.dart';
 import 'orden_calendario_card.dart';
 
-class OrdenCreateForm extends StatefulWidget {
-  /// Callback cuando el usuario cancela o termina de crear.
-  final VoidCallback onVolver;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/orden_provider.dart';
 
-  const OrdenCreateForm({super.key, required this.onVolver});
+class OrdenFormPage extends ConsumerStatefulWidget {
+  final VoidCallback onVolver;
+  const OrdenFormPage({super.key, required this.onVolver});
 
   @override
-  State<OrdenCreateForm> createState() => _OrdenCreateFormState();
+  ConsumerState<OrdenFormPage> createState() => _OrdenFormPageState();
 }
 
-class _OrdenCreateFormState extends State<OrdenCreateForm> {
+class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
   OrdenDraft _draft = OrdenDraft.empty();
 
   // ignore: unused_element
@@ -56,18 +57,43 @@ class _OrdenCreateFormState extends State<OrdenCreateForm> {
     );
   }
 
-  void _onCrearOrden() {
+  Future<void> _onCrearOrden() async {
     if (!_draft.esValido) return;
-    // TODO(SCRUM-75): cuando Mel exponga orden_provider.crear(draft),
-    // reemplazar el SnackBar por la llamada real.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Orden creada (mock — pendiente conexión a BD)'),
-        backgroundColor: AppColors.success,
-        duration: Duration(seconds: 2),
-      ),
-    );
-    widget.onVolver();
+
+    try {
+      // 1. Mostramos indicador de carga (opcional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Creando orden...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      // 2. Llamamos a Supabase a través de nuestro Provider
+      final servicio = ref.read(ordenServiceProvider);
+      await servicio.crearOrdenDesdeDraft(_draft);
+
+      // 3. ¡Éxito! Refrescamos la tabla de atrás y mostramos mensaje
+      ref.read(ordenesProvider.notifier).refreshOrdenes();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Orden creada exitosamente!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        widget.onVolver(); // Cerramos el formulario
+      }
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al crear: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override

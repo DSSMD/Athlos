@@ -35,14 +35,39 @@ class OrdenDetallePage extends StatefulWidget {
 class _OrdenDetallePageState extends State<OrdenDetallePage> {
   static const double _mobileBreakpoint = 900;
 
-  // Items mock iniciales — la "escalabilidad" local arranca desde aquí.
-  List<OrdenItem> _items = const [
-    OrdenItem(nombre: 'Producto principal', cantidad: 10, precioUnitario: 25.0),
-  ];
+  late List<OrdenItem> _items;
 
-  double get _totalItems =>
-      _items.fold(0, (sum, i) => sum + i.subtotal);
+  @override
+  void initState() {
+    super.initState();
+    // Llenamos la tabla de edición con el desglose de tallas real
+    _items = widget.orden.desgloseTallas.map((talla) {
+      return OrdenItem(
+        nombre: '${widget.orden.producto} - Talla ${talla.nombreTalla}',
+        cantidad: talla.cantidad,
+        // Si no tienes el precio por talla, puedes dejar 0 o hacer un cálculo estimado
+        precioUnitario: 0.0,
+      );
+    }).toList();
 
+    // Fallback: Si por alguna razón la orden no tiene tallas,
+    // mostramos el producto como un solo item genérico
+    if (_items.isEmpty) {
+      _items = [
+        OrdenItem(
+          nombre: widget.orden.producto,
+          cantidad: widget.orden.cantidad,
+          precioUnitario: widget.orden.cantidad > 0
+              ? (widget.orden.costoTotal / widget.orden.cantidad)
+              : 0.0,
+        ),
+      ];
+    }
+  }
+
+  double get _totalItems => _items.fold(0, (sum, i) => sum + i.subtotal);
+
+  // 👇 AQUÍ ESTÁ EL MÉTODO BUILD QUE SE HABÍA BORRADO 👇
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -86,9 +111,7 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
                 padding: EdgeInsets.all(
                   isMobile ? AppSpacing.lg : AppSpacing.xl2,
                 ),
-                child: isMobile
-                    ? _buildMobile(orden)
-                    : _buildDesktop(orden),
+                child: isMobile ? _buildMobile(orden) : _buildDesktop(orden),
               ),
             ),
           ],
@@ -240,10 +263,7 @@ class _InfoPedidoCard extends StatelessWidget {
               color: AppColors.neutral50,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Text(
-              'Especificaciones: —',
-              style: AppTypography.small,
-            ),
+            child: Text('Especificaciones: —', style: AppTypography.small),
           ),
         ],
       ),
@@ -382,11 +402,7 @@ class _InfoItem extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _InfoItem({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoItem({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {

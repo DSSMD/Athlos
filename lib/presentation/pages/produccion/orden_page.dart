@@ -25,16 +25,17 @@ import '../../../domain/models/orden_model.dart';
 
 // Vistas internas
 import 'orden_detalle_page.dart';
+import '../../components/ordenes/orden_form_page.dart';
 
 // --- PÁGINA PRINCIPAL ---
-class OrdenesPage extends ConsumerStatefulWidget {
-  const OrdenesPage({super.key});
+class OrdenPage extends ConsumerStatefulWidget {
+  const OrdenPage({super.key});
 
   @override
-  ConsumerState<OrdenesPage> createState() => _OrdenesPageState();
+  ConsumerState<OrdenPage> createState() => _OrdenPageState();
 }
 
-class _OrdenesPageState extends ConsumerState<OrdenesPage> {
+class _OrdenPageState extends ConsumerState<OrdenPage> {
   final TextEditingController _searchController = TextEditingController();
   int _currentPage = 1;
   final int _itemsPerPage = 10;
@@ -43,6 +44,7 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
   // Estado interno: orden seleccionada para ver detalle.
   // Si es null, se muestra el listado. Si tiene valor, se muestra el detalle.
   OrdenModel? _ordenSeleccionada;
+  bool _creandoOrden = false;
 
   void _abrirDetalle(OrdenModel orden) {
     setState(() => _ordenSeleccionada = orden);
@@ -50,6 +52,7 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
   void _volverAlListado() {
     setState(() => _ordenSeleccionada = null);
+    setState(() => _creandoOrden = false);
   }
 
   @override
@@ -60,6 +63,18 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    if (_creandoOrden) {
+      return OrdenFormPage(onVolver: _volverAlListado);
+    }
+
+    if (_ordenSeleccionada != null) {
+      return OrdenDetallePage(
+        orden: _ordenSeleccionada!,
+        onVolver: _volverAlListado,
+      );
+    }
+
     if (_ordenSeleccionada != null) {
       return OrdenDetallePage(
         orden: _ordenSeleccionada!,
@@ -110,8 +125,7 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                   newButtonLabelMobile: 'Nueva',
                   newButtonLabelDesktop: 'Nueva orden',
                   onNewPressed: () {
-                    
-                    // TODO: Aquí luego llamaremos a tu formulario multimodal
+                    setState(() => _creandoOrden = true);
                   },
                 ),
                 Expanded(
@@ -452,12 +466,15 @@ class _OrderListRow extends StatelessWidget {
 
           // ESTADO
           Expanded(
-            flex: 2, 
+            flex: 2,
             child: Align(
               alignment: Alignment.centerLeft,
               // Asegúrate de que este widget _StatusBadge acepte los parámetros correctos
-              child: _StatusBadge(estado: order.estadoOrden, idEstado: order.idEstado),
-            )
+              child: _StatusBadge(
+                estado: order.estadoOrden,
+                idEstado: order.idEstado,
+              ),
+            ),
           ),
 
           // ACCIONES (Usando el popup moderno en lugar del simple botón "Ver")
@@ -471,7 +488,10 @@ class _OrderListRow extends StatelessWidget {
                   if (value == 'ver') onVerPressed();
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'ver', child: Text('Ver Detalles'))
+                  const PopupMenuItem(
+                    value: 'ver',
+                    child: Text('Ver Detalles'),
+                  ),
                 ],
               ),
             ),
@@ -548,7 +568,7 @@ class _OrderCard extends StatelessWidget {
                     color: AppColors.primary500,
                   ),
                 ),
-                _StatusBadge(idEstado: order.idEstado, estado: '',),
+                _StatusBadge(idEstado: order.idEstado, estado: ''),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -646,8 +666,6 @@ class _OrderCard extends StatelessWidget {
 // STATUS BADGE
 // ══════════════════════════════════════════════════════════════════════════════
 
-
-
 class _StatusBadge extends StatelessWidget {
   final String estado;
   final int idEstado;
@@ -683,7 +701,10 @@ class _StatusBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
