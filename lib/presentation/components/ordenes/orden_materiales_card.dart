@@ -2,13 +2,14 @@
 // orden_materiales_card.dart
 // Ubicación: lib/presentation/components/ordenes/orden_materiales_card.dart
 // Descripción: Card "Materiales requeridos (calculadora)" del form Crear
-// Orden (SCRUM-75). Muestra los materiales necesarios con stock actual y
-// estado (disponible / justo / insuficiente). Incluye banner de alerta si
-// algún material es insuficiente.
+// Orden (SCRUM-75).
 //
-// MOCK FIJO: los 4 materiales siempre se muestran tal como en el Figma.
-// TODO(SCRUM-75): cuando exista tabla `material` y relación
-// `producto_material` en BD, calcular dinámicamente desde productos.
+// Desktop (>= 600px del card): tabla con MATERIAL / REQUERIDO / STOCK ACTUAL /
+// DESPUÉS / ESTADO.
+// Mobile (< 600px): lista de mini-cards apiladas con la misma info.
+//
+// Banner de alerta si algún material está insuficiente.
+// MOCK FIJO: 4 materiales del Figma.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -29,9 +30,10 @@ class OrdenMaterialesCard extends StatelessWidget {
     required this.onChanged,
   });
 
+  static const double _compactBreakpoint = 600;
+
   // ═══════════════════════════════════════════════════════════════════════════
-  // MOCK FIJO — los 4 materiales del Figma. Se reemplaza cuando exista
-  // relación producto→material en BD.
+  // MOCK FIJO
   // ═══════════════════════════════════════════════════════════════════════════
   static const List<OrdenMaterialRequerido> _materialesMock = [
     OrdenMaterialRequerido(
@@ -61,9 +63,6 @@ class OrdenMaterialesCard extends StatelessWidget {
   ];
 
   void _recalcular() {
-    // Por ahora "recalcular" simplemente refresca con los mismos mocks.
-    // TODO(SCRUM-75): cuando haya relación con productos reales, este botón
-    // dispara el cálculo dinámico.
     onChanged(draft.copyWith(materiales: _materialesMock));
   }
 
@@ -72,8 +71,6 @@ class OrdenMaterialesCard extends StatelessWidget {
   // ═══════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    // Si el draft no tiene materiales aún, los inicializamos con el mock.
-    // (Permite que la card siempre muestre algo, fiel al Figma.)
     final materiales = draft.materiales.isEmpty
         ? _materialesMock
         : draft.materiales;
@@ -90,32 +87,41 @@ class OrdenMaterialesCard extends StatelessWidget {
     final hayInsuficiente = materialInsuficiente.material.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _header(),
-          const SizedBox(height: AppSpacing.lg),
-          _tabla(materiales),
-          if (hayInsuficiente) ...[
-            const SizedBox(height: AppSpacing.lg),
-            _bannerAlerta(materialInsuficiente),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < _compactBreakpoint;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(isCompact),
+              const SizedBox(height: AppSpacing.lg),
+              if (isCompact)
+                _listaMobile(materiales)
+              else
+                _tablaDesktop(materiales),
+              if (hayInsuficiente) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _bannerAlerta(materialInsuficiente),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // HEADER — título + botón Recalcular
+  // HEADER
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _header() {
+  Widget _header(bool isCompact) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Text(
@@ -123,33 +129,44 @@ class OrdenMaterialesCard extends StatelessWidget {
             style: AppTypography.h3,
           ),
         ),
-        OutlinedButton.icon(
-          onPressed: _recalcular,
-          icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Recalcular'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textPrimary,
-            side: const BorderSide(color: AppColors.border),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+        const SizedBox(width: AppSpacing.sm),
+        if (isCompact)
+          IconButton(
+            onPressed: _recalcular,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Recalcular',
+            color: AppColors.textPrimary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: _recalcular,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Recalcular'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: const BorderSide(color: AppColors.border),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TABLA
+  // TABLA DESKTOP
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _tabla(List<OrdenMaterialRequerido> materiales) {
+  Widget _tablaDesktop(List<OrdenMaterialRequerido> materiales) {
     return Column(
       children: [
         _headerTabla(),
         const Divider(height: 1, color: AppColors.border),
         for (var i = 0; i < materiales.length; i++) ...[
-          _MaterialRow(material: materiales[i]),
+          _MaterialRowDesktop(material: materiales[i]),
           if (i < materiales.length - 1)
             const Divider(height: 1, color: AppColors.border),
         ],
@@ -185,7 +202,21 @@ class OrdenMaterialesCard extends StatelessWidget {
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // BANNER DE ALERTA
+  // LISTA MOBILE
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _listaMobile(List<OrdenMaterialRequerido> materiales) {
+    return Column(
+      children: [
+        for (var i = 0; i < materiales.length; i++) ...[
+          _MaterialRowMobile(material: materiales[i]),
+          if (i < materiales.length - 1) const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BANNER ALERTA
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _bannerAlerta(OrdenMaterialRequerido m) {
     final faltante = m.requerido - m.stockActual;
@@ -232,11 +263,11 @@ class OrdenMaterialesCard extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// FILA DE MATERIAL
+// FILA DESKTOP
 // ═════════════════════════════════════════════════════════════════════════════
-class _MaterialRow extends StatelessWidget {
+class _MaterialRowDesktop extends StatelessWidget {
   final OrdenMaterialRequerido material;
-  const _MaterialRow({required this.material});
+  const _MaterialRowDesktop({required this.material});
 
   @override
   Widget build(BuildContext context) {
@@ -273,9 +304,7 @@ class _MaterialRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              esInsuficiente
-                  ? '${despues.toStringAsFixed(0)} ${material.unidad}'
-                  : '${despues.toStringAsFixed(0)} ${material.unidad}',
+              '${despues.toStringAsFixed(0)} ${material.unidad}',
               style: AppTypography.small.copyWith(
                 color: esInsuficiente ? AppColors.error : AppColors.textPrimary,
                 fontWeight: esInsuficiente ? FontWeight.w700 : FontWeight.w400,
@@ -285,6 +314,107 @@ class _MaterialRow extends StatelessWidget {
           Expanded(flex: 2, child: _BadgeEstado(estado: material.estado)),
         ],
       ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FILA MOBILE — mini-card
+// ═════════════════════════════════════════════════════════════════════════════
+class _MaterialRowMobile extends StatelessWidget {
+  final OrdenMaterialRequerido material;
+  const _MaterialRowMobile({required this.material});
+
+  @override
+  Widget build(BuildContext context) {
+    final despues = material.despues;
+    final esInsuficiente = material.estado == 'insuficiente';
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Línea 1: nombre + badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  material.material,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _BadgeEstado(estado: material.estado),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // Línea 2: 3 mini-info en row
+          Row(
+            children: [
+              Expanded(
+                child: _miniInfo(
+                  label: 'Requerido',
+                  value:
+                      '${material.requerido.toStringAsFixed(0)} ${material.unidad}',
+                ),
+              ),
+              Expanded(
+                child: _miniInfo(
+                  label: 'Stock',
+                  value:
+                      '${material.stockActual.toStringAsFixed(0)} ${material.unidad}',
+                ),
+              ),
+              Expanded(
+                child: _miniInfo(
+                  label: 'Después',
+                  value: '${despues.toStringAsFixed(0)} ${material.unidad}',
+                  highlight: esInsuficiente,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniInfo({
+    required String label,
+    required String value,
+    bool highlight = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTypography.small.copyWith(
+            fontWeight: FontWeight.w600,
+            color: highlight ? AppColors.error : AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -324,24 +454,24 @@ class _BadgeEstado extends StatelessWidget {
         label = estado;
     }
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 4,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.caption.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
         ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.caption.copyWith(
-            color: fg,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        maxLines: 1,
+        overflow: TextOverflow.visible,
+        softWrap: false,
       ),
     );
   }

@@ -2,8 +2,11 @@
 // orden_productos_card.dart
 // Ubicación: lib/presentation/components/ordenes/orden_productos_card.dart
 // Descripción: Card "Productos de la orden" del form Crear Orden (SCRUM-75).
-// Tabla con # / Producto / Cantidad / P. Unitario / Subtotal / Eliminar.
-// Botón "+ Agregar producto" abre un dialog para agregar nuevos items.
+//
+// Desktop (>= 600px del card): tabla con # / Producto / Cantidad / P. Unit /
+// Subtotal / Eliminar.
+// Mobile (< 600px): lista de mini-cards apiladas verticalmente con la misma
+// info, formato más legible.
 //
 // Reusa OrdenProductoItem de orden_draft.dart.
 // ============================================================================
@@ -26,6 +29,9 @@ class OrdenProductosCard extends StatelessWidget {
     required this.draft,
     required this.onChanged,
   });
+
+  // Breakpoint interno: por debajo, switch a layout vertical de cards.
+  static const double _compactBreakpoint = 600;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ACCIONES
@@ -51,37 +57,57 @@ class OrdenProductosCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _header(context),
-          const SizedBox(height: AppSpacing.lg),
-          if (draft.productos.isEmpty) _empty() else _tabla(),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < _compactBreakpoint;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(context, isCompact),
+              const SizedBox(height: AppSpacing.lg),
+              if (draft.productos.isEmpty)
+                _empty()
+              else if (isCompact)
+                _listaMobile()
+              else
+                _tablaDesktop(),
+            ],
+          );
+        },
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // HEADER — título + botón "+ Agregar producto"
+  // HEADER — adapta el botón a icon-only en compact
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _header(BuildContext context) {
+  Widget _header(BuildContext context, bool isCompact) {
     return Row(
       children: [
-        Text('Productos de la orden', style: AppTypography.h3),
-        const Spacer(),
-        TextButton.icon(
-          onPressed: () => _agregarProducto(context),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Agregar producto'),
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
-        ),
+        Expanded(child: Text('Productos de la orden', style: AppTypography.h3)),
+        const SizedBox(width: AppSpacing.sm),
+        if (isCompact)
+          IconButton(
+            onPressed: () => _agregarProducto(context),
+            icon: const Icon(Icons.add_circle_outline),
+            color: AppColors.primary500,
+            tooltip: 'Agregar producto',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          )
+        else
+          TextButton.icon(
+            onPressed: () => _agregarProducto(context),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar producto'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
+          ),
       ],
     );
   }
@@ -116,15 +142,27 @@ class OrdenProductosCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TABLA
+  // TABLA DESKTOP
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _tabla() {
+  Widget _tablaDesktop() {
     return Column(
       children: [
-        _headerTabla(),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              _col('#', 1),
+              _col('PRODUCTO', 4),
+              _col('CANTIDAD', 2),
+              _col('P. UNITARIO', 2),
+              _col('SUBTOTAL', 2),
+              const SizedBox(width: 60),
+            ],
+          ),
+        ),
         const Divider(height: 1, color: AppColors.border),
         for (var i = 0; i < draft.productos.length; i++) ...[
-          _ProductoRow(
+          _ProductoRowDesktop(
             index: i + 1,
             producto: draft.productos[i],
             moneda: draft.moneda,
@@ -134,22 +172,6 @@ class OrdenProductosCard extends StatelessWidget {
             const Divider(height: 1, color: AppColors.border),
         ],
       ],
-    );
-  }
-
-  Widget _headerTabla() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          _col('#', 1),
-          _col('PRODUCTO', 4),
-          _col('CANTIDAD', 2),
-          _col('P. UNITARIO', 2),
-          _col('SUBTOTAL', 2),
-          const SizedBox(width: 60),
-        ],
-      ),
     );
   }
 
@@ -164,18 +186,38 @@ class OrdenProductosCard extends StatelessWidget {
       ),
     ),
   );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LISTA MOBILE — cada producto como mini-card
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _listaMobile() {
+    return Column(
+      children: [
+        for (var i = 0; i < draft.productos.length; i++) ...[
+          _ProductoRowMobile(
+            index: i + 1,
+            producto: draft.productos[i],
+            moneda: draft.moneda,
+            onEliminar: () => _eliminarProducto(i),
+          ),
+          if (i < draft.productos.length - 1)
+            const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// FILA DE PRODUCTO
+// FILA DESKTOP
 // ═════════════════════════════════════════════════════════════════════════════
-class _ProductoRow extends StatelessWidget {
+class _ProductoRowDesktop extends StatelessWidget {
   final int index;
   final OrdenProductoItem producto;
   final OrdenMoneda moneda;
   final VoidCallback onEliminar;
 
-  const _ProductoRow({
+  const _ProductoRowDesktop({
     required this.index,
     required this.producto,
     required this.moneda,
@@ -247,6 +289,146 @@ class _ProductoRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FILA MOBILE — mini-card vertical
+// ═════════════════════════════════════════════════════════════════════════════
+class _ProductoRowMobile extends StatelessWidget {
+  final int index;
+  final OrdenProductoItem producto;
+  final OrdenMoneda moneda;
+  final VoidCallback onEliminar;
+
+  const _ProductoRowMobile({
+    required this.index,
+    required this.producto,
+    required this.moneda,
+    required this.onEliminar,
+  });
+
+  String _formatPrecio(double v) {
+    if (moneda == OrdenMoneda.dolares) {
+      return '\$${v.toStringAsFixed(2)}';
+    }
+    return 'Bs. ${v.toStringAsFixed(2)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Línea 1: #N + nombre + botón eliminar
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.primary500.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$index',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.primary500,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  producto.nombre,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                onPressed: onEliminar,
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: AppColors.error,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                tooltip: 'Eliminar',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // Línea 2: cantidad y precio unitario
+          Row(
+            children: [
+              Expanded(
+                child: _miniInfo(
+                  label: 'Cantidad',
+                  value: '${producto.cantidad} ${producto.unidad}',
+                ),
+              ),
+              Expanded(
+                child: _miniInfo(
+                  label: 'P. unitario',
+                  value: _formatPrecio(producto.precioUnitario),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: AppSpacing.sm),
+          // Línea 3: subtotal destacado
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Subtotal',
+                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+              ),
+              Text(
+                _formatPrecio(producto.subtotal),
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniInfo({required String label, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 }
