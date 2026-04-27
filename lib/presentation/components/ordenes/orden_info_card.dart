@@ -39,7 +39,6 @@ class OrdenInfoCard extends ConsumerStatefulWidget {
 }
 
 class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
-
   late final TextEditingController _productoCtrl;
   late final TextEditingController _cantidadCtrl;
   late final TextEditingController _precioCtrl;
@@ -322,30 +321,7 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            _label('Moneda de la orden'),
-            const SizedBox(width: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: Text(
-                'Nuevo',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.info,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-          ],
-        ),
+        _label('Moneda de la orden'),
         const SizedBox(height: AppSpacing.xs),
         Container(
           decoration: BoxDecoration(
@@ -358,14 +334,18 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
                 child: _monedaOption(
                   label: 'Bs — Bolivianos',
                   selected: widget.draft.moneda == OrdenMoneda.bolivianos,
-                  onTap: () => _setMoneda(OrdenMoneda.bolivianos),
+                  onTap: () => widget.onChanged(
+                    widget.draft.copyWith(moneda: OrdenMoneda.bolivianos),
+                  ),
                 ),
               ),
               Expanded(
                 child: _monedaOption(
                   label: '\$ — Dólares (USD)',
                   selected: widget.draft.moneda == OrdenMoneda.dolares,
-                  onTap: () => _setMoneda(OrdenMoneda.dolares),
+                  onTap: () => widget.onChanged(
+                    widget.draft.copyWith(moneda: OrdenMoneda.dolares),
+                  ),
                 ),
               ),
             ],
@@ -448,20 +428,22 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
   // BANNER TIPO DE CAMBIO (solo si moneda = USD)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _bannerTipoCambio() {
-    if (widget.draft.moneda != OrdenMoneda.dolares) {
+    if (widget.draft.moneda != OrdenMoneda.dolares ||
+        widget.draft.productos.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final totalUsd =
-        widget.draft.productoRapidoCantidad * widget.draft.productoRapidoPrecio;
-    final totalBs = totalUsd * kTipoCambioUsdBs;
+    // Calculamos el total real de la orden en Bs (sumatoria de subtotales)
+    final totalBs = widget.draft.subtotal;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.08),
+        // ignore: deprecated_member_use
+        color: AppColors.info.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+        // ignore: deprecated_member_use
+        border: Border.all(color: AppColors.info.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -473,14 +455,13 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
                 style: AppTypography.small,
                 children: [
                   const TextSpan(
-                    text: 'Tipo de cambio:  ',
+                    text: 'Visualización en USD: ',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   TextSpan(
                     text:
-                        '1 USD = ${kTipoCambioUsdBs.toStringAsFixed(2)} Bs '
-                        '— Total equivalente: '
-                        'Bs ${totalBs.toStringAsFixed(2)}',
+                        'Tipo de cambio 1 USD = ${kTipoCambioUsdBs.toStringAsFixed(2)} Bs. '
+                        'El valor contable total es de Bs ${totalBs.toStringAsFixed(2)}',
                   ),
                 ],
               ),

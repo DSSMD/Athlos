@@ -74,30 +74,56 @@ class OrdenModel {
     String productoNombre = 'Sin especificar';
     String? img;
 
-    // Manejo de Producto e Imagen (Desde la ficha técnica)
+    // Extraemos la imagen de la primera ficha técnica (si la hay)
     if (json['ficha_tecnica'] != null &&
         (json['ficha_tecnica'] as List).isNotEmpty) {
       final ficha = json['ficha_tecnica'][0];
       final tipo = ficha['tipo_prenda'];
       productoNombre = tipo?['nombre_prenda'] ?? 'Prenda';
-      img = ficha['imagen_modelo']; // 👈 Sacamos la foto correctamente
+      img = ficha['imagen_modelo'];
     }
 
     int totalCant = 0;
     List<TallaDetalle> tallasReales = [];
+
+    Map<String, int> conteoProductos = {};
 
     // Manejo de Tallas
     if (json['desglose_tallas'] != null) {
       for (var t in (json['desglose_tallas'] as List)) {
         int cant = (t['cantidad'] as num).toInt();
         totalCant += cant;
+
+        String nombrePrenda = t['tipo_prenda']?['nombre_prenda'] ?? 'Prenda';
+
         tallasReales.add(
           TallaDetalle(
-            nombrePrenda: t['tipo_prenda']?['nombre_prenda'] ?? 'Prenda',
+            nombrePrenda: nombrePrenda,
             nombreTalla: t['tallas']?['nombre_talla'] ?? '?',
             cantidad: cant,
           ),
         );
+
+        conteoProductos[nombrePrenda] =
+            (conteoProductos[nombrePrenda] ?? 0) + cant;
+      }
+    }
+
+    String resumenProductos = productoNombre;
+
+    if (conteoProductos.isNotEmpty) {
+      // Convertimos el mapa en una lista de textos: ["Camisa (2)", "Short (3)"]
+      List<String> listaResumen = conteoProductos.entries
+          .map((e) => '${e.key} (${e.value})')
+          .toList();
+
+      // Lógica para no saturar la fila
+      if (listaResumen.length <= 2) {
+        resumenProductos = listaResumen.join(', ');
+      } else {
+        // Si son 3 o más, mostramos los dos primeros y un indicativo
+        resumenProductos =
+            '${listaResumen[0]}, ${listaResumen[1]} y ${listaResumen.length - 2} más...';
       }
     }
 
@@ -116,10 +142,13 @@ class OrdenModel {
       fechaOrden: DateTime.parse(json['fecha_orden']),
       fechaEntrega: DateTime.parse(json['fecha_entrega']),
       costoTotal: (json['costo_total'] as num).toDouble(),
-      producto: productoNombre,
+
+      // 👈 Inyectamos el resumen inteligente aquí:
+      producto: resumenProductos,
+
       cantidad: totalCant,
       desgloseTallas: tallasReales,
-      imagenModelo: img, // 👈 Le pasamos la variable 'img'
+      imagenModelo: img,
       notasAdicionales: json['notas_adicionales'] ?? '',
     );
   }

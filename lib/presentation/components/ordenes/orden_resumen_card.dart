@@ -7,7 +7,6 @@
 //
 // El descuento del 5% es mock fijo del Figma. Cuando exista lógica de
 // descuentos por cliente o promociones, se calcula dinámico.
-// TODO(SCRUM-75): conectar a `cliente_provider` para descuentos reales.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -28,19 +27,17 @@ class OrdenResumenCard extends StatelessWidget {
     this.descuentoFijo = 0.05,
   });
 
-  // Mock fijo del Figma. Cuando se conecte cliente_provider, leer del
-  // perfil del cliente o reglas de promoción.
   static const double _porcentajeDescuento = 0.05;
 
   @override
   Widget build(BuildContext context) {
+    // 1. Todo esto está internamente en Bolivianos (Bs)
     final subtotal = draft.subtotal;
-
     final descuento = subtotal * descuentoFijo;
     final total = subtotal - descuento;
-    final equivalenteBs = draft.moneda == OrdenMoneda.dolares
-        ? total * 9.2
-        : null;
+
+    // 2. Si la UI está en Dólares, el equivalente en Bs es simplemente el 'total' puro
+    final equivalenteBs = draft.moneda == OrdenMoneda.dolares ? total : null;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -63,13 +60,18 @@ class OrdenResumenCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
+
+            // formatPrecio se encargará de dividir si está en Dólares, o dejarlo igual si está en Bs
             _filaTotal('Subtotal', draft.formatPrecio(subtotal)),
             const SizedBox(height: AppSpacing.sm),
             _filaDescuento(descuento),
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
+
             _filaTotal('Total', draft.formatPrecio(total), destacado: true),
+
+            // Mostramos el monto original contable en la parte inferior si la vista está en USD
             if (equivalenteBs != null) ...[
               const SizedBox(height: AppSpacing.sm),
               _filaEquivalenteBs(equivalenteBs),

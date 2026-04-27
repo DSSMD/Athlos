@@ -63,7 +63,6 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
 
   @override
   Widget build(BuildContext context) {
-
     if (_creandoOrden) {
       return OrdenFormPage(onVolver: _volverAlListado);
     }
@@ -301,7 +300,7 @@ class _KpiRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DESKTOP TABLE
+// DESKTOP TABLE — Encabezado Sincronizado
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _DesktopTable extends StatelessWidget {
@@ -329,25 +328,18 @@ class _DesktopTable extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _col('CÓDIGO', 2),
-                _col('CLIENTE', 3),
-                _col('PRODUCTO', 3),
-                _col('CANTIDAD', 2),
-                _col('TOTAL', 2),
-                _col('ENTREGA', 2),
-                _col('ESTADO', 2),
-                SizedBox(
+                // 🔥 ESCALA UNIFICADA: Debe ser igual en la fila
+                _col('CÓDIGO', 12),
+                _col('CLIENTE', 22),
+                _col('PRODUCTO', 35),
+                _col('CANT.', 10),
+                _col('TOTAL', 15),
+                _col('ENTREGA', 15),
+                _col('ESTADO', 20),
+                const SizedBox(
                   width: 60,
-                  child: Text(
-                    'ACCIONES',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.caption.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
+                  child: Text(''),
+                ), // Espacio para acciones
               ],
             ),
           ),
@@ -389,7 +381,6 @@ class _OrderListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Formateador para el código corto
     final String displayCode = order.numOrden.length > 8
         ? order.numOrden.substring(0, 8).toUpperCase()
         : order.numOrden.toUpperCase();
@@ -401,9 +392,9 @@ class _OrderListRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // CÓDIGO
+          // CÓDIGO (Flex 12)
           Expanded(
-            flex: 2,
+            flex: 12,
             child: Text(
               '#$displayCode',
               style: AppTypography.small.copyWith(
@@ -413,9 +404,9 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // CLIENTE (Usando el dato real de la BD)
+          // CLIENTE (Flex 22)
           Expanded(
-            flex: 3,
+            flex: 22,
             child: Text(
               order.clienteNombre,
               style: AppTypography.small,
@@ -424,76 +415,59 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // PRODUCTO (Usando el dato real de la BD)
+          // PRODUCTO (Flex 35) - Más espacio para el resumen inteligente
           Expanded(
-            flex: 3,
+            flex: 35,
             child: Text(
               order.producto,
-              style: AppTypography.small.copyWith(color: AppColors.textMuted),
+              style: AppTypography.small,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
-          // CANTIDAD (Usando el dato real de la BD)
+          // CANTIDAD (Flex 10)
           Expanded(
-            flex: 2,
-            child: Text(
-              order.cantidad.toString(),
-              style: AppTypography.small.copyWith(color: AppColors.textMuted),
-            ),
+            flex: 10,
+            child: Text(order.cantidad.toString(), style: AppTypography.small),
           ),
 
-          // TOTAL
+          // TOTAL (Flex 15)
           Expanded(
-            flex: 2,
+            flex: 15,
             child: Text(
               'Bs. ${order.costoTotal.toStringAsFixed(2)}',
               style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
 
-          // ENTREGA
+          // ENTREGA (Flex 15)
           Expanded(
-            flex: 2,
+            flex: 15,
             child: Text(
-              '${order.fechaEntrega.day.toString().padLeft(2, '0')}/'
-              '${order.fechaEntrega.month.toString().padLeft(2, '0')}/'
-              '${order.fechaEntrega.year}',
+              '${order.fechaEntrega.day}/${order.fechaEntrega.month}/${order.fechaEntrega.year}',
               style: AppTypography.small,
             ),
           ),
 
-          // ESTADO
+          // ESTADO (Flex 20)
           Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              // Asegúrate de que este widget _StatusBadge acepte los parámetros correctos
-              child: _StatusBadge(
-                estado: order.estadoOrden,
-                idEstado: order.idEstado,
-              ),
+            flex: 20,
+            child: _StatusBadge(
+              estado: order.estadoOrden,
+              idEstado: order.idEstado,
             ),
           ),
 
-          // ACCIONES (Usando el popup moderno en lugar del simple botón "Ver")
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  if (value == 'ver') onVerPressed();
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'ver',
-                    child: Text('Ver Detalles'),
-                  ),
-                ],
-              ),
+          // ACCIONES (Ancho fijo 60)
+          SizedBox(
+            width: 60,
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'ver', child: Text('Ver Detalles')),
+              ],
+              onSelected: (v) => onVerPressed(),
             ),
           ),
         ],
@@ -528,7 +502,7 @@ class _MobileList extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ORDER CARD (mobile)
+// ORDER CARD (mobile) — Conectada a Datos Reales
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _OrderCard extends StatelessWidget {
@@ -539,11 +513,10 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Código corto del UUID
     final String displayCode = order.numOrden.length > 8
         ? order.numOrden.substring(0, 8).toUpperCase()
         : order.numOrden.toUpperCase();
-
-    final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
 
     return InkWell(
       onTap: onVerPressed,
@@ -558,6 +531,7 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // HEADER: Código y Estado
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -568,11 +542,16 @@ class _OrderCard extends StatelessWidget {
                     color: AppColors.primary500,
                   ),
                 ),
-                _StatusBadge(idEstado: order.idEstado, estado: ''),
+                // 🔥 Inyectamos los datos reales al badge
+                _StatusBadge(
+                  idEstado: order.idEstado,
+                  estado: order.estadoOrden,
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
 
+            // CLIENTE: Nombre real
             Row(
               children: [
                 const Icon(
@@ -583,17 +562,21 @@ class _OrderCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    clienteDisplay,
-                    style: AppTypography.body,
+                    order.clienteNombre, // 🔥 Nombre completo del cliente
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
+            // PRODUCTOS: Resumen inteligente (Camisa (2), Short (3)...)
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(
                   Icons.inventory_2_outlined,
@@ -603,18 +586,21 @@ class _OrderCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    '—',
+                    order
+                        .producto, // 🔥 Aquí sale el resumen que armamos en el modelo
                     style: AppTypography.small.copyWith(
-                      color: AppColors.textMuted,
+                      color: AppColors.textSecondary,
                     ),
-                    maxLines: 1,
+                    maxLines:
+                        2, // Permitimos 2 líneas en móvil por si son varios
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
 
+            // FECHA DE ENTREGA
             Row(
               children: [
                 const Icon(
@@ -624,10 +610,7 @@ class _OrderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  'Entrega: '
-                  '${order.fechaEntrega.day.toString().padLeft(2, '0')}/'
-                  '${order.fechaEntrega.month.toString().padLeft(2, '0')}/'
-                  '${order.fechaEntrega.year}',
+                  'Entrega: ${order.fechaEntrega.day.toString().padLeft(2, '0')}/${order.fechaEntrega.month.toString().padLeft(2, '0')}/${order.fechaEntrega.year}',
                   style: AppTypography.small.copyWith(
                     color: AppColors.textMuted,
                   ),
@@ -637,11 +620,12 @@ class _OrderCard extends StatelessWidget {
 
             const Divider(height: AppSpacing.xl),
 
+            // FOOTER: Total en Bs.
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total',
+                  'Total de la orden',
                   style: AppTypography.small.copyWith(
                     color: AppColors.textMuted,
                   ),
@@ -663,7 +647,7 @@ class _OrderCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STATUS BADGE
+// STATUS BADGE — Actualizado al Workflow de 4 Pasos
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _StatusBadge extends StatelessWidget {
@@ -677,23 +661,23 @@ class _StatusBadge extends StatelessWidget {
     Color bgColor;
     Color textColor;
 
-    // Colores basados en el id del estado de tu base de datos
+    // Sincronizado con: 1:Pendiente, 2:En Producción, 3:Finalizada, 4:Entregada
     switch (idEstado) {
       case 1: // Pendiente
         bgColor = Colors.orange.withOpacity(0.1);
         textColor = Colors.orange.shade800;
         break;
-      case 2: // Producción
+      case 2: // En Producción
         bgColor = Colors.blue.withOpacity(0.1);
         textColor = Colors.blue.shade800;
         break;
-      case 3: // Entregada
+      case 3: // Finalizada (Lista para entregar)
+        bgColor = Colors.teal.withOpacity(0.1);
+        textColor = Colors.teal.shade800;
+        break;
+      case 4: // Entregada
         bgColor = Colors.green.withOpacity(0.1);
         textColor = Colors.green.shade800;
-        break;
-      case 4: // Cancelada
-        bgColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red.shade800;
         break;
       default:
         bgColor = Colors.grey.withOpacity(0.1);
@@ -710,10 +694,11 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        estado, // Aquí usamos el nombre real que viene de Supabase
+        estado.toUpperCase(),
         style: AppTypography.caption.copyWith(
           color: textColor,
           fontWeight: FontWeight.bold,
+          fontSize: 10,
         ),
       ),
     );

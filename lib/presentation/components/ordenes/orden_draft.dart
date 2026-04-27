@@ -7,12 +7,10 @@
 // usuario lo está llenando, con todos los campos que pide el Figma.
 // Cuando se aprieta "Crear orden", este draft se mappea a OrdenModel
 // (los 7 campos que sí existen en BD) y los campos extra quedan como
-// TODO documentado hasta que el backend los exponga.
-//
 // Ver HANDOFF — patrón "placeholders honestos con TODOs".
 // ============================================================================
 
-import 'dart:typed_data'; // Importante para manejar los bytes de la imagen
+import 'dart:typed_data';
 
 /// Moneda de la orden. El Figma muestra toggle Bs / USD.
 enum OrdenMoneda { bolivianos, dolares }
@@ -21,20 +19,15 @@ enum OrdenMoneda { bolivianos, dolares }
 enum OrdenPrioridad { normal, alta, urgente }
 
 /// Tipo de cambio mockeado USD -> Bs.
-/// TODO(SCRUM-75): cuando exista config global o endpoint del banco,
-/// reemplazar por valor real. Hoy hardcoded a 6.96 según mockup.
-const double kTipoCambioUsdBs = 6.96;
+const double kTipoCambioUsdBs = 10.50;
 
-/// Item de producto dentro de la orden (mock — backend no expone tabla).
-/// Mismo concepto que OrdenItem en orden_items_editor.dart pero independiente
-/// para no acoplar la lógica del editor de SCRUM-72 con este form.
 class OrdenProductoItem {
   final int? idTipoPrenda;
   final int? idTalla;
   final String nombre;
   final int cantidad;
   final double precioUnitario;
-  final String unidad; // "uds", "mts", "kg", etc.
+  final String unidad;
 
   const OrdenProductoItem({
     this.idTipoPrenda,
@@ -64,9 +57,6 @@ class OrdenProductoItem {
   }
 }
 
-/// Material requerido calculado para esta orden (mock — Figma).
-/// TODO(SCRUM-75): cuando exista tabla `material` y relación
-/// `producto_material` en BD, calcular dinámicamente desde productos.
 class OrdenMaterialRequerido {
   final String material;
   final double requerido;
@@ -209,10 +199,13 @@ class OrdenDraft {
   //int? get idTipoPrenda => null;
 
   /// Helper para formatear precios según moneda actual.
-  String formatPrecio(double valor) {
+  // En lib/presentation/components/ordenes/orden_draft.dart
+
+  String formatPrecio(double valorEnBs) {
     if (moneda == OrdenMoneda.dolares) {
-      return '\$${valor.toStringAsFixed(2)}';
+      double valorUsd = valorEnBs / kTipoCambioUsdBs;
+      return "\$ ${valorUsd.toStringAsFixed(2)}";
     }
-    return 'Bs. ${valor.toStringAsFixed(2)}';
+    return "Bs ${valorEnBs.toStringAsFixed(2)}";
   }
 }
