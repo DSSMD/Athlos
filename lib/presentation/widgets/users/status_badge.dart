@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../../domain/models/usuario_model.dart'; 
+import '../../../domain/models/usuario_model.dart';
 
 // 2. ELIMINAMOS EL ENUM VIEJO QUE ESTABA AQUÍ
 

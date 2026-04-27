@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Ajusta esta ruta a donde tengas tu auth_provider.dart
-import '../../presentation/providers/auth_provider.dart'; 
+import '../../presentation/providers/auth_provider.dart';
 
 final routerNotifierProvider = Provider<RouterNotifier>((ref) {
   ref.keepAlive();

@@ -111,7 +111,6 @@ class UserCard extends StatelessWidget {
   }
 }
 
-
 class _PermissionsWrap extends StatelessWidget {
   const _PermissionsWrap({required this.permissions});
   final List<String> permissions;

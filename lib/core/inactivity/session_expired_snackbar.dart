@@ -41,9 +41,7 @@ class SessionExpiredSnackbar {
         duration: InactivityConfig.snackbarDuration,
         behavior: SnackBarBehavior.floating,
         backgroundColor: _bgColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         content: Row(

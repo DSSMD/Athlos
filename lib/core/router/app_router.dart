@@ -14,6 +14,10 @@ import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/produccion/orden_page.dart';
 
+import '../../presentation/pages/admin/clientes_page.dart';
+
+//import '../../presentation/models/cliente_mock.dart';
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
 
@@ -90,10 +94,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
-          pages: const [
-            Center(child: Text('Dashboard Admin General')),
-            UsuariosPage(),
-            Center(child: Text('Reportes Financieros')),
+          pages: [
+            const Center(child: Text('Dashboard Admin General')),
+            const UsuariosPage(),
+            const ClientesPage(),
+            const Center(child: Text('Reportes Financieros')),
           ],
           railDestinations: const [
             NavigationRailDestination(
@@ -103,6 +108,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             NavigationRailDestination(
               icon: Icon(Icons.people),
               label: Text('Usuarios'),
+            ),
+            // 👇 Icono corregido (adiós a los caracteres raros)
+            NavigationRailDestination(
+              icon: Icon(Icons.assignment_ind),
+              label: Text('Clientes'),
             ),
             NavigationRailDestination(
               icon: Icon(Icons.bar_chart),
@@ -118,6 +128,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               icon: Icon(Icons.people),
               label: 'Usuarios',
             ),
+            BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clientes'),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart),
               label: 'Reportes',

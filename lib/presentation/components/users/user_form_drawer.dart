@@ -4,6 +4,8 @@
 // Descripción: Formulario de crear/editar usuario.
 // ============================================================================
 
+// lib/presentation/components/user_form_drawer.dart
+
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
@@ -25,7 +27,7 @@ import '../../providers/usuario_provider.dart';
 /// API pública — llamar con `showUserFormDrawer(context, initialUser: ...)`.
 Future<void> showUserFormDrawer(
   BuildContext context, {
-  UsuarioModel? initialUser, // Cambiado a UsuarioModel
+  UsuarioModel? initialUser,
 }) {
   final isMobile = MediaQuery.of(context).size.width < 900;
 
@@ -36,7 +38,6 @@ Future<void> showUserFormDrawer(
         opaque: true,
         barrierColor: Colors.black54,
         transitionDuration: const Duration(milliseconds: 300),
-        // 💡 CORRECCIÓN: Retornamos el Widget (UserFormDrawer), NO el State
         pageBuilder: (_, _, _) => UserFormDrawer(initialUser: initialUser),
         transitionsBuilder: (_, animation, _, child) {
           return SlideTransition(
@@ -87,6 +88,8 @@ class UserFormDrawer extends ConsumerStatefulWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// ESTADO DEL FORMULARIO
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
   late final TextEditingController _nombreCtrl;
@@ -105,6 +108,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
   final Set<String> _permisos = {};
   final _formKey = GlobalKey<FormState>();
 
+  // Esta lista es solo para mostrar en el formulario, no se guarda en la BD.
   static const _allPermisos = [
     'Órdenes',
     'Inventario',
@@ -151,6 +155,9 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
     super.dispose();
   }
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // MÉTODOS DE GUARDADO Y LÓGICA
+  // ══════════════════════════════════════════════════════════════════════════════
   Future<void> _handleSave() async {
     // 1. Validar que los campos de texto cumplan las reglas
     if (!_formKey.currentState!.validate()) return;
@@ -246,6 +253,9 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
 
   bool get _isEditing => widget.initialUser != null;
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // BUILD PRINCIPAL
+  // ══════════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 900;

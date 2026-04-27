@@ -9,12 +9,12 @@ final usuarioServiceProvider = Provider<UsuarioService>((ref) {
 });
 
 // 2. Proveedor de la Lista de Usuarios (AsyncNotifier)
-final usuariosProvider = AsyncNotifierProvider<UsuariosNotifier, List<UsuarioModel>>(() {
-  return UsuariosNotifier();
-});
+final usuariosProvider =
+    AsyncNotifierProvider<UsuariosNotifier, List<UsuarioModel>>(() {
+      return UsuariosNotifier();
+    });
 
 class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
-  
   @override
   Future<List<UsuarioModel>> build() async {
     return _fetchUsuarios();
@@ -92,7 +92,7 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
   // ══════════════════════════════════════════════════════════════════════════
   Future<void> cambiarEstatus(UsuarioModel user) async {
     final service = ref.read(usuarioServiceProvider);
-    
+
     state = await AsyncValue.guard(() async {
       // Usamos el método de actualizar pero solo mandamos el cambio de 'activo'
       await service.actualizarUsuario(
@@ -101,7 +101,9 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         apellido: user.name.contains(' ') ? user.name.split(' ').last : '',
         telefono: user.phone,
         rol: user.role,
-        activo: !user.status.toString().contains('activo'), // Invertimos el estado
+        activo: !user.status.toString().contains(
+          'activo',
+        ), // Invertimos el estado
       );
       return _fetchUsuarios();
     });

@@ -26,7 +26,9 @@ class RoleBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: config.bg,
-        borderRadius: BorderRadius.circular(AppRadius.full), // Asegúrate de tener AppRadius definido en tu theme
+        borderRadius: BorderRadius.circular(
+          AppRadius.full,
+        ), // Asegúrate de tener AppRadius definido en tu theme
       ),
       child: Text(
         config.label,
@@ -42,21 +44,23 @@ class RoleBadge extends StatelessWidget {
     switch (role) {
       case UserRole.administrador:
         return const _RoleConfig(
-          label: 'Administrador', // Al ser el mayor rango ahora, le damos el color oscuro
+          label:
+              'Administrador', // Al ser el mayor rango ahora, le damos el color oscuro
           bg: AppColors.neutral950,
           fg: AppColors.brandWhite,
         );
       case UserRole.produccion:
         return const _RoleConfig(
-          label: 'Producción', // Puedes dejarlo corto en la UI aunque en DB sea "Operador..."
+          label:
+              'Producción', // Puedes dejarlo corto en la UI aunque en DB sea "Operador..."
           bg: AppColors.warningBg,
-          fg: Color(0xFFA16207), 
+          fg: Color(0xFFA16207),
         );
       case UserRole.cajas:
         return const _RoleConfig(
           label: 'Cajas',
-          bg: Color(0xFFD1D5DB), 
-          fg: Color(0xFF4B5563), 
+          bg: Color(0xFFD1D5DB),
+          fg: Color(0xFF4B5563),
         );
       case UserRole.invitado:
         return const _RoleConfig(
