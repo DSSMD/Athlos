@@ -11,14 +11,19 @@
 // Reusa OrdenProductoItem de orden_draft.dart.
 // ============================================================================
 
+// lib/presentation/components/ordenes/orden_productos_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+//import 'package:workspace/domain/models/orden_model.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 import 'orden_draft.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/catalogos_provider.dart';
 
 class OrdenProductosCard extends StatelessWidget {
   final OrdenDraft draft;
@@ -152,10 +157,8 @@ class OrdenProductosCard extends StatelessWidget {
           child: Row(
             children: [
               _col('#', 1),
-              _col('PRODUCTO', 4),
-              _col('CANTIDAD', 2),
-              _col('P. UNITARIO', 2),
-              _col('SUBTOTAL', 2),
+              _col('PRODUCTO Y TALLA', 6),
+              _col('CANTIDAD', 3),
               const SizedBox(width: 60),
             ],
           ),
@@ -165,7 +168,6 @@ class OrdenProductosCard extends StatelessWidget {
           _ProductoRowDesktop(
             index: i + 1,
             producto: draft.productos[i],
-            moneda: draft.moneda,
             onEliminar: () => _eliminarProducto(i),
           ),
           if (i < draft.productos.length - 1)
@@ -197,7 +199,6 @@ class OrdenProductosCard extends StatelessWidget {
           _ProductoRowMobile(
             index: i + 1,
             producto: draft.productos[i],
-            moneda: draft.moneda,
             onEliminar: () => _eliminarProducto(i),
           ),
           if (i < draft.productos.length - 1)
@@ -214,22 +215,13 @@ class OrdenProductosCard extends StatelessWidget {
 class _ProductoRowDesktop extends StatelessWidget {
   final int index;
   final OrdenProductoItem producto;
-  final OrdenMoneda moneda;
   final VoidCallback onEliminar;
 
   const _ProductoRowDesktop({
     required this.index,
     required this.producto,
-    required this.moneda,
     required this.onEliminar,
   });
-
-  String _formatPrecio(double v) {
-    if (moneda == OrdenMoneda.dolares) {
-      return '\$${v.toStringAsFixed(2)}';
-    }
-    return 'Bs. ${v.toStringAsFixed(2)}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +231,7 @@ class _ProductoRowDesktop extends StatelessWidget {
         children: [
           Expanded(flex: 1, child: Text('$index', style: AppTypography.small)),
           Expanded(
-            flex: 4,
+            flex: 6,
             child: Text(
               producto.nombre,
               style: AppTypography.small,
@@ -248,42 +240,21 @@ class _ProductoRowDesktop extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
               '${producto.cantidad} ${producto.unidad}',
               style: AppTypography.small,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _formatPrecio(producto.precioUnitario),
-              style: AppTypography.small,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _formatPrecio(producto.subtotal),
-              style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           SizedBox(
             width: 60,
             child: Align(
               alignment: Alignment.center,
-              child: TextButton(
+              child: IconButton(
                 onPressed: onEliminar,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Eliminar',
-                  style: AppTypography.small.copyWith(color: AppColors.error),
-                ),
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: AppColors.error,
+                tooltip: 'Eliminar',
               ),
             ),
           ),
@@ -299,22 +270,13 @@ class _ProductoRowDesktop extends StatelessWidget {
 class _ProductoRowMobile extends StatelessWidget {
   final int index;
   final OrdenProductoItem producto;
-  final OrdenMoneda moneda;
   final VoidCallback onEliminar;
 
   const _ProductoRowMobile({
     required this.index,
     required this.producto,
-    required this.moneda,
     required this.onEliminar,
   });
-
-  String _formatPrecio(double v) {
-    if (moneda == OrdenMoneda.dolares) {
-      return '\$${v.toStringAsFixed(2)}';
-    }
-    return 'Bs. ${v.toStringAsFixed(2)}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -325,31 +287,30 @@ class _ProductoRowMobile extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Línea 1: #N + nombre + botón eliminar
-          Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.primary500.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$index',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.primary500,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primary500.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$index',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.primary500,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   producto.nombre,
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w600,
@@ -357,127 +318,102 @@ class _ProductoRowMobile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              IconButton(
-                onPressed: onEliminar,
-                icon: const Icon(Icons.delete_outline, size: 20),
-                color: AppColors.error,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                tooltip: 'Eliminar',
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  'Cantidad: ${producto.cantidad} ${producto.unidad}',
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          // Línea 2: cantidad y precio unitario
-          Row(
-            children: [
-              Expanded(
-                child: _miniInfo(
-                  label: 'Cantidad',
-                  value: '${producto.cantidad} ${producto.unidad}',
-                ),
-              ),
-              Expanded(
-                child: _miniInfo(
-                  label: 'P. unitario',
-                  value: _formatPrecio(producto.precioUnitario),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: AppSpacing.sm),
-          // Línea 3: subtotal destacado
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Subtotal',
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
-              ),
-              Text(
-                _formatPrecio(producto.subtotal),
-                style: AppTypography.body.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary500,
-                ),
-              ),
-            ],
+          IconButton(
+            onPressed: onEliminar,
+            icon: const Icon(Icons.delete_outline, size: 20),
+            color: AppColors.error,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _miniInfo({required String label, required String value}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTypography.caption.copyWith(
-            color: AppColors.textMuted,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
+Widget _miniInfo({required String label, required String value}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label.toUpperCase(),
+        style: AppTypography.caption.copyWith(
+          color: AppColors.textMuted,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
+      ),
+    ],
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// DIALOG: Agregar producto
+// DIALOG: Agregar producto (CONECTADO A BD)
 // ═════════════════════════════════════════════════════════════════════════════
-class _AgregarProductoDialog extends StatefulWidget {
+class _AgregarProductoDialog extends ConsumerStatefulWidget {
+  // <-- Ahora es Consumer
   const _AgregarProductoDialog();
 
   @override
-  State<_AgregarProductoDialog> createState() => _AgregarProductoDialogState();
+  ConsumerState<_AgregarProductoDialog> createState() =>
+      _AgregarProductoDialogState();
 }
 
-class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
-  final _nombreCtrl = TextEditingController();
-  final _cantidadCtrl = TextEditingController();
-  final _precioCtrl = TextEditingController();
-  String _unidad = 'uds';
+class _AgregarProductoDialogState
+    extends ConsumerState<_AgregarProductoDialog> {
+  int? _idPrenda;
+  String _nombrePrenda = '';
 
-  static const List<String> _unidades = ['uds', 'mts', 'kg', 'cajas', 'pares'];
+  int? _idTalla;
+  String _nombreTalla = '';
+
+  final _cantidadCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _nombreCtrl.dispose();
     _cantidadCtrl.dispose();
-    _precioCtrl.dispose();
     super.dispose();
   }
 
   void _guardar() {
-    final nombre = _nombreCtrl.text.trim();
     final cantidad = int.tryParse(_cantidadCtrl.text) ?? 0;
-    final precio = double.tryParse(_precioCtrl.text) ?? 0;
-    if (nombre.isEmpty || cantidad <= 0 || precio <= 0) return;
+
+    if (_idPrenda == null || _idTalla == null || cantidad <= 0) return;
 
     Navigator.pop(
       context,
       OrdenProductoItem(
-        nombre: nombre,
+        idTipoPrenda: _idPrenda,
+        idTalla: _idTalla,
+        nombre: '$_nombrePrenda - Talla $_nombreTalla',
         cantidad: cantidad,
-        precioUnitario: precio,
-        unidad: _unidad,
+        precioUnitario:
+            0.0, // Lo dejamos en 0 internamente para no romper el draft
+        unidad: 'uds',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final prendasAsync = ref.watch(tiposPrendaProvider);
+    final tallasAsync = ref.watch(tallasProvider);
+
     return AlertDialog(
       title: Text('Agregar producto', style: AppTypography.h3),
       content: SizedBox(
@@ -486,13 +422,36 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _label('Nombre del producto'),
+            _label('Tipo de prenda *'),
             const SizedBox(height: AppSpacing.xs),
-            TextField(
-              controller: _nombreCtrl,
-              decoration: _decoration('Ej: Pantalones cargo'),
+            prendasAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => const Text('Error al cargar prendas'),
+              data: (prendas) => DropdownButtonFormField<int>(
+                initialValue: _idPrenda,
+                decoration: _decoration('Selecciona una prenda'),
+                items: prendas
+                    .map(
+                      (p) => DropdownMenuItem<int>(
+                        value: p.id,
+                        child: Text(p.nombre),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _idPrenda = val;
+                      _nombrePrenda = prendas
+                          .firstWhere((p) => p.id == val)
+                          .nombre;
+                    });
+                  }
+                },
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
+
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -500,7 +459,44 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _label('Cantidad'),
+                      _label('Talla *'),
+                      const SizedBox(height: AppSpacing.xs),
+                      tallasAsync.when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, s) => const Text('Error'),
+                        data: (tallas) => DropdownButtonFormField<int>(
+                          initialValue: _idTalla,
+                          decoration: _decoration('Talla'),
+                          items: tallas
+                              .map(
+                                (t) => DropdownMenuItem<int>(
+                                  value: t['id_talla'] as int,
+                                  child: Text(t['nombre_talla'].toString()),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _idTalla = val;
+                                _nombreTalla = tallas.firstWhere(
+                                  (t) => t['id_talla'] == val,
+                                )['nombre_talla'];
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _label('Cantidad *'),
                       const SizedBox(height: AppSpacing.xs),
                       TextField(
                         controller: _cantidadCtrl,
@@ -513,58 +509,7 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Unidad'),
-                      const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _unidad,
-                            isExpanded: true,
-                            items: _unidades
-                                .map(
-                                  (u) => DropdownMenuItem(
-                                    value: u,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.md,
-                                      ),
-                                      child: Text(u),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) {
-                              if (v != null) setState(() => _unidad = v);
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _label('Precio unitario'),
-            const SizedBox(height: AppSpacing.xs),
-            TextField(
-              controller: _precioCtrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-              ],
-              decoration: _decoration('0.00'),
             ),
           ],
         ),
@@ -586,15 +531,13 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
     );
   }
 
-  Widget _label(String text) {
-    return Text(
-      text,
-      style: AppTypography.small.copyWith(
-        color: AppColors.textSecondary,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
+  Widget _label(String text) => Text(
+    text,
+    style: AppTypography.small.copyWith(
+      color: AppColors.textSecondary,
+      fontWeight: FontWeight.w500,
+    ),
+  );
 
   InputDecoration _decoration(String hint) {
     return InputDecoration(
@@ -602,7 +545,7 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
       hintStyle: AppTypography.small.copyWith(color: AppColors.textMuted),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -619,3 +562,4 @@ class _AgregarProductoDialogState extends State<_AgregarProductoDialog> {
     );
   }
 }
+

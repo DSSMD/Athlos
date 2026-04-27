@@ -11,16 +11,20 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // <-- 1. Agregamos Riverpod
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../widgets/custom_text_field.dart';
+//import '../../widgets/custom_text_field.dart';
 
 import 'orden_draft.dart';
+import '../../providers/cliente_provider.dart';
+//import '../../providers/catalogos_provider.dart';
 
-class OrdenInfoCard extends StatefulWidget {
+import 'package:image_picker/image_picker.dart'; // Asegúrate de tenerlo
+
+class OrdenInfoCard extends ConsumerStatefulWidget {
   final OrdenDraft draft;
   final ValueChanged<OrdenDraft> onChanged;
 
@@ -31,33 +35,11 @@ class OrdenInfoCard extends StatefulWidget {
   });
 
   @override
-  State<OrdenInfoCard> createState() => _OrdenInfoCardState();
+  ConsumerState<OrdenInfoCard> createState() => _OrdenInfoCardState();
 }
 
-class _OrdenInfoCardState extends State<OrdenInfoCard> {
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MOCK DATA — se reemplaza cuando Mel exponga los providers
-  // ═══════════════════════════════════════════════════════════════════════════
-  static const List<Map<String, String>> _clientesMock = [
-    {'id': 'cli-001', 'nombre': 'Empresa Textil S.A.'},
-    {'id': 'cli-002', 'nombre': 'Confecciones del Sur'},
-    {'id': 'cli-003', 'nombre': 'María López'},
-    {'id': 'cli-004', 'nombre': 'Carlos Ruiz'},
-    {'id': 'cli-005', 'nombre': 'Ana Torres'},
-  ];
+class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
 
-  static const List<String> _unidadesMock = [
-    'Unidades',
-    'Metros',
-    'Kilogramos',
-    'Cajas',
-    'Pares',
-  ];
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CONTROLLERS — necesarios porque CustomTextField requiere `controller`,
-  // no acepta `initialValue`. Se inicializan con el valor del draft.
-  // ═══════════════════════════════════════════════════════════════════════════
   late final TextEditingController _productoCtrl;
   late final TextEditingController _cantidadCtrl;
   late final TextEditingController _precioCtrl;
@@ -112,6 +94,21 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
     }
   }
 
+  Future<void> _subirImagen() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70, // Comprimimos un poco para ahorrar almacenamiento
+    );
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      widget.onChanged(
+        widget.draft.copyWith(imagenBytes: bytes, imagenNombre: image.name),
+      );
+    }
+  }
+
   void _setMoneda(OrdenMoneda m) {
     widget.onChanged(widget.draft.copyWith(moneda: m));
   }
@@ -140,11 +137,9 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
           const SizedBox(height: AppSpacing.lg),
           _filaClienteFecha(),
           const SizedBox(height: AppSpacing.lg),
-          _filaProductoCantidad(),
-          const SizedBox(height: AppSpacing.lg),
           _toggleMoneda(),
           const SizedBox(height: AppSpacing.lg),
-          _filaPrecioUnidad(),
+          _selectorImagen(),
           const SizedBox(height: AppSpacing.lg),
           _bannerTipoCambio(),
           if (widget.draft.moneda == OrdenMoneda.dolares)
@@ -199,6 +194,9 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
   }
 
   Widget _selectorCliente() {
+    // 1. Escuchamos tu provider de clientes reales
+    final clientesAsync = ref.watch(clientesProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,34 +207,65 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
             border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: widget.draft.idCliente,
-              isExpanded: true,
-              hint: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: Text(
-                  'Seleccionar o buscar cliente...',
-                  style: AppTypography.small.copyWith(
-                    color: AppColors.textMuted,
-                  ),
+          // 2. Evaluamos el estado de los datos (cargando, error, data)
+          child: clientesAsync.when(
+            // Mientras carga, mostramos un pequeño spinner
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Center(
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              items: _clientesMock
-                  .map(
-                    (c) => DropdownMenuItem(
-                      value: c['id'],
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                        child: Text(c['nombre']!),
+            ),
+            error: (err, stack) => Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text(
+                'Error al cargar',
+                style: AppTypography.small.copyWith(color: AppColors.error),
+              ),
+            ),
+            data: (clientes) {
+              // Filtramos para mostrar solo los clientes que estén activos
+              final activos = clientes.where((c) => c.activo).toList();
+
+              return DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: widget.draft.idCliente,
+                  isExpanded: true,
+                  hint: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: Text(
+                      'Seleccionar o buscar cliente...',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.textMuted,
                       ),
                     ),
-                  )
-                  .toList(),
-              onChanged: _setCliente,
-            ),
+                  ),
+                  // Mapeamos la lista real de clientes al diseño del menú
+                  items: activos
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c.idCliente, // El UUID real de Supabase
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            child: Text(
+                              '${c.nomCliente} ${c.apellidoCliente}'.trim(),
+                            ), // Nombre completo real
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _setCliente,
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -280,45 +309,6 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
                 ),
               ],
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA: Producto + Cantidad
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _filaProductoCantidad() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 3,
-          child: CustomTextField(
-            label: 'Producto *',
-            hint: 'Ej: Camisas polo manga corta',
-            controller: _productoCtrl,
-            onChanged: (v) => widget.onChanged(
-              widget.draft.copyWith(productoRapidoNombre: v),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(
-          flex: 1,
-          child: CustomTextField(
-            label: 'Cantidad *',
-            hint: '0',
-            controller: _cantidadCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) {
-              final n = int.tryParse(v) ?? 0;
-              widget.onChanged(
-                widget.draft.copyWith(productoRapidoCantidad: n),
-              );
-            },
           ),
         ),
       ],
@@ -385,6 +375,49 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
     );
   }
 
+  Widget _selectorImagen() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label('Imagen del modelo'),
+        const SizedBox(height: AppSpacing.xs),
+        InkWell(
+          onTap: _subirImagen,
+          child: Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              color: AppColors.neutral50,
+            ),
+            child: widget.draft.imagenBytes != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Image.memory(
+                      widget.draft.imagenBytes!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_a_photo_outlined,
+                        color: AppColors.textMuted,
+                      ),
+                      Text(
+                        'Subir foto de referencia',
+                        style: AppTypography.caption,
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _monedaOption({
     required String label,
     required bool selected,
@@ -408,113 +441,6 @@ class _OrdenInfoCardState extends State<OrdenInfoCard> {
           ),
         ),
       ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA: Precio + Unidad
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _filaPrecioUnidad() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _label('Precio unitario'),
-              const SizedBox(height: AppSpacing.xs),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.md,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.neutral100,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Text(
-                      widget.draft.moneda == OrdenMoneda.dolares
-                          ? 'USD \$'
-                          : 'Bs',
-                      style: AppTypography.small.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: CustomTextField(
-                      label: '',
-                      hint: '0.00',
-                      controller: _precioCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d{0,2}'),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        final n = double.tryParse(v) ?? 0;
-                        widget.onChanged(
-                          widget.draft.copyWith(productoRapidoPrecio: n),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _label('Unidad de medida'),
-              const SizedBox(height: AppSpacing.xs),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: widget.draft.productoRapidoUnidad,
-                    isExpanded: true,
-                    items: _unidadesMock
-                        .map(
-                          (u) => DropdownMenuItem(
-                            value: u,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                              ),
-                              child: Text(u),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        widget.onChanged(
-                          widget.draft.copyWith(productoRapidoUnidad: v),
-                        );
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

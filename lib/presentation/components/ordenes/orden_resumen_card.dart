@@ -20,8 +20,13 @@ import 'orden_draft.dart';
 
 class OrdenResumenCard extends StatelessWidget {
   final OrdenDraft draft;
+  final double descuentoFijo; // NUEVO parámetro
 
-  const OrdenResumenCard({super.key, required this.draft});
+  const OrdenResumenCard({
+    super.key,
+    required this.draft,
+    this.descuentoFijo = 0.05,
+  });
 
   // Mock fijo del Figma. Cuando se conecte cliente_provider, leer del
   // perfil del cliente o reglas de promoción.
@@ -30,10 +35,11 @@ class OrdenResumenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtotal = draft.subtotal;
-    final descuento = subtotal * _porcentajeDescuento;
+
+    final descuento = subtotal * descuentoFijo;
     final total = subtotal - descuento;
     final equivalenteBs = draft.moneda == OrdenMoneda.dolares
-        ? total * kTipoCambioUsdBs
+        ? total * 9.2
         : null;
 
     return Container(

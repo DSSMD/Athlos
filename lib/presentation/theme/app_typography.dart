@@ -66,4 +66,8 @@ class AppTypography {
     height: 1.4,
     color: AppColors.textMuted,
   );
+
+  static TextStyle? get label => null;
+
+  static TextStyle? get smallBold => null;
 }

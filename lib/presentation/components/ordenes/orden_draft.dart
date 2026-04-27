@@ -12,6 +12,8 @@
 // Ver HANDOFF — patrón "placeholders honestos con TODOs".
 // ============================================================================
 
+import 'dart:typed_data'; // Importante para manejar los bytes de la imagen
+
 /// Moneda de la orden. El Figma muestra toggle Bs / USD.
 enum OrdenMoneda { bolivianos, dolares }
 
@@ -27,19 +29,39 @@ const double kTipoCambioUsdBs = 6.96;
 /// Mismo concepto que OrdenItem en orden_items_editor.dart pero independiente
 /// para no acoplar la lógica del editor de SCRUM-72 con este form.
 class OrdenProductoItem {
+  final int? idTipoPrenda;
+  final int? idTalla;
   final String nombre;
   final int cantidad;
   final double precioUnitario;
   final String unidad; // "uds", "mts", "kg", etc.
 
   const OrdenProductoItem({
+    this.idTipoPrenda,
+    this.idTalla,
     required this.nombre,
     required this.cantidad,
-    required this.precioUnitario,
+    this.precioUnitario = 0.0,
     this.unidad = 'uds',
   });
 
   double get subtotal => cantidad * precioUnitario;
+
+  OrdenProductoItem copyWith({
+    int? idTipoPrenda,
+    int? idTalla,
+    String? nombre,
+    int? cantidad,
+    double? precioUnitario,
+  }) {
+    return OrdenProductoItem(
+      idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
+      idTalla: idTalla ?? this.idTalla,
+      nombre: nombre ?? this.nombre,
+      cantidad: cantidad ?? this.cantidad,
+      precioUnitario: precioUnitario ?? this.precioUnitario,
+    );
+  }
 }
 
 /// Material requerido calculado para esta orden (mock — Figma).
@@ -58,13 +80,23 @@ class OrdenMaterialRequerido {
     required this.unidad,
   });
 
+  // Lógica de estado automática
+  String get estado => stockActual >= requerido ? 'disponible' : 'insuficiente';
   double get despues => stockActual - requerido;
 
-  /// Estado del material: 'disponible', 'justo', 'insuficiente'.
-  String get estado {
-    if (despues < 0) return 'insuficiente';
-    if (despues < requerido * 0.3) return 'justo';
-    return 'disponible';
+  // ESTO ES LO QUE FALTA:
+  OrdenMaterialRequerido copyWith({
+    String? material,
+    double? requerido,
+    double? stockActual,
+    String? unidad,
+  }) {
+    return OrdenMaterialRequerido(
+      material: material ?? this.material,
+      requerido: requerido ?? this.requerido,
+      stockActual: stockActual ?? this.stockActual,
+      unidad: unidad ?? this.unidad,
+    );
   }
 }
 
@@ -82,6 +114,7 @@ class OrdenDraft {
   // ───── Producto rápido (header del Figma) ─────
   // El Figma duplica producto/cantidad/precio en el header de "Información"
   // Y en la tabla "Productos de la orden". Mantenemos los dos según diseño.
+  final int? idTipoPrenda;
   final String productoRapidoNombre;
   final int productoRapidoCantidad;
   final double productoRapidoPrecio;
@@ -98,11 +131,17 @@ class OrdenDraft {
   final double anticipo;
   final String metodoPago;
 
+  // ───── IMAGEN  ─────
+  final Uint8List? imagenBytes;
+  final String? imagenNombre;
+
   const OrdenDraft({
     this.idCliente,
     this.fechaEntrega,
     this.descripcion = '',
     this.moneda = OrdenMoneda.bolivianos,
+
+    this.idTipoPrenda,
     this.productoRapidoNombre = '',
     this.productoRapidoCantidad = 0,
     this.productoRapidoPrecio = 0,
@@ -112,6 +151,8 @@ class OrdenDraft {
     this.prioridad = OrdenPrioridad.normal,
     this.anticipo = 0,
     this.metodoPago = 'Transferencia',
+    this.imagenBytes,
+    this.imagenNombre,
   });
 
   /// Draft vacío inicial.
@@ -132,6 +173,9 @@ class OrdenDraft {
     OrdenPrioridad? prioridad,
     double? anticipo,
     String? metodoPago,
+    int? idTipoPrenda,
+    Uint8List? imagenBytes,
+    String? imagenNombre,
   }) {
     return OrdenDraft(
       idCliente: idCliente ?? this.idCliente,
@@ -148,6 +192,9 @@ class OrdenDraft {
       prioridad: prioridad ?? this.prioridad,
       anticipo: anticipo ?? this.anticipo,
       metodoPago: metodoPago ?? this.metodoPago,
+      idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
+      imagenBytes: imagenBytes ?? this.imagenBytes,
+      imagenNombre: imagenNombre ?? this.imagenNombre,
     );
   }
 
@@ -158,6 +205,8 @@ class OrdenDraft {
   bool get esValido {
     return idCliente != null && fechaEntrega != null && productos.isNotEmpty;
   }
+
+  //int? get idTipoPrenda => null;
 
   /// Helper para formatear precios según moneda actual.
   String formatPrecio(double valor) {

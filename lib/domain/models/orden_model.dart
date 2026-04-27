@@ -1,19 +1,26 @@
 class TallaDetalle {
+  final String nombrePrenda;
   final String nombreTalla;
   final int cantidad;
-  TallaDetalle({required this.nombreTalla, required this.cantidad});
+  TallaDetalle({
+    required this.nombrePrenda,
+    required this.nombreTalla,
+    required this.cantidad,
+  });
 }
 
 class OrdenModel {
   final String numOrden;
 
-  // Información del Cliente (ID + Nombre para visualización)
+  // Información del Cliente
   final String idCliente;
+  final String? clienteCi;
   final String clienteNombre;
-  final String?
-  clienteTelefono; // Útil para contactar al cliente desde la lista
+  final String? clienteTelefono;
+  final String? clienteEmail;
+  final String? clienteDireccion;
 
-  // Estados (ID para lógica/update + Nombre para la UI)
+  // Estados
   final int idEstado;
   final String estadoOrden;
   final int idEstadoPago;
@@ -24,11 +31,13 @@ class OrdenModel {
   final double costoTotal;
   final String producto;
   final int cantidad;
-  final String? notas;
 
-  // NUEVOS CAMPOS AÑADIDOS:
+  // Lista de tallas y notas
   final List<TallaDetalle> desgloseTallas;
-  final String? imagenUrl;
+  final String notasAdicionales;
+
+  // Imagen de la Ficha Técnica
+  final String? imagenModelo;
 
   OrdenModel({
     required this.numOrden,
@@ -44,10 +53,12 @@ class OrdenModel {
     required this.costoTotal,
     required this.producto,
     required this.cantidad,
-    this.notas,
-
     required this.desgloseTallas,
-    this.imagenUrl,
+    this.imagenModelo,
+    this.notasAdicionales = '',
+    this.clienteEmail,
+    this.clienteDireccion,
+    this.clienteCi,
   });
 
   factory OrdenModel.fromJson(Map<String, dynamic> json) {
@@ -63,24 +74,26 @@ class OrdenModel {
     String productoNombre = 'Sin especificar';
     String? img;
 
-    // Manejo de Producto y Cantidad (como en el anterior)
+    // Manejo de Producto e Imagen (Desde la ficha técnica)
     if (json['ficha_tecnica'] != null &&
         (json['ficha_tecnica'] as List).isNotEmpty) {
       final ficha = json['ficha_tecnica'][0];
       final tipo = ficha['tipo_prenda'];
       productoNombre = tipo?['nombre_prenda'] ?? 'Prenda';
-      img = ficha['imagen_modelo']; // Sacamos la foto
+      img = ficha['imagen_modelo']; // 👈 Sacamos la foto correctamente
     }
 
     int totalCant = 0;
     List<TallaDetalle> tallasReales = [];
 
+    // Manejo de Tallas
     if (json['desglose_tallas'] != null) {
       for (var t in (json['desglose_tallas'] as List)) {
         int cant = (t['cantidad'] as num).toInt();
         totalCant += cant;
         tallasReales.add(
           TallaDetalle(
+            nombrePrenda: t['tipo_prenda']?['nombre_prenda'] ?? 'Prenda',
             nombreTalla: t['tallas']?['nombre_talla'] ?? '?',
             cantidad: cant,
           ),
@@ -93,6 +106,9 @@ class OrdenModel {
       idCliente: json['id_cliente'] ?? '',
       clienteNombre: '$nombre $apellido'.trim(),
       clienteTelefono: cliente?['num_telefono'],
+      clienteEmail: cliente?['email'],
+      clienteDireccion: cliente?['direccion'],
+      clienteCi: cliente?['ci'],
       idEstado: json['id_estado'] ?? 0,
       estadoOrden: eOrden?['nombre_estado'] ?? 'Desconocido',
       idEstadoPago: json['id_estado_pago'] ?? 0,
@@ -102,9 +118,9 @@ class OrdenModel {
       costoTotal: (json['costo_total'] as num).toDouble(),
       producto: productoNombre,
       cantidad: totalCant,
-      notas: json['notas_adicionales'],
       desgloseTallas: tallasReales,
-      imagenUrl: img,
+      imagenModelo: img, // 👈 Le pasamos la variable 'img'
+      notasAdicionales: json['notas_adicionales'] ?? '',
     );
   }
 }

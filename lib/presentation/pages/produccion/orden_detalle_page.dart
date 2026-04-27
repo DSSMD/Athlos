@@ -40,12 +40,11 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
   @override
   void initState() {
     super.initState();
-    // Llenamos la tabla de edición con el desglose de tallas real
+    // Llenamos la tabla con la PRENDA y la TALLA real
     _items = widget.orden.desgloseTallas.map((talla) {
       return OrdenItem(
-        nombre: '${widget.orden.producto} - Talla ${talla.nombreTalla}',
+        nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
         cantidad: talla.cantidad,
-        // Si no tienes el precio por talla, puedes dejar 0 o hacer un cálculo estimado
         precioUnitario: 0.0,
       );
     }).toList();
@@ -213,67 +212,6 @@ class _EstadoChip extends StatelessWidget {
       ),
     );
   }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// CARDS
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _InfoPedidoCard extends StatelessWidget {
-  final OrdenModel orden;
-  const _InfoPedidoCard({required this.orden});
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      title: 'Información del pedido',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _InfoItem(
-                label: 'Cliente',
-                value: 'Cliente #${orden.idCliente.substring(0, 6)}',
-              ),
-              _InfoItem(label: 'Producto', value: '—'),
-              _InfoItem(label: 'Cantidad', value: '—'),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              _InfoItem(
-                label: 'Fecha pedido',
-                value: _formatFecha(orden.fechaOrden),
-              ),
-              _InfoItem(
-                label: 'Fecha entrega',
-                value: _formatFecha(orden.fechaEntrega),
-                valueColor: AppColors.primary500,
-              ),
-              _InfoItem(label: 'Prioridad', value: '—'),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.neutral50,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text('Especificaciones: —', style: AppTypography.small),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatFecha(DateTime f) =>
-      '${f.day.toString().padLeft(2, '0')}/'
-      '${f.month.toString().padLeft(2, '0')}/'
-      '${f.year}';
 }
 
 class _PagosCard extends StatelessWidget {
@@ -457,6 +395,194 @@ class _KeyValueRow extends StatelessWidget {
             style: AppTypography.small.copyWith(
               color: valueColor ?? AppColors.textPrimary,
               fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TARJETA DE INFORMACIÓN DEL PEDIDO (Con Imagen Modelo)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _InfoPedidoCard extends StatelessWidget {
+  final OrdenModel orden;
+  const _InfoPedidoCard({required this.orden});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.person_pin_outlined,
+                color: AppColors.primary500,
+                size: 20,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Información del Cliente y Referencia',
+                style: AppTypography.h3,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. IMAGEN DE REFERENCIA (Modelo)
+              _visorImagen(),
+
+              const SizedBox(width: AppSpacing.xl),
+
+              // 2. GRILLA DE DATOS DEL CLIENTE
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: AppSpacing.xl2,
+                      runSpacing: AppSpacing.lg,
+                      children: [
+                        _itemDato(
+                          'Nombre del Cliente',
+                          orden.clienteNombre,
+                          Icons.person_outline,
+                        ),
+                        _itemDato(
+                          'CI / NIT',
+                          orden.clienteCi ?? 'No registrado',
+                          Icons.badge_outlined,
+                        ),
+                        _itemDato(
+                          'Teléfono',
+                          orden.clienteTelefono ?? 'Sin contacto',
+                          Icons.phone_android_outlined,
+                        ),
+                        _itemDato(
+                          'Correo Electrónico',
+                          orden.clienteEmail ?? 'Sin correo',
+                          Icons.alternate_email,
+                        ),
+                        _itemDato(
+                          'Dirección de Entrega',
+                          orden.clienteDireccion ?? 'Recojo en tienda',
+                          Icons.location_on_outlined,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // NOTAS ADICIONALES DE LA ORDEN
+                    Text(
+                      'Notas y especificaciones de la orden:',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      orden.notasAdicionales.isEmpty
+                          ? 'Sin notas adicionales para esta orden.'
+                          : orden.notasAdicionales,
+                      style: AppTypography.body.copyWith(
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget para la imagen del modelo
+  Widget _visorImagen() {
+    return Container(
+      width: 160,
+      height: 160,
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: orden.imagenModelo != null && orden.imagenModelo!.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: Image.network(
+                orden.imagenModelo!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => const Icon(
+                  Icons.broken_image_outlined,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            )
+          : const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image_outlined,
+                  color: AppColors.textMuted,
+                  size: 32,
+                ),
+                SizedBox(height: 4),
+                Text('Sin imagen', style: AppTypography.caption),
+              ],
+            ),
+    );
+  }
+
+  // Widget auxiliar para cada dato individual
+  Widget _itemDato(String label, String value, IconData icon) {
+    return SizedBox(
+      width: 220, // Ancho fijo para mantener la grilla ordenada
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: AppColors.textMuted.withValues(alpha: 0.7),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

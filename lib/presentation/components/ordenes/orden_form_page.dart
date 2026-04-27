@@ -42,6 +42,56 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
     setState(() => _draft = nuevo);
   }
 
+  // Método para llamar a la calculadora de Supabase
+  void _handleRecalcularMateriales() async {
+    // Verificamos que haya productos antes de calcular
+    if (_draft.productos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Añade al menos un producto para calcular materiales.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final service = ref.read(ordenServiceProvider);
+
+      // 1. Calculamos la tabla de materiales (Lo que hicimos antes)
+      final nuevosMateriales = await service.calcularMaterialesNecesarios(
+        _draft.productos,
+      );
+
+      // 2. NUEVO: Calculamos los precios sugeridos para el Resumen
+      final productosConPrecio = await service.calcularPreciosSugeridos(
+        _draft.productos,
+      );
+
+      // 3. Actualizamos el estado de la pantalla
+      setState(() {
+        _draft = _draft.copyWith(
+          materiales: nuevosMateriales,
+          productos:
+              productosConPrecio, // Esto disparará la actualización de OrdenResumenCard
+        );
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Materiales calculados correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al calcular: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _onCancelar() {
     // TODO(SCRUM-75): si el draft tiene cambios, mostrar diálogo de confirmación
     widget.onVolver();
@@ -141,7 +191,13 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
               const SizedBox(height: AppSpacing.lg),
               OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
               const SizedBox(height: AppSpacing.lg),
-              OrdenMaterialesCard(draft: _draft, onChanged: _updateDraft),
+
+              // 🔥 AQUÍ CONECTAMOS LA CALCULADORA REAL
+              OrdenMaterialesCard(
+                draft: _draft,
+                onChanged: _updateDraft,
+                onRecalcular: _handleRecalcularMateriales,
+              ),
             ],
           ),
         ),
@@ -177,7 +233,11 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
         const SizedBox(height: AppSpacing.lg),
         OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),
-        OrdenMaterialesCard(draft: _draft, onChanged: _updateDraft),
+        OrdenMaterialesCard(
+          draft: _draft,
+          onChanged: _updateDraft,
+          onRecalcular: _handleRecalcularMateriales,
+        ),
         const SizedBox(height: AppSpacing.lg),
         OrdenResumenCard(draft: _draft),
         const SizedBox(height: AppSpacing.lg),
