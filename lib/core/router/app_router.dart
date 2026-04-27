@@ -12,7 +12,7 @@ import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
-import '../../presentation/pages/produccion/ordenes_page.dart';
+import '../../presentation/pages/produccion/orden_page.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);

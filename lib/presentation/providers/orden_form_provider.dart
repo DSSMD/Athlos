@@ -1,10 +1,11 @@
+// lib/presentation/providers/orden_form_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-// Importamos tu nuevo repositorio (Asegúrate de que la ruta sea correcta)
-import '../../data/repositories/orden_repository_impl.dart';
+import 'orden_provider.dart'; 
 
 // ==========================================
-// 1. CLASE DE ESTADO (Los datos del formulario)
+// 1. CLASE DE ESTADO (Se mantiene igual, ¡es perfecta!)
 // ==========================================
 class OrdenFormState {
   final String nombreModelo;
@@ -50,7 +51,7 @@ class OrdenFormState {
 }
 
 // ==========================================
-// 2. CONTROLADOR (La lógica de negocio de la UI)
+// 2. CONTROLADOR (Actualizado con Inyección de Dependencias)
 // ==========================================
 class OrdenFormNotifier extends Notifier<OrdenFormState> {
   @override
@@ -72,7 +73,6 @@ class OrdenFormNotifier extends Notifier<OrdenFormState> {
     state = state.copyWith(tallas: nuevasTallas);
   }
 
-  // --- NUEVOS MÉTODOS PARA ACTUALIZAR LA UI ---
   void updateFechaEntrega(DateTime fecha) {
     state = state.copyWith(fechaEntrega: fecha);
   }
@@ -87,16 +87,24 @@ class OrdenFormNotifier extends Notifier<OrdenFormState> {
     try {
       debugPrint('⏳ Iniciando guardado en Supabase...');
 
-      // Instanciamos el repositorio real y le enviamos todo el estado
-      final repositorio = OrdenRepositoryImpl();
-      await repositorio.guardarOrdenMultimodal(state);
+      // 1. Obtenemos el servicio a través de Riverpod en lugar de instanciarlo directo
+      final servicio = ref.read(ordenServiceProvider);
+      
+      // 2. Guardamos enviando todo el estado
+      await servicio.crearOrdenMultimodal(state);
 
       debugPrint('✅ Flujo de guardado completado en la BD real.');
 
-      // Limpiamos el formulario tras guardar exitosamente
+      // 3. ¡LA MAGIA DE RIVERPOD! 
+      // Le decimos a la lista de órdenes que se vuelva a cargar para que aparezca la nueva
+      ref.read(ordenesProvider.notifier).refreshOrdenes();
+
+      // 4. Limpiamos el formulario tras guardar exitosamente
       state = OrdenFormState();
+      
     } catch (e) {
       debugPrint('❌ Falló el guardado: $e');
+      // Aquí podrías agregar lógica para mostrar un SnackBar de error en la UI
     }
   }
 }

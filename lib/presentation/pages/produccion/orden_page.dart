@@ -1,5 +1,10 @@
+// lib/presentation/pages/produccion/orden_page.dart
+
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/presentation/providers/orden_provider.dart';
 
 // Tema
 import '../../theme/app_colors.dart';
@@ -17,7 +22,6 @@ import '../../widgets/users/kpi_card.dart';
 
 // Datos
 import '../../../domain/models/orden_model.dart';
-import '../../providers/orden_list_provider.dart';
 
 // Vistas internas
 import 'orden_detalle_page.dart';
@@ -56,7 +60,6 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Si hay orden seleccionada, mostramos el detalle
     if (_ordenSeleccionada != null) {
       return OrdenDetallePage(
         orden: _ordenSeleccionada!,
@@ -64,8 +67,8 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
       );
     }
 
-    // Modo listado
-    final ordenesAsync = ref.watch(ordenListProvider);
+    // Usamos el provider que creamos en el paso anterior
+    final ordenesAsync = ref.watch(ordenesProvider);
 
     return ordenesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -107,7 +110,8 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
                   newButtonLabelMobile: 'Nueva',
                   newButtonLabelDesktop: 'Nueva orden',
                   onNewPressed: () {
-                    // TODO: abrir pantalla "Nueva orden" (SCRUM-75)
+                    
+                    // TODO: Aquí luego llamaremos a tu formulario multimodal
                   },
                 ),
                 Expanded(
@@ -210,7 +214,6 @@ class _OrdenesPageState extends ConsumerState<OrdenesPage> {
     );
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // KPI ROW
 // ══════════════════════════════════════════════════════════════════════════════
@@ -372,16 +375,10 @@ class _OrderListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Formateador para el código corto
     final String displayCode = order.numOrden.length > 8
         ? order.numOrden.substring(0, 8).toUpperCase()
         : order.numOrden.toUpperCase();
-
-    // TODO(SCRUM-72): Los campos 'nombreCliente', 'producto' y 'cantidad' no
-    // existen en OrdenModel. Requieren joins con la tabla 'cliente' y con
-    // las tablas de líneas/items. Por ahora se muestran placeholders.
-    final String clienteDisplay = 'Cliente #${order.idCliente.substring(0, 6)}';
-    const String productoDisplay = '—';
-    const String cantidadDisplay = '—';
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -402,33 +399,33 @@ class _OrderListRow extends StatelessWidget {
             ),
           ),
 
-          // CLIENTE
+          // CLIENTE (Usando el dato real de la BD)
           Expanded(
             flex: 3,
             child: Text(
-              clienteDisplay,
+              order.clienteNombre,
               style: AppTypography.small,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
-          // PRODUCTO
+          // PRODUCTO (Usando el dato real de la BD)
           Expanded(
             flex: 3,
             child: Text(
-              productoDisplay,
+              order.producto,
               style: AppTypography.small.copyWith(color: AppColors.textMuted),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
-          // CANTIDAD
+          // CANTIDAD (Usando el dato real de la BD)
           Expanded(
             flex: 2,
             child: Text(
-              cantidadDisplay,
+              order.cantidad.toString(),
               style: AppTypography.small.copyWith(color: AppColors.textMuted),
             ),
           ),
@@ -454,24 +451,28 @@ class _OrderListRow extends StatelessWidget {
           ),
 
           // ESTADO
-          Expanded(flex: 2, child: _StatusBadge(idEstado: order.idEstado)),
-
-          // ACCIONES — botón "Ver"
-          SizedBox(
-            width: 60,
+          Expanded(
+            flex: 2, 
             child: Align(
-              alignment: Alignment.center,
-              child: TextButton(
-                onPressed: onVerPressed,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text('Ver'),
+              alignment: Alignment.centerLeft,
+              // Asegúrate de que este widget _StatusBadge acepte los parámetros correctos
+              child: _StatusBadge(estado: order.estadoOrden, idEstado: order.idEstado),
+            )
+          ),
+
+          // ACCIONES (Usando el popup moderno en lugar del simple botón "Ver")
+          Expanded(
+            flex: 1,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'ver') onVerPressed();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'ver', child: Text('Ver Detalles'))
+                ],
               ),
             ),
           ),
@@ -547,7 +548,7 @@ class _OrderCard extends StatelessWidget {
                     color: AppColors.primary500,
                   ),
                 ),
-                _StatusBadge(idEstado: order.idEstado),
+                _StatusBadge(idEstado: order.idEstado, estado: '',),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -645,46 +646,53 @@ class _OrderCard extends StatelessWidget {
 // STATUS BADGE
 // ══════════════════════════════════════════════════════════════════════════════
 
+
+
 class _StatusBadge extends StatelessWidget {
+  final String estado;
   final int idEstado;
-  const _StatusBadge({required this.idEstado});
+
+  const _StatusBadge({required this.estado, required this.idEstado});
 
   @override
   Widget build(BuildContext context) {
-    Color color = AppColors.neutral500;
-    String label = 'ESTADO $idEstado';
+    Color bgColor;
+    Color textColor;
 
+    // Colores basados en el id del estado de tu base de datos
     switch (idEstado) {
-      case 1:
-        color = AppColors.warning;
-        label = 'PENDIENTE';
+      case 1: // Pendiente
+        bgColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange.shade800;
         break;
-      case 2:
-        color = AppColors.info;
-        label = 'PRODUCCIÓN';
+      case 2: // Producción
+        bgColor = Colors.blue.withOpacity(0.1);
+        textColor = Colors.blue.shade800;
         break;
-      case 3:
-        color = AppColors.success;
-        label = 'ENTREGADO';
+      case 3: // Entregada
+        bgColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green.shade800;
         break;
-      case 4:
-        color = AppColors.error;
-        label = 'CANCELADO';
+      case 4: // Cancelada
+        bgColor = Colors.red.withOpacity(0.1);
+        textColor = Colors.red.shade800;
         break;
+      default:
+        bgColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey.shade800;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        label,
+        estado, // Aquí usamos el nombre real que viene de Supabase
         style: AppTypography.caption.copyWith(
-          color: color,
+          color: textColor,
           fontWeight: FontWeight.bold,
-          fontSize: 10,
         ),
       ),
     );

@@ -1,3 +1,6 @@
+// lib/presentation/pages/produccion/registro_orden_page.dart
+// archivo creado para el formulario de registro de orden, que se abrirá como un Drawer o Modal desde el dashboard de producción.
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
