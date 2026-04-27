@@ -218,10 +218,7 @@ class _OrdenItemsEditorState extends State<OrdenItemsEditor> {
             ),
 
           for (var i = 0; i < _items.length; i++)
-            _ItemRow(
-              item: _items[i],
-              onDelete: () => _eliminarItem(i),
-            ),
+            _ItemRow(item: _items[i], onDelete: () => _eliminarItem(i)),
 
           if (_items.isNotEmpty) ...[
             const Divider(),

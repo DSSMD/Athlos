@@ -83,7 +83,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(), // <-- Así de limpio
+        builder: (context, state) => const LoginPage(),
       ),
 
       // ROL 1: ADMINISTRADOR
@@ -127,22 +127,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ROL 2: PRODUCCIÓN
+      // Indicación del PO (Den, 26/04/2026): producción no debe poder
+      // generar órdenes (su perfil es de trabajador). Órdenes movido al
+      // rol ventas. Quedan solo Taller e Inventario.
       GoRoute(
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: const [
             ProduccionDashboardPage(),
-            Center(child: Text('Registro de Ordenes')),
             Center(child: Text('Inventario Telas')),
           ],
           railDestinations: const [
             NavigationRailDestination(
               icon: Icon(Icons.precision_manufacturing),
               label: Text('Taller'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.assignment),
-              label: Text('Órdenes'),
             ),
             NavigationRailDestination(
               icon: Icon(Icons.inventory_2),
@@ -155,10 +153,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               label: 'Taller',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment),
-              label: 'Órdenes',
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2),
               label: 'Inventario',
             ),
@@ -167,12 +161,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ROL 3: CAJAS / VENTAS
+      // Indicación del PO (Den, 26/04/2026): ventas debe tener Órdenes
+      // en su sidebar (es el rol comercial responsable de gestionarlas).
       GoRoute(
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: const [
-            Center(child: Text('Dashboard Cajas')), // Página 1: Dashboard
-            OrdenesPage(), // Página 2: Tu nueva vista de Órdenes
+            Center(child: Text('Dashboard Cajas')),
+            Center(child: Text('Punto de Venta (POS)')),
+            OrdenesPage(),
           ],
           railDestinations: const [
             NavigationRailDestination(
@@ -185,6 +182,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               selectedIcon: Icon(Icons.assignment),
               label: Text('Órdenes'),
             ),
+            NavigationRailDestination(
+              icon: Icon(Icons.assignment),
+              label: Text('Órdenes'),
+            ),
           ],
           bottomNavItems: const [
             BottomNavigationBarItem(
@@ -195,6 +196,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             BottomNavigationBarItem(
               icon: Icon(Icons.assignment_outlined),
               activeIcon: Icon(Icons.assignment),
+              label: 'Órdenes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.assignment),
               label: 'Órdenes',
             ),
           ],
