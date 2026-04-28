@@ -219,6 +219,75 @@ class OrdenService {
   }
 
   // =================================================================
+  // AGREGAR ÍTEMS A UNA ORDEN EXISTENTE (Solo INSERT, no destruye nada)
+  // =================================================================
+  /// Agrega nuevos ítems (filas en desglose_tallas) a una orden ya creada
+  /// y recalcula el costo_total sumando el costo de los nuevos ítems.
+  ///
+  /// Sigue el mismo patrón INSERT de crearOrdenDesdeDraft (PASO 4).
+  Future<void> agregarItemsAOrden({
+    required String numOrden,
+    required List<Map<String, dynamic>> nuevosItems,
+  }) async {
+    try {
+      if (nuevosItems.isEmpty) {
+        throw Exception('Debe agregar al menos un ítem');
+      }
+
+      // ─── PASO 1: INSERT en desglose_tallas (mismo patrón que crearOrdenDesdeDraft) ───
+      List<Map<String, dynamic>> tallasAInsertar = [];
+
+      for (var item in nuevosItems) {
+        tallasAInsertar.add({
+          'num_orden': numOrden,
+          'id_tipo_prenda': item['id_tipo_prenda'],
+          'id_talla': item['id_talla'],
+          'cantidad': item['cantidad'],
+        });
+      }
+
+      await _supabase.from('desglose_tallas').insert(tallasAInsertar);
+
+      // ─── PASO 2: Recalcular costo_total basado en TODOS los ítems de la orden ───
+      double costoAdicional = 0;
+
+      for (var item in nuevosItems) {
+        final int idTipoPrenda = item['id_tipo_prenda'];
+        final int cantidad = item['cantidad'];
+
+        double costoMateriales = await _obtenerCostoMaterialesPorTipo(
+          idTipoPrenda,
+        );
+
+        double manoDeObra = 25.0;
+        double margenUtilidad = 1.4;
+        double precioUnitario =
+            (costoMateriales + manoDeObra) * margenUtilidad;
+
+        costoAdicional += precioUnitario * cantidad;
+      }
+
+      // ─── PASO 3: Obtener costo actual y sumarle lo nuevo ───
+      final ordenActual = await _supabase
+          .from('orden')
+          .select('costo_total')
+          .eq('num_orden', numOrden)
+          .single();
+
+      final double costoActual =
+          (ordenActual['costo_total'] as num).toDouble();
+      final double nuevoCostoTotal = costoActual + costoAdicional;
+
+      await _supabase
+          .from('orden')
+          .update({'costo_total': nuevoCostoTotal})
+          .eq('num_orden', numOrden);
+    } catch (e) {
+      throw Exception('Error al agregar ítems a la orden: $e');
+    }
+  }
+
+  // =================================================================
   // FUNCIÓN AUXILIAR: Obtener Costo Total de Materiales por Tipo de Prenda
   // =================================================================
   Future<double> _obtenerCostoMaterialesPorTipo(int idTipoPrenda) async {

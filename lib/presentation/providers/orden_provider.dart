@@ -49,4 +49,21 @@ class OrdenesNotifier extends AsyncNotifier<List<OrdenModel>> {
       throw Exception('Error al crear orden: $e');
     }
   }
+
+  // NUEVO: Agregar ítems a una orden existente y refrescar la lista
+  Future<void> agregarItemsAOrden({
+    required String numOrden,
+    required List<Map<String, dynamic>> nuevosItems,
+  }) async {
+    try {
+      final service = ref.read(ordenServiceProvider);
+      await service.agregarItemsAOrden(
+        numOrden: numOrden,
+        nuevosItems: nuevosItems,
+      );
+      await refreshOrdenes();
+    } catch (e) {
+      throw Exception('Error al agregar ítems: $e');
+    }
+  }
 }

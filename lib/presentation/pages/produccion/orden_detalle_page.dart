@@ -8,6 +8,7 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../components/ordenes/orden_items_editor.dart';
 import '../../components/ordenes/orden_workflow_stepper.dart';
@@ -17,8 +18,9 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 import '../../../domain/models/orden_model.dart';
+import '../../providers/orden_provider.dart';
 
-class OrdenDetallePage extends StatefulWidget {
+class OrdenDetallePage extends ConsumerStatefulWidget {
   final OrdenModel orden;
   final VoidCallback onVolver;
 
@@ -29,10 +31,10 @@ class OrdenDetallePage extends StatefulWidget {
   });
 
   @override
-  State<OrdenDetallePage> createState() => _OrdenDetallePageState();
+  ConsumerState<OrdenDetallePage> createState() => _OrdenDetallePageState();
 }
 
-class _OrdenDetallePageState extends State<OrdenDetallePage> {
+class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
   static const double _mobileBreakpoint = 900;
 
   late List<OrdenItem> _items;
@@ -139,6 +141,12 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
               OrdenItemsEditor(
                 initialItems: _items,
                 onChanged: (items, _) => setState(() => _items = items),
+                onAgregarItem: (nuevoItem) async {
+                  await ref.read(ordenesProvider.notifier).agregarItemsAOrden(
+                    numOrden: widget.orden.numOrden,
+                    nuevosItems: [nuevoItem],
+                  );
+                },
               ),
             ],
           ),
@@ -172,6 +180,12 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
         OrdenItemsEditor(
           initialItems: _items,
           onChanged: (items, _) => setState(() => _items = items),
+          onAgregarItem: (nuevoItem) async {
+            await ref.read(ordenesProvider.notifier).agregarItemsAOrden(
+              numOrden: widget.orden.numOrden,
+              nuevosItems: [nuevoItem],
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.lg),
         _PagosCard(orden: widget.orden, totalItems: _totalItems),
@@ -758,7 +772,7 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
             opacity: _isHovered ? 1.0 : 0.0,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4), // Oscurece al 40%
+                color: Colors.black.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: const Center(
