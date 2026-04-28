@@ -26,7 +26,7 @@ class OrdenService {
         estado_orden (nombre_estado),
         estado_pago (nombre_estado),
         ficha_tecnica (imagen_modelo, tipo_prenda (nombre_prenda)), 
-        desglose_tallas (cantidad, tallas (nombre_talla), tipo_prenda (nombre_prenda)) 
+        desglose_tallas (id_tipo_prenda, cantidad, precio_unitario, tallas (nombre_talla), tipo_prenda (nombre_prenda)) 
       ''')
           .order('fecha_orden', ascending: false);
 
@@ -86,25 +86,11 @@ class OrdenService {
       }
 
       // ---------------------------------------------------------
-      // NUEVO PASO: Cálculo de Costo Total basado en Recetas
+      // Costo Total: usamos el subtotal ya calculado por la UI
+      // (calcularPreciosSugeridos ya aplicó: materiales + mano de obra + margen)
+      // Esto garantiza que lo que el usuario ve = lo que se guarda.
       // ---------------------------------------------------------
-      double costoTotalCalculado = 0;
-
-      for (var p in draft.productos) {
-        // Obtenemos el costo de materiales para este TIPO de prenda
-        double costoMateriales = await _obtenerCostoMaterialesPorTipo(
-          p.idTipoPrenda!,
-        );
-
-        // --- Lógica de Negocio ---
-        double manoDeObra =
-            25.0; // Valor base por prenda (puedes traerlo de BD luego)
-        double margenUtilidad = 1.4; // Ganancia del 40%
-
-        double precioUnitarioSugerido =
-            (costoMateriales + manoDeObra) * margenUtilidad;
-        costoTotalCalculado += precioUnitarioSugerido * p.cantidad;
-      }
+      final double costoTotalCalculado = draft.subtotal;
 
       // Unimos notas y prioridad
       String notasCompletas =
@@ -191,6 +177,8 @@ class OrdenService {
           'id_tipo_prenda': producto.idTipoPrenda,
           'id_talla': producto.idTalla,
           'cantidad': producto.cantidad,
+          'precio_unitario':
+              producto.precioUnitario,
         });
       }
 
@@ -199,9 +187,7 @@ class OrdenService {
         await _supabase.from('desglose_tallas').insert(tallasAInsertar);
       }
 
-      // --- PASO EXTRA: Si hay anticipo, lo guardamos en la tabla de pagos ---
-      // Si tienes la tabla, descomenta esto; si no, déjalo comentado.
-      /*
+      // --- PASO EXTRA: Si hay anticipo, lo registramos en pago_cliente ---
       if (draft.anticipo > 0) {
         await _supabase.from('pago_cliente').insert({
           'id_cliente': draft.idCliente,
@@ -210,7 +196,6 @@ class OrdenService {
           'metodo_pago': draft.metodoPago,
         });
       }
-      */
 
       // EL PASO 5 SE EJECUTARÁ AUTOMÁTICAMENTE GRACIAS A TU TRIGGER EN BD 🔥
     } catch (e) {
@@ -234,38 +219,32 @@ class OrdenService {
         throw Exception('Debe agregar al menos un ítem');
       }
 
-      // ─── PASO 1: INSERT en desglose_tallas (mismo patrón que crearOrdenDesdeDraft) ───
+      // ─── PASO 1 y 2: Calcular precio unitario y armar INSERT en desglose_tallas ───
       List<Map<String, dynamic>> tallasAInsertar = [];
-
-      for (var item in nuevosItems) {
-        tallasAInsertar.add({
-          'num_orden': numOrden,
-          'id_tipo_prenda': item['id_tipo_prenda'],
-          'id_talla': item['id_talla'],
-          'cantidad': item['cantidad'],
-        });
-      }
-
-      await _supabase.from('desglose_tallas').insert(tallasAInsertar);
-
-      // ─── PASO 2: Recalcular costo_total basado en TODOS los ítems de la orden ───
       double costoAdicional = 0;
 
       for (var item in nuevosItems) {
         final int idTipoPrenda = item['id_tipo_prenda'];
         final int cantidad = item['cantidad'];
 
-        double costoMateriales = await _obtenerCostoMaterialesPorTipo(
-          idTipoPrenda,
-        );
+        double costoMateriales = await _obtenerCostoMaterialesPorTipo(idTipoPrenda);
 
         double manoDeObra = 25.0;
         double margenUtilidad = 1.4;
-        double precioUnitario =
-            (costoMateriales + manoDeObra) * margenUtilidad;
+        double precioUnitario = (costoMateriales + manoDeObra) * margenUtilidad;
 
         costoAdicional += precioUnitario * cantidad;
+
+        tallasAInsertar.add({
+          'num_orden': numOrden,
+          'id_tipo_prenda': idTipoPrenda,
+          'id_talla': item['id_talla'],
+          'cantidad': cantidad,
+          'precio_unitario': precioUnitario,
+        });
       }
+
+      await _supabase.from('desglose_tallas').insert(tallasAInsertar);
 
       // ─── PASO 3: Obtener costo actual y sumarle lo nuevo ───
       final ordenActual = await _supabase
@@ -274,8 +253,7 @@ class OrdenService {
           .eq('num_orden', numOrden)
           .single();
 
-      final double costoActual =
-          (ordenActual['costo_total'] as num).toDouble();
+      final double costoActual = (ordenActual['costo_total'] as num).toDouble();
       final double nuevoCostoTotal = costoActual + costoAdicional;
 
       await _supabase

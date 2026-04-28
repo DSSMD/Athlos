@@ -1,11 +1,15 @@
 class TallaDetalle {
+  final int idTipoPrenda;
   final String nombrePrenda;
   final String nombreTalla;
   final int cantidad;
+  final double precioUnitario;
   TallaDetalle({
+    required this.idTipoPrenda,
     required this.nombrePrenda,
     required this.nombreTalla,
     required this.cantidad,
+    this.precioUnitario = 0.0,
   });
 }
 
@@ -94,13 +98,16 @@ class OrdenModel {
         int cant = (t['cantidad'] as num).toInt();
         totalCant += cant;
 
+        int idTipoPrenda = (t['id_tipo_prenda'] as int?) ?? 0;
         String nombrePrenda = t['tipo_prenda']?['nombre_prenda'] ?? 'Prenda';
 
         tallasReales.add(
           TallaDetalle(
+            idTipoPrenda: idTipoPrenda,
             nombrePrenda: nombrePrenda,
             nombreTalla: t['tallas']?['nombre_talla'] ?? '?',
             cantidad: cant,
+            precioUnitario: (t['precio_unitario'] as num).toDouble(),
           ),
         );
 

@@ -5,11 +5,11 @@
 // Muestra calendario mensual con marcadores por estado, leyenda, lista de
 // entregas del mes, y banner de "Carga de trabajo" si hay aglomeración.
 //
-// MOCK FIJO de entregas. TODO(SCRUM-75): cuando exista listado real de
-// órdenes con fechas, leerlas del provider y filtrar por mes.
+// Conectado a ordenesProvider para mostrar entregas reales de BD.
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../theme/app_colors.dart';
@@ -17,33 +17,36 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 import 'orden_draft.dart';
+import '../../../domain/models/orden_model.dart';
+import '../../providers/orden_provider.dart';
 
 /// Estado visual de una entrega en el calendario.
-enum _EstadoEntrega { completada, urgente, enProduccion, pendiente, estaOrden }
+enum _EstadoEntrega { completada, enProduccion, pendiente, estaOrden }
 
-/// Mock de entrega para mostrar en el calendario.
-class _EntregaMock {
+/// Entrega real mapeada desde OrdenModel.
+class _EntregaReal {
   final DateTime fecha;
   final String numOrden;
   final _EstadoEntrega estado;
 
-  const _EntregaMock({
+  const _EntregaReal({
     required this.fecha,
     required this.numOrden,
     required this.estado,
   });
 }
 
-class OrdenCalendarioCard extends StatefulWidget {
+class OrdenCalendarioCard extends ConsumerStatefulWidget {
   final OrdenDraft draft;
 
   const OrdenCalendarioCard({super.key, required this.draft});
 
   @override
-  State<OrdenCalendarioCard> createState() => _OrdenCalendarioCardState();
+  ConsumerState<OrdenCalendarioCard> createState() =>
+      _OrdenCalendarioCardState();
 }
 
-class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
+class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
   late DateTime _mesVisible;
 
   @override
@@ -53,38 +56,38 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MOCK DE ENTREGAS — basado en el Figma (5 entregas en abril)
+  // MAPEO DE ORDENES REALES → ENTREGAS PARA EL CALENDARIO
   // ═══════════════════════════════════════════════════════════════════════════
-  List<_EntregaMock> get _entregasMock {
-    final anio = _mesVisible.year;
-    final mes = _mesVisible.month;
-    return [
-      _EntregaMock(
-        fecha: DateTime(anio, mes, 5),
-        numOrden: 'ORD-2843',
-        estado: _EstadoEntrega.completada,
-      ),
-      _EntregaMock(
-        fecha: DateTime(anio, mes, 8),
-        numOrden: 'ORD-2841',
-        estado: _EstadoEntrega.urgente,
-      ),
-      _EntregaMock(
-        fecha: DateTime(anio, mes, 10),
-        numOrden: 'ORD-2846',
-        estado: _EstadoEntrega.enProduccion,
-      ),
-      _EntregaMock(
-        fecha: DateTime(anio, mes, 12),
-        numOrden: 'ORD-2842',
-        estado: _EstadoEntrega.enProduccion,
-      ),
-      _EntregaMock(
-        fecha: DateTime(anio, mes, 20),
-        numOrden: 'ORD-2845',
-        estado: _EstadoEntrega.pendiente,
-      ),
-    ];
+  _EstadoEntrega _mapEstado(int idEstado) {
+    switch (idEstado) {
+      case 1:
+        return _EstadoEntrega.pendiente; // Pendiente
+      case 2:
+        return _EstadoEntrega.enProduccion; // En Producción
+      case 3:
+      case 4:
+        return _EstadoEntrega.completada; // Finalizada / Entregada
+      default:
+        return _EstadoEntrega.pendiente;
+    }
+  }
+
+  List<_EntregaReal> _buildEntregas(List<OrdenModel> ordenes) {
+    return ordenes
+        .where((o) =>
+            o.fechaEntrega.month == _mesVisible.month &&
+            o.fechaEntrega.year == _mesVisible.year)
+        .map((o) {
+      final codigoCorto = o.numOrden.length > 8
+          ? o.numOrden.substring(0, 8).toUpperCase()
+          : o.numOrden.toUpperCase();
+      return _EntregaReal(
+        fecha: o.fechaEntrega,
+        numOrden: codigoCorto,
+        estado: _mapEstado(o.idEstado),
+      );
+    }).toList()
+      ..sort((a, b) => a.fecha.compareTo(b.fecha));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -94,8 +97,6 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
     switch (e) {
       case _EstadoEntrega.completada:
         return AppColors.success;
-      case _EstadoEntrega.urgente:
-        return AppColors.error;
       case _EstadoEntrega.enProduccion:
         return AppColors.warning;
       case _EstadoEntrega.pendiente:
@@ -109,8 +110,6 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
     switch (e) {
       case _EstadoEntrega.completada:
         return 'Completada';
-      case _EstadoEntrega.urgente:
-        return 'Urgente';
       case _EstadoEntrega.enProduccion:
         return 'En prod.';
       case _EstadoEntrega.pendiente:
@@ -143,7 +142,7 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
   // ═══════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    final entregas = _entregasMock;
+    final ordenesAsync = ref.watch(ordenesProvider);
     final estaOrdenFecha = widget.draft.fechaEntrega;
 
     return Container(
@@ -153,21 +152,44 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _header(),
-          const SizedBox(height: AppSpacing.lg),
-          _calendario(entregas, estaOrdenFecha),
-          const SizedBox(height: AppSpacing.lg),
-          _leyenda(),
-          const SizedBox(height: AppSpacing.lg),
-          _listaEntregas(entregas, estaOrdenFecha),
-          if (_hayAglomeracion(entregas)) ...[
-            const SizedBox(height: AppSpacing.lg),
-            _bannerCargaTrabajo(),
+      child: ordenesAsync.when(
+        loading: () => Column(
+          children: [
+            _header(),
+            const SizedBox(height: AppSpacing.xl2),
+            const Center(child: CircularProgressIndicator()),
+            const SizedBox(height: AppSpacing.xl2),
           ],
-        ],
+        ),
+        error: (e, s) => Column(
+          children: [
+            _header(),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Error al cargar entregas',
+              style: AppTypography.small.copyWith(color: AppColors.error),
+            ),
+          ],
+        ),
+        data: (ordenes) {
+          final entregas = _buildEntregas(ordenes);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(),
+              const SizedBox(height: AppSpacing.lg),
+              _calendario(entregas, estaOrdenFecha),
+              const SizedBox(height: AppSpacing.lg),
+              _leyenda(),
+              const SizedBox(height: AppSpacing.lg),
+              _listaEntregas(entregas, estaOrdenFecha),
+              if (_hayAglomeracion(entregas)) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _bannerCargaTrabajo(entregas),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -186,13 +208,13 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
             vertical: 2,
           ),
           decoration: BoxDecoration(
-            color: AppColors.info.withValues(alpha: 0.1),
+            color: AppColors.success.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Text(
-            'Nuevo',
+            'En vivo',
             style: AppTypography.caption.copyWith(
-              color: AppColors.info,
+              color: AppColors.success,
               fontWeight: FontWeight.w600,
               fontSize: 10,
             ),
@@ -205,7 +227,7 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
   // ═══════════════════════════════════════════════════════════════════════════
   // CALENDARIO
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _calendario(List<_EntregaMock> entregas, DateTime? estaOrdenFecha) {
+  Widget _calendario(List<_EntregaReal> entregas, DateTime? estaOrdenFecha) {
     return TableCalendar(
       firstDay: DateTime(2020),
       lastDay: DateTime(2030),
@@ -323,7 +345,6 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
       runSpacing: AppSpacing.xs,
       children: [
         _leyendaItem(AppColors.primary500, 'Esta orden'),
-        _leyendaItem(AppColors.error, 'Urgente'),
         _leyendaItem(AppColors.warning, 'En producción'),
         _leyendaItem(AppColors.success, 'Completada'),
         _leyendaItem(AppColors.info, 'Pendiente'),
@@ -352,7 +373,7 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
   // ═══════════════════════════════════════════════════════════════════════════
   // LISTA DE ENTREGAS DEL MES
   // ═══════════════════════════════════════════════════════════════════════════
-  Widget _listaEntregas(List<_EntregaMock> entregas, DateTime? estaOrdenFecha) {
+  Widget _listaEntregas(List<_EntregaReal> entregas, DateTime? estaOrdenFecha) {
     final tieneEstaOrden =
         estaOrdenFecha != null &&
         estaOrdenFecha.month == _mesVisible.month &&
@@ -369,6 +390,16 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
           style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.sm),
+
+        if (entregas.isEmpty && !tieneEstaOrden)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Text(
+              'No hay entregas programadas para este mes.',
+              style: AppTypography.small.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+
         ...entregas.map(
           (e) => _entregaRow(
             dia: e.fecha.day,
@@ -446,7 +477,7 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
   // ═══════════════════════════════════════════════════════════════════════════
   // BANNER CARGA DE TRABAJO
   // ═══════════════════════════════════════════════════════════════════════════
-  bool _hayAglomeracion(List<_EntregaMock> entregas) {
+  bool _hayAglomeracion(List<_EntregaReal> entregas) {
     // Si hay 3+ entregas en una ventana de 5 días, mostramos el banner.
     if (entregas.length < 3) return false;
     final ordenadas = [...entregas]..sort((a, b) => a.fecha.compareTo(b.fecha));
@@ -457,7 +488,22 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
     return false;
   }
 
-  Widget _bannerCargaTrabajo() {
+  Widget _bannerCargaTrabajo(List<_EntregaReal> entregas) {
+    // Encontrar el rango de aglomeración real
+    final ordenadas = [...entregas]..sort((a, b) => a.fecha.compareTo(b.fecha));
+    int inicioAglom = 0;
+    int finAglom = 2;
+    for (var i = 0; i <= ordenadas.length - 3; i++) {
+      final diff = ordenadas[i + 2].fecha.difference(ordenadas[i].fecha);
+      if (diff.inDays <= 5) {
+        inicioAglom = ordenadas[i].fecha.day;
+        finAglom = ordenadas[i + 2].fecha.day;
+        break;
+      }
+    }
+
+    final mesCorto = _nombreMes(_mesVisible).split(' ').first.toLowerCase();
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -476,10 +522,10 @@ class _OrdenCalendarioCardState extends State<OrdenCalendarioCard> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const TextSpan(
+            TextSpan(
               text:
-                  'Hay 3 entregas entre el 8-12 de abril. Considera si '
-                  'el equipo tiene capacidad para entregar esta orden.',
+                  'Hay 3+ entregas entre el $inicioAglom-$finAglom de $mesCorto. '
+                  'Considera si el equipo tiene capacidad para entregar esta orden.',
             ),
           ],
         ),

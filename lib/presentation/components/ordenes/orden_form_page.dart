@@ -38,59 +38,74 @@ class OrdenFormPage extends ConsumerStatefulWidget {
 
 class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
   OrdenDraft _draft = OrdenDraft.empty();
+  int _prevProductCount = 0;
 
-  // ignore: unused_element
   void _updateDraft(OrdenDraft nuevo) {
+    final productosChanged = nuevo.productos.length != _prevProductCount;
     setState(() => _draft = nuevo);
+
+    // Auto-recalcular materiales cuando se agregan/quitan productos
+    if (productosChanged && nuevo.productos.isNotEmpty) {
+      _prevProductCount = nuevo.productos.length;
+      _handleRecalcularMateriales(silent: true);
+    }
   }
 
   // Método para llamar a la calculadora de Supabase
-  void _handleRecalcularMateriales() async {
+  // silent=true suprime los SnackBars (para auto-recálculo al agregar producto)
+  void _handleRecalcularMateriales({bool silent = false}) async {
     // Verificamos que haya productos antes de calcular
     if (_draft.productos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Añade al menos un producto para calcular materiales.'),
-        ),
-      );
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Añade al menos un producto para calcular materiales.'),
+          ),
+        );
+      }
       return;
     }
 
     try {
       final service = ref.read(ordenServiceProvider);
 
-      // 1. Calculamos la tabla de materiales (Lo que hicimos antes)
+      // 1. Calculamos la tabla de materiales
       final nuevosMateriales = await service.calcularMaterialesNecesarios(
         _draft.productos,
       );
 
-      // 2. NUEVO: Calculamos los precios sugeridos para el Resumen
+      // 2. Calculamos los precios sugeridos para el Resumen
       final productosConPrecio = await service.calcularPreciosSugeridos(
         _draft.productos,
       );
 
       // 3. Actualizamos el estado de la pantalla
-      setState(() {
-        _draft = _draft.copyWith(
-          materiales: nuevosMateriales,
-          productos:
-              productosConPrecio, // Esto disparará la actualización de OrdenResumenCard
-        );
-      });
+      if (mounted) {
+        setState(() {
+          _draft = _draft.copyWith(
+            materiales: nuevosMateriales,
+            productos: productosConPrecio,
+          );
+        });
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Materiales calculados correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Materiales calculados correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al calcular: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al calcular: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

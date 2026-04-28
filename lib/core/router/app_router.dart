@@ -179,7 +179,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: const [
             Center(child: Text('Dashboard Cajas')),
-            Center(child: Text('Punto de Venta (POS)')),
             OrdenPage(),
           ],
           railDestinations: const [
@@ -193,10 +192,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               selectedIcon: Icon(Icons.assignment),
               label: Text('Órdenes'),
             ),
-            NavigationRailDestination(
-              icon: Icon(Icons.assignment),
-              label: Text('Órdenes'),
-            ),
           ],
           bottomNavItems: const [
             BottomNavigationBarItem(
@@ -207,10 +202,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             BottomNavigationBarItem(
               icon: Icon(Icons.assignment_outlined),
               activeIcon: Icon(Icons.assignment),
-              label: 'Órdenes',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.assignment),
               label: 'Órdenes',
             ),
           ],

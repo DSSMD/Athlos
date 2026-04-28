@@ -103,19 +103,19 @@ class OrdenMaterialesCard extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         if (isCompact)
           IconButton(
-            onPressed: onRecalcular, // Llama a la función inyectada
+            onPressed: onRecalcular,
             icon: const Icon(Icons.refresh),
             tooltip: 'Recalcular',
-            color: AppColors.primary50,
+            color: AppColors.primary500,
           )
         else
           OutlinedButton.icon(
-            onPressed: onRecalcular, // Llama a la función inyectada
+            onPressed: onRecalcular,
             icon: const Icon(Icons.refresh, size: 16),
             label: const Text('Recalcular costos'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary50,
-              side: const BorderSide(color: AppColors.primary50),
+              foregroundColor: AppColors.primary500,
+              side: const BorderSide(color: AppColors.primary500),
             ),
           ),
       ],

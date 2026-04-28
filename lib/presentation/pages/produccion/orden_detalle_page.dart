@@ -1,12 +1,3 @@
-// ============================================================================
-// orden_detalle_page.dart
-// Ubicación: lib/presentation/pages/produccion/orden_detalle_page.dart
-// Descripción: Vista de detalle de una orden. Muestra workflow, información
-// del pedido, items editables (escalabilidad SCRUM-72), resumen de pagos,
-// fechas clave y placeholders para features que requieren joins con backend.
-// Se renderiza dentro del shell como estado interno de OrdenesPage.
-// ============================================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -42,22 +33,17 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
   @override
   void initState() {
     super.initState();
-    // Distribuimos el costoTotal equitativamente entre tallas para que
-    // el resumen financiero muestre datos reales desde el primer render.
-    final totalCantidad = widget.orden.desgloseTallas
-        .fold<int>(0, (sum, t) => sum + t.cantidad);
-    final precioPorUnidad =
-        totalCantidad > 0 ? widget.orden.costoTotal / totalCantidad : 0.0;
 
+    // ✅ 1. Llenamos la tabla directamente con la PRENDA, TALLA y su PRECIO EXACTO congelado
     _items = widget.orden.desgloseTallas.map((talla) {
       return OrdenItem(
         nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
         cantidad: talla.cantidad,
-        precioUnitario: precioPorUnidad,
+        precioUnitario: talla.precioUnitario,
       );
     }).toList();
 
-    // Fallback: Si la orden no tiene tallas, usamos el producto como item genérico
+    // 🛡️ 2. Fallback de emergencia (Solo si una orden vieja no tiene tallas guardadas)
     if (_items.isEmpty) {
       _items = [
         OrdenItem(
@@ -71,10 +57,12 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
     }
   }
 
-  double get _totalItems => _items.fold(0, (sum, i) => sum + i.subtotal);
+  // 💰 El total financiero SIEMPRE viene del modelo (BD), no de los ítems calculados.
+  double get _totalItems => widget.orden.costoTotal;
 
   @override
   Widget build(BuildContext context) {
+    // ... Tu LayoutBuilder y el resto del código _buildDesktop / _buildMobile se queda igual ...
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
@@ -140,12 +128,20 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
               const SizedBox(height: AppSpacing.xl),
               OrdenItemsEditor(
                 initialItems: _items,
-                onChanged: (items, _) => setState(() => _items = items),
+                onChanged: (items, _) {
+                  // Solo agregamos ítems nuevos; no sobreescribimos los existentes
+                  // para evitar que precios calculados se pierdan
+                  if (items.length > _items.length) {
+                    setState(() => _items = items);
+                  }
+                },
                 onAgregarItem: (nuevoItem) async {
-                  await ref.read(ordenesProvider.notifier).agregarItemsAOrden(
-                    numOrden: widget.orden.numOrden,
-                    nuevosItems: [nuevoItem],
-                  );
+                  await ref
+                      .read(ordenesProvider.notifier)
+                      .agregarItemsAOrden(
+                        numOrden: widget.orden.numOrden,
+                        nuevosItems: [nuevoItem],
+                      );
                 },
               ),
             ],
@@ -179,12 +175,18 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
         const SizedBox(height: AppSpacing.lg),
         OrdenItemsEditor(
           initialItems: _items,
-          onChanged: (items, _) => setState(() => _items = items),
+          onChanged: (items, _) {
+            if (items.length > _items.length) {
+              setState(() => _items = items);
+            }
+          },
           onAgregarItem: (nuevoItem) async {
-            await ref.read(ordenesProvider.notifier).agregarItemsAOrden(
-              numOrden: widget.orden.numOrden,
-              nuevosItems: [nuevoItem],
-            );
+            await ref
+                .read(ordenesProvider.notifier)
+                .agregarItemsAOrden(
+                  numOrden: widget.orden.numOrden,
+                  nuevosItems: [nuevoItem],
+                );
           },
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -247,11 +249,9 @@ class _PagosCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Si el usuario editó ítems con precios propios, usamos ese total;
-    // de lo contrario mostramos el costoTotal registrado en el modelo.
-    final double total =
-        totalItems > 0 ? totalItems : orden.costoTotal;
-    final bool pagado = orden.idEstadoPago != 1; // 1 = pendiente de pago
+    // Usamos el costoTotal del modelo (BD) como fuente de verdad.
+    final double total = orden.costoTotal;
+    final bool pagado = orden.idEstadoPago != 1; // 1 = Pendiente
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
