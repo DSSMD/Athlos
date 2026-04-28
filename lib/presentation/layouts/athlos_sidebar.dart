@@ -3,6 +3,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../widgets/auth_profile_menu.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../presentation/providers/auth_provider.dart';
 
 /// Agrupa un item de navegación con su sección visual.
 /// El mapeo label -> sección se hace en main_layout.dart.
@@ -24,24 +26,150 @@ class SidebarItem {
 
 enum SidebarSection { principal, operaciones, comercial, sistema }
 
-class AthlosSidebar extends StatelessWidget {
+// sidebar_menu_config.dart
+
+class SidebarMenuConfig {
+  // ─── PRINCIPAL ──────────────────────────────────────────────────
+  static const itemDashboard = SidebarItem(
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard,
+    label: 'Dashboard',
+    section: SidebarSection.principal,
+  );
+
+  static const itemEspera = SidebarItem(
+    icon: Icons.hourglass_empty_outlined,
+    selectedIcon: Icons.hourglass_empty,
+    label: 'En Espera',
+    section: SidebarSection.principal,
+  );
+
+  // ─── OPERACIONES ────────────────────────────────────────────────
+  static const itemInventario = SidebarItem(
+    icon: Icons.inventory_2_outlined,
+    selectedIcon: Icons.inventory_2,
+    label: 'Inventario',
+    section: SidebarSection.operaciones,
+  );
+
+  static const itemProduccion = SidebarItem(
+    icon: Icons.precision_manufacturing_outlined,
+    selectedIcon: Icons.precision_manufacturing,
+    label: 'Producción',
+    section: SidebarSection.operaciones,
+  );
+
+  // ─── COMERCIAL ──────────────────────────────────────────────────
+  static const itemOrdenes = SidebarItem(
+    icon: Icons.assignment_outlined,
+    selectedIcon: Icons.assignment,
+    label: 'Órdenes',
+    section: SidebarSection.comercial, // 👈 Órdenes ahora es comercial
+    badge: 12,
+  );
+
+  static const itemClientes = SidebarItem(
+    icon: Icons.people_outline,
+    selectedIcon: Icons.people,
+    label: 'Clientes',
+    section: SidebarSection.comercial,
+  );
+
+  static const itemPagos = SidebarItem(
+    // 👈 Aquí está definido itemPagos
+    icon: Icons.payments_outlined,
+    selectedIcon: Icons.payments,
+    label: 'Pagos',
+    section: SidebarSection.comercial,
+  );
+
+  static const itemBalance = SidebarItem(
+    // 👈 Aquí está definido itemBalance
+    icon: Icons.account_balance_wallet_outlined,
+    selectedIcon: Icons.account_balance_wallet,
+    label: 'Balance',
+    section: SidebarSection.comercial,
+  );
+
+  // ─── SISTEMA ────────────────────────────────────────────────────
+  static const itemUsuarios = SidebarItem(
+    icon: Icons.manage_accounts_outlined,
+    selectedIcon: Icons.manage_accounts,
+    label: 'Usuarios',
+    section: SidebarSection.sistema,
+  );
+
+  static const itemConfiguracion = SidebarItem(
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings,
+    label: 'Configuración',
+    section: SidebarSection.sistema,
+  );
+
+  static const itemNotificaciones = SidebarItem(
+    icon: Icons.notifications_outlined,
+    selectedIcon: Icons.notifications,
+    label: 'Avisos',
+    section: SidebarSection.sistema,
+    badge: 4,
+  );
+
+  static Map<String, List<SidebarItem>> get itemsPorRol => {
+    '1': [
+      // ADMIN: 10 ítems (Ve todo)
+      itemDashboard, itemOrdenes, itemInventario, itemProduccion,
+      itemClientes, itemPagos, itemBalance,
+      itemUsuarios, itemConfiguracion, itemNotificaciones,
+    ],
+    '2': [
+      // PRODUCCIÓN: 3 ítems (Órdenes fue removido de aquí)
+      itemDashboard,
+      itemInventario,
+      itemProduccion,
+    ],
+    '3': [
+      // VENTAS: 4 ítems (Ahora tienen la propiedad de Órdenes)
+      itemDashboard,
+      itemOrdenes,
+      itemClientes,
+      itemPagos,
+    ],
+    '4': [
+      // INVITADO: 2 ítems
+      itemDashboard,
+      itemEspera,
+    ],
+  };
+}
+
+class AthlosSidebar extends ConsumerWidget {
   const AthlosSidebar({
     super.key,
-    required this.items,
+    required this.items, // Lo mantenemos en el constructor para no romper el MainLayout que ya lo llama
     required this.selectedIndex,
     required this.onItemSelected,
     this.collapsed = false,
     this.onToggleCollapsed,
   });
 
-  final List<SidebarItem> items;
+  final List<SidebarItem>
+  items; // Aunque lo recibimos, lo ignoraremos internamente
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
   final bool collapsed;
   final VoidCallback? onToggleCollapsed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 5. MAGIA AQUÍ: Leemos el rol del usuario directamente en el Sidebar
+    final profileAsync = ref.watch(userProfileProvider);
+    final roleId =
+        profileAsync.value?['id_rol']?.toString() ??
+        '4'; // Por defecto '4' (invitado) si algo falla
+
+    // 6. Obtenemos la lista dinámica según el rol
+    final dynamicItems = SidebarMenuConfig.itemsPorRol[roleId] ?? [];
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
@@ -52,7 +180,8 @@ class AthlosSidebar extends StatelessWidget {
           children: [
             _buildLogoWithToggle(),
             const SizedBox(height: AppSpacing.sm),
-            Expanded(child: _buildNavList()),
+            // 7. Pasamos los items dinámicos a la lista
+            Expanded(child: _buildNavList(dynamicItems)),
             _buildUserFooter(),
           ],
         ),
@@ -111,13 +240,14 @@ class AthlosSidebar extends StatelessWidget {
   }
 
   // ──────────────────────────────────────────────────────── NAV ITEMS ──
-  Widget _buildNavList() {
-    // Agrupar items por sección preservando el índice original
+  Widget _buildNavList(List<SidebarItem> dynamicItems) {
     final Map<SidebarSection, List<_IndexedItem>> grouped = {};
-    for (var i = 0; i < items.length; i++) {
+
+    // Iteramos sobre dynamicItems en lugar de "this.items"
+    for (var i = 0; i < dynamicItems.length; i++) {
       grouped
-          .putIfAbsent(items[i].section, () => [])
-          .add(_IndexedItem(index: i, item: items[i]));
+          .putIfAbsent(dynamicItems[i].section, () => [])
+          .add(_IndexedItem(index: i, item: dynamicItems[i]));
     }
 
     const sectionOrder = [
@@ -126,11 +256,12 @@ class AthlosSidebar extends StatelessWidget {
       SidebarSection.comercial,
       SidebarSection.sistema,
     ];
+
     const sectionLabels = {
-      SidebarSection.principal: null, // sin encabezado
-      SidebarSection.operaciones: 'OPERACIONES',
-      SidebarSection.comercial: 'COMERCIAL',
-      SidebarSection.sistema: 'SISTEMA',
+      SidebarSection.principal: null,
+      SidebarSection.operaciones: 'Operaciones',
+      SidebarSection.comercial: 'Comercial',
+      SidebarSection.sistema: 'Sistema',
     };
 
     return ListView(
@@ -175,7 +306,6 @@ class AthlosSidebar extends StatelessWidget {
     );
   }
 
-  // ───────────────────────────────────────────────────────── FOOTER ──
   Widget _buildUserFooter() {
     return Container(
       width: double.infinity,
@@ -188,6 +318,7 @@ class AthlosSidebar extends StatelessWidget {
     );
   }
 }
+// ───────────────────────────────────────────────────────── FOOTER ──
 
 class _IndexedItem {
   const _IndexedItem({required this.index, required this.item});

@@ -44,16 +44,18 @@ class MainLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(navigationIndexProvider);
+    final rawIndex = ref.watch(navigationIndexProvider);
+
+    final safeIndex = (rawIndex >= pages.length) ? 0 : rawIndex;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         // BREAKPOINT: 800px para separar Desktop de Mobile
         if (constraints.maxWidth >= 800) {
           bool isExtended = constraints.maxWidth >= 1000;
-          return _buildDesktopLayout(context, ref, selectedIndex, isExtended);
+          return _buildDesktopLayout(context, ref, safeIndex, isExtended);
         } else {
-          return _buildMobileLayout(context, ref, selectedIndex);
+          return _buildMobileLayout(context, ref, safeIndex);
         }
       },
     );

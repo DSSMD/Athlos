@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
 
 // Importamos el cerebro y tus providers
 import 'router_notifier.dart';
@@ -9,10 +10,9 @@ import '../../presentation/providers/auth_provider.dart';
 // Ajusta estas rutas a tus pantallas
 import '../../presentation/pages/auth/login_page.dart';
 import '../../presentation/layouts/main_layout.dart';
-import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
-import '../../presentation/pages/produccion/orden_page.dart';
+import '../../presentation/pages/cajas/orden_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 
@@ -85,162 +85,136 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
-      // ROL 1: ADMINISTRADOR
+      // ────────── ROL 1: ADMINISTRADOR (10 Páginas) ──────────
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
           pages: [
-            const Center(child: Text('Dashboard Admin General')),
-            const UsuariosPage(),
-            const ClientesPage(),
-            const Center(child: Text('Reportes Financieros')),
+            _buildPlaceholder('Dashboard'), // 0. Dashboard
+            const OrdenPage(), // 1. Órdenes
+            _buildPlaceholder('Inventario'), // 2. Inventario
+            _buildPlaceholder(
+              'Producción',
+            ), // 3. Producción (Reemplazado por placeholder)
+            const ClientesPage(), // 4. Clientes
+            _buildPlaceholder('Pagos'), // 5. Pagos
+            _buildPlaceholder('Balance'), // 6. Balance
+            const UsuariosPage(), // 7. Usuarios
+            _buildPlaceholder('Configuración'), // 8. Config
+            _buildPlaceholder('Avisos'), // 9. Notificaciones
           ],
-          railDestinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.dashboard),
-              label: Text('Dashboard'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.people),
-              label: Text('Usuarios'),
-            ),
-            // 👇 Icono corregido (adiós a los caracteres raros)
-            NavigationRailDestination(
-              icon: Icon(Icons.assignment_ind),
-              label: Text('Clientes'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.bar_chart),
-              label: Text('Reportes'),
-            ),
-          ],
-          bottomNavItems: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people),
-              label: 'Usuarios',
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clientes'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart),
-              label: 'Reportes',
-            ),
-          ],
+          railDestinations: _buildRailFromRole('1'),
+          bottomNavItems: _buildBottomFromRole('1'),
         ),
       ),
 
-      // ROL 2: PRODUCCIÓN
-      // Indicación del PO (Den, 26/04/2026): producción no debe poder
-      // generar órdenes (su perfil es de trabajador). Órdenes movido al
-      // rol ventas. Quedan solo Taller e Inventario.
+      // ────────── ROL 2: PRODUCCIÓN (3 Páginas) ──────────
+      // Todo en construcción como pediste, y sin Órdenes
       GoRoute(
         path: '/produccion',
         builder: (context, state) => MainLayout(
-          pages: const [
-            ProduccionDashboardPage(),
-            Center(child: Text('Inventario Telas')),
+          pages: [
+            _buildPlaceholder('Dashboard Taller'), // 0. Dashboard
+            _buildPlaceholder('Inventario'), // 1. Inventario
+            _buildPlaceholder('Producción'), // 2. Producción
           ],
-          railDestinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.precision_manufacturing),
-              label: Text('Taller'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.inventory_2),
-              label: Text('Inventario'),
-            ),
-          ],
-          bottomNavItems: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.precision_manufacturing),
-              label: 'Taller',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2),
-              label: 'Inventario',
-            ),
-          ],
+          railDestinations: _buildRailFromRole('2'),
+          bottomNavItems: _buildBottomFromRole('2'),
         ),
       ),
 
-      // ROL 3: CAJAS / VENTAS
-      // Indicación del PO (Den, 26/04/2026): ventas debe tener Órdenes
-      // en su sidebar (es el rol comercial responsable de gestionarlas).
+      // ────────── ROL 3: VENTAS (4 Páginas) ──────────
+      // Ahora incluye la OrdenPage funcional
       GoRoute(
         path: '/ventas',
         builder: (context, state) => MainLayout(
-          pages: const [
-            Center(child: Text('Dashboard Cajas')),
-            OrdenPage(),
+          pages: [
+            _buildPlaceholder('Dashboard Ventas'), // 0. Dashboard
+            const OrdenPage(), // 1. Órdenes (Movido aquí)
+            const ClientesPage(), // 2. Clientes
+            _buildPlaceholder('Pagos'), // 3. Pagos
           ],
-          railDestinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: Text('Inicio'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.assignment_outlined), // Ícono de lista/orden
-              selectedIcon: Icon(Icons.assignment),
-              label: Text('Órdenes'),
-            ),
-          ],
-          bottomNavItems: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Inicio',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_outlined),
-              activeIcon: Icon(Icons.assignment),
-              label: 'Órdenes',
-            ),
-          ],
+          railDestinations: _buildRailFromRole('3'),
+          bottomNavItems: _buildBottomFromRole('3'),
         ),
       ),
 
-      // ROL 4: INVITADO
+      // ─────────── ROL 4: INVITADO (2 Páginas) ───────────
       GoRoute(
         path: '/invitado',
         builder: (context, state) => MainLayout(
-          pages: const [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.hourglass_empty, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'Acceso en espera. Un administrador debe asignarte un área.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
+          pages: [
+            _buildPlaceholder('Dashboard'), // 0. Coincide con itemDashboard
+            _buildPlaceholder(
+              // 1. Coincide con itemEspera
+              'Acceso en espera',
+              subtitulo:
+                  'Un administrador debe asignarte un área para comenzar.',
             ),
           ],
-          railDestinations: const [
-            NavigationRailDestination(
-              icon: Icon(Icons.hourglass_empty),
-              label: Text('En Espera'),
-            ),
-          ],
-          bottomNavItems: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.hourglass_empty),
-              label: 'En Espera',
-            ),
-          ],
+          railDestinations: _buildRailFromRole('4'),
+          bottomNavItems: _buildBottomFromRole('4'),
         ),
       ),
     ],
   );
 });
+
+// Genera los destinos del Rail lateral automáticamente basado en el rol
+List<NavigationRailDestination> _buildRailFromRole(String roleId) {
+  final items = SidebarMenuConfig.itemsPorRol[roleId] ?? [];
+  return items
+      .map(
+        (item) => NavigationRailDestination(
+          icon: Icon(item.icon),
+          selectedIcon: Icon(item.selectedIcon),
+          label: Text(item.label),
+        ),
+      )
+      .toList();
+}
+
+// Genera los ítems de la barra inferior automáticamente
+List<BottomNavigationBarItem> _buildBottomFromRole(String roleId) {
+  final items = SidebarMenuConfig.itemsPorRol[roleId] ?? [];
+  return items
+      .map(
+        (item) => BottomNavigationBarItem(
+          icon: Icon(item.icon),
+          activeIcon: Icon(item.selectedIcon),
+          label: item.label,
+        ),
+      )
+      .toList();
+}
+
+// Pantalla genérica para secciones no terminadas
+Widget _buildPlaceholder(
+  String titulo, {
+  String subtitulo = 'Esta sección está en desarrollo.',
+}) {
+  return Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.construction, size: 64, color: Colors.grey),
+        const SizedBox(height: 16),
+        Text(
+          titulo,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Text(
+            subtitulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ),
+      ],
+    ),
+  );
+}
