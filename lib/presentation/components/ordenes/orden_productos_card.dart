@@ -341,26 +341,6 @@ class _ProductoRowMobile extends StatelessWidget {
   }
 }
 
-Widget _miniInfo({required String label, required String value}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label.toUpperCase(),
-        style: AppTypography.caption.copyWith(
-          color: AppColors.textMuted,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-      ),
-      const SizedBox(height: 2),
-      Text(
-        value,
-        style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
-      ),
-    ],
-  );
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // DIALOG: Agregar producto (CONECTADO A BD)

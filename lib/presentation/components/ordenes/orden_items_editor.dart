@@ -330,7 +330,7 @@ class _AgregarItemDetalleDialogState
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, s) => const Text('Error al cargar prendas'),
               data: (prendas) => DropdownButtonFormField<int>(
-                value: _idPrenda,
+                initialValue: _idPrenda,
                 decoration: _decoration('Selecciona una prenda'),
                 items: prendas
                     .map(
@@ -368,7 +368,7 @@ class _AgregarItemDetalleDialogState
                             const Center(child: CircularProgressIndicator()),
                         error: (e, s) => const Text('Error'),
                         data: (tallas) => DropdownButtonFormField<int>(
-                          value: _idTalla,
+                          initialValue: _idTalla,
                           decoration: _decoration('Talla'),
                           items: tallas
                               .map(

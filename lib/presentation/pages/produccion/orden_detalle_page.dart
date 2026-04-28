@@ -419,6 +419,7 @@ class _KeyValueRow extends StatelessWidget {
   const _KeyValueRow({
     required this.label,
     required this.value,
+    // ignore: unused_element_parameter
     this.bold = false,
     this.valueColor,
   });

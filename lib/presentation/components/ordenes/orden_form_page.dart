@@ -8,6 +8,8 @@
 // Bloque 1: solo header + grid vacío. Cards se agregan en bloques siguientes.
 // ============================================================================
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
@@ -136,6 +138,7 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
         widget.onVolver(); // Cerramos el formulario
       }
     } catch (e) {
+      // ignore: duplicate_ignore
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

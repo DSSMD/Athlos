@@ -4,6 +4,8 @@
 // Descripción: Card "Materiales requeridos (calculadora)" del form Crear Orden.
 // ============================================================================
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
@@ -194,7 +196,6 @@ class OrdenMaterialesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: AppColors.error.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.error),

@@ -108,9 +108,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     }
   }
 
-  void _setMoneda(OrdenMoneda m) {
-    widget.onChanged(widget.draft.copyWith(moneda: m));
-  }
 
   String _fechaDisplay() {
     final f = widget.draft.fechaEntrega;
