@@ -39,10 +39,9 @@ class UsuarioService {
   }) async {
     try {
       final session = _supabase.auth.currentSession;
-
       // Le "gritamos" a la función en la nube de Supabase que haga el trabajo
       final response = await _supabase.functions.invoke(
-        'admin_crear_usuario', // El nombre que le daremos a tu Edge Function
+        'admin_crear_usuario', 
         headers: {
           if (session != null) 'Authorization': 'Bearer ${session.accessToken}',
         },
@@ -55,11 +54,14 @@ class UsuarioService {
           'id_rol': _roleToInt(rol),
         },
       );
-
-      // Verificamos si la función nos respondió con éxito (código 200 o 201)
+      // Verificamos si la función nos respondió con éxito
       if (response.status != 200 && response.status != 201) {
         throw Exception('Error del servidor: ${response.data}');
       }
+      } on FunctionException catch (e) {
+      // Si el error viene de Supabase (ej: ya existe el correo), 
+      // lo pasamos tal cual hacia la interfaz visual.
+      rethrow;
     } catch (e) {
       throw Exception('Error al crear usuario: $e');
     }
