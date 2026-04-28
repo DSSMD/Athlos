@@ -40,17 +40,22 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
   @override
   void initState() {
     super.initState();
-    // Llenamos la tabla con la PRENDA y la TALLA real
+    // Distribuimos el costoTotal equitativamente entre tallas para que
+    // el resumen financiero muestre datos reales desde el primer render.
+    final totalCantidad = widget.orden.desgloseTallas
+        .fold<int>(0, (sum, t) => sum + t.cantidad);
+    final precioPorUnidad =
+        totalCantidad > 0 ? widget.orden.costoTotal / totalCantidad : 0.0;
+
     _items = widget.orden.desgloseTallas.map((talla) {
       return OrdenItem(
         nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
         cantidad: talla.cantidad,
-        precioUnitario: 0.0,
+        precioUnitario: precioPorUnidad,
       );
     }).toList();
 
-    // Fallback: Si por alguna razón la orden no tiene tallas,
-    // mostramos el producto como un solo item genérico
+    // Fallback: Si la orden no tiene tallas, usamos el producto como item genérico
     if (_items.isEmpty) {
       _items = [
         OrdenItem(
@@ -66,7 +71,6 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
 
   double get _totalItems => _items.fold(0, (sum, i) => sum + i.subtotal);
 
-  // 👇 AQUÍ ESTÁ EL MÉTODO BUILD QUE SE HABÍA BORRADO 👇
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -146,7 +150,7 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
           flex: 1,
           child: Column(
             children: [
-              _PagosCard(totalItems: _totalItems),
+              _PagosCard(orden: widget.orden, totalItems: _totalItems),
               const SizedBox(height: AppSpacing.xl),
               _FechasClaveCard(orden: widget.orden),
               const SizedBox(height: AppSpacing.xl),
@@ -170,7 +174,7 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
           onChanged: (items, _) => setState(() => _items = items),
         ),
         const SizedBox(height: AppSpacing.lg),
-        _PagosCard(totalItems: _totalItems),
+        _PagosCard(orden: widget.orden, totalItems: _totalItems),
         const SizedBox(height: AppSpacing.lg),
         _FechasClaveCard(orden: widget.orden),
         const SizedBox(height: AppSpacing.lg),
@@ -181,7 +185,7 @@ class _OrdenDetallePageState extends State<OrdenDetallePage> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ESTADO CHIP (header)
+// ESTADO CHIP (header) — Sincronizado con Workflow de 4 pasos
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _EstadoChip extends StatelessWidget {
@@ -192,61 +196,110 @@ class _EstadoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (idEstado) {
       1 => ('Pendiente', AppColors.warning),
-      2 => ('En producción', AppColors.info),
-      3 => ('Entregado', AppColors.success),
-      4 => ('Cancelado', AppColors.error),
+      2 => ('En Producción', AppColors.info),
+      3 => ('Finalizada', Colors.teal),
+      4 => ('Entregada', AppColors.success),
       _ => ('Estado $idEstado', AppColors.neutral500),
     };
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
-        label,
+        label.toUpperCase(),
         style: AppTypography.small.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+          letterSpacing: 0.5,
         ),
       ),
     );
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPONENTES DE LA PÁGINA DE DETALLE DE ORDEN
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _PagosCard extends StatelessWidget {
+  final OrdenModel orden;
   final double totalItems;
-  const _PagosCard({required this.totalItems});
+  const _PagosCard({required this.orden, required this.totalItems});
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
-      title: 'Pagos',
+    // Si el usuario editó ítems con precios propios, usamos ese total;
+    // de lo contrario mostramos el costoTotal registrado en el modelo.
+    final double total =
+        totalItems > 0 ? totalItems : orden.costoTotal;
+    final bool pagado = orden.idEstadoPago != 1; // 1 = pendiente de pago
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _KeyValueRow(
-            label: 'Total orden',
-            value: 'Bs. ${totalItems.toStringAsFixed(2)}',
-            bold: true,
-          ),
-          _KeyValueRow(label: 'Anticipo', value: '—'),
-          _KeyValueRow(label: 'Método', value: '—'),
-          _KeyValueRow(label: 'Fecha pago', value: '—'),
-          const Divider(),
-          _KeyValueRow(
-            label: 'Saldo pendiente',
-            value: 'Bs. ${totalItems.toStringAsFixed(2)}',
-            bold: true,
-            valueColor: AppColors.error,
-          ),
+          Text('Resumen Financiero', style: AppTypography.smallBold),
           const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                // TODO(SCRUM-72): conectar a flujo de pago real
-              },
-              child: const Text('Registrar pago'),
+          _FinRow(
+            label: 'Costo Total',
+            value: 'Bs. ${total.toStringAsFixed(2)}',
+            isBold: true,
+            color: AppColors.textPrimary,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _FinRow(
+            label: 'Estado de Pago',
+            value: orden.estadoPago,
+            isSuccess: pagado,
+            color: pagado ? AppColors.success : AppColors.warning,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isBold;
+  final bool isSuccess;
+  final Color? color;
+
+  const _FinRow({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+    this.isSuccess = false,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = isBold
+        ? AppTypography.body.copyWith(fontWeight: FontWeight.w700)
+        : AppTypography.small;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style.copyWith(color: AppColors.textSecondary)),
+          Text(
+            value,
+            style: style.copyWith(
+              color: color ?? (isSuccess ? AppColors.success : null),
             ),
           ),
         ],
@@ -254,6 +307,10 @@ class _PagosCard extends StatelessWidget {
     );
   }
 }
+
+// =═════════════════════════════════════════════════════════════════════════════
+// CARD DE INFORMACIÓN DEL PEDIDO (con imagen modelo y datos del cliente)
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _FechasClaveCard extends StatelessWidget {
   final OrdenModel orden;
@@ -285,6 +342,10 @@ class _FechasClaveCard extends StatelessWidget {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CARD DE HISTORIAL DE CAMBIOS (placeholder para futura integración con backend)
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _HistorialCard extends StatelessWidget {
   const _HistorialCard();
@@ -329,37 +390,6 @@ class _Card extends StatelessWidget {
           Text(title, style: AppTypography.h3),
           const SizedBox(height: AppSpacing.md),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _InfoItem({required this.label, required this.value, this.valueColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTypography.caption.copyWith(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppTypography.body.copyWith(
-              color: valueColor ?? AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
       ),
     );
@@ -411,6 +441,12 @@ class _InfoPedidoCard extends StatelessWidget {
   final OrdenModel orden;
   const _InfoPedidoCard({required this.orden});
 
+  // Función helper para validar si un string es nulo o vacío
+  String _validateText(String? text, String fallback) {
+    if (text == null || text.trim().isEmpty) return fallback;
+    return text;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -441,8 +477,8 @@ class _InfoPedidoCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. IMAGEN DE REFERENCIA (Modelo)
-              _visorImagen(),
+              // 1. IMAGEN DE REFERENCIA (Modelo) Interactiva
+              _visorImagen(context),
 
               const SizedBox(width: AppSpacing.xl),
 
@@ -457,27 +493,30 @@ class _InfoPedidoCard extends StatelessWidget {
                       children: [
                         _itemDato(
                           'Nombre del Cliente',
-                          orden.clienteNombre,
+                          _validateText(orden.clienteNombre, 'No registrado'),
                           Icons.person_outline,
                         ),
                         _itemDato(
                           'CI / NIT',
-                          orden.clienteCi ?? 'No registrado',
+                          _validateText(orden.clienteCi, 'No registrado'),
                           Icons.badge_outlined,
                         ),
                         _itemDato(
                           'Teléfono',
-                          orden.clienteTelefono ?? 'Sin contacto',
+                          _validateText(orden.clienteTelefono, 'Sin contacto'),
                           Icons.phone_android_outlined,
                         ),
                         _itemDato(
                           'Correo Electrónico',
-                          orden.clienteEmail ?? 'Sin correo',
+                          _validateText(orden.clienteEmail, 'Sin correo'),
                           Icons.alternate_email,
                         ),
                         _itemDato(
                           'Dirección de Entrega',
-                          orden.clienteDireccion ?? 'Recojo en tienda',
+                          _validateText(
+                            orden.clienteDireccion,
+                            'Recojo en tienda',
+                          ),
                           Icons.location_on_outlined,
                         ),
                       ],
@@ -512,8 +551,11 @@ class _InfoPedidoCard extends StatelessWidget {
     );
   }
 
-  // Widget para la imagen del modelo
-  Widget _visorImagen() {
+  // Widget para la imagen del modelo (Con Hover y Click)
+  Widget _visorImagen(BuildContext context) {
+    final bool hasImage =
+        orden.imagenModelo != null && orden.imagenModelo!.isNotEmpty;
+
     return Container(
       width: 160,
       height: 160,
@@ -522,16 +564,16 @@ class _InfoPedidoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: orden.imagenModelo != null && orden.imagenModelo!.isNotEmpty
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              child: Image.network(
-                orden.imagenModelo!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => const Icon(
-                  Icons.broken_image_outlined,
-                  color: AppColors.textMuted,
-                ),
+      child: hasImage
+          ? Material(
+              // Material necesario para el InkWell
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                onTap: () =>
+                    _mostrarImagenAmpliada(context, orden.imagenModelo!),
+                // StateState para manejar el hover (HoverBuilder es una buena alternativa si tienes un paquete, aquí usamos State normal a través de un StatefulWidget interno)
+                child: _HoverImageWidget(imageUrl: orden.imagenModelo!),
               ),
             )
           : const Column(
@@ -546,6 +588,88 @@ class _InfoPedidoCard extends StatelessWidget {
                 Text('Sin imagen', style: AppTypography.caption),
               ],
             ),
+    );
+  }
+
+  // Dialog para mostrar la imagen en grande (pero sin ocupar toda la pantalla)
+  void _mostrarImagenAmpliada(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Contenedor de la imagen ampliada
+              Container(
+                constraints: BoxConstraints(
+                  // Limita el tamaño al 70% de la pantalla para que no sea gigante
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: Colors.white24, width: 2),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain, // Mantiene la proporción sin recortar
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary500,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stack) => Container(
+                      color: AppColors.background,
+                      padding: const EdgeInsets.all(AppSpacing.xl2),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.broken_image_outlined,
+                            size: 48,
+                            color: AppColors.textMuted,
+                          ),
+                          SizedBox(height: AppSpacing.sm),
+                          Text('Error al cargar la imagen ampliada'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Botón de cerrar (X) en la esquina superior derecha
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors
+                          .black54, // Fondo oscuro semi-transparente para que se vea sobre cualquier imagen
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -583,6 +707,67 @@ class _InfoPedidoCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET INTERNO: Imagen con Efecto Hover
+// ══════════════════════════════════════════════════════════════════════════════
+class _HoverImageWidget extends StatefulWidget {
+  final String imageUrl;
+
+  const _HoverImageWidget({required this.imageUrl});
+
+  @override
+  State<_HoverImageWidget> createState() => _HoverImageWidgetState();
+}
+
+class _HoverImageWidgetState extends State<_HoverImageWidget> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.zoomIn, // Cambia el cursor a una lupa
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Imagen Base
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Image.network(
+              widget.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => const Icon(
+                Icons.broken_image_outlined,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+
+          // Capa Oscura (Aparece en Hover)
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _isHovered ? 1.0 : 0.0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4), // Oscurece al 40%
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.zoom_in, // Ícono de lupa
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
             ),
           ),
         ],

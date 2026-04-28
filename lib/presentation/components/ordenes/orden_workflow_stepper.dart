@@ -12,22 +12,19 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 class OrdenWorkflowStepper extends StatelessWidget {
-  /// idEstado del modelo: 1=pendiente, 2=producción, 3=entregado, 4=cancelado.
-  /// Este mapeo a pasos 1..5 es aproximado — cuando backend expanda los
-  /// estados (Confirmada, Control calidad), se ajusta acá.
+  /// idEstado del modelo: 1=Pendiente, 2=En Producción, 3=Finalizada, 4=Entregada.
   final int idEstado;
 
   const OrdenWorkflowStepper({super.key, required this.idEstado});
 
   @override
   Widget build(BuildContext context) {
-    final currentStep = _mapIdEstadoToStep(idEstado);
+    final currentStep = idEstado;
 
     const steps = [
-      'Registrada',
-      'Confirmada',
-      'En producción',
-      'Control calidad',
+      'Pendiente',
+      'En Producción',
+      'Finalizada',
       'Entregada',
     ];
 
@@ -152,21 +149,6 @@ class OrdenWorkflowStepper extends StatelessWidget {
         );
       }),
     );
-  }
-
-  int _mapIdEstadoToStep(int idEstado) {
-    switch (idEstado) {
-      case 1:
-        return 1;
-      case 2:
-        return 3;
-      case 3:
-        return 5;
-      case 4:
-        return 1;
-      default:
-        return 1;
-    }
   }
 
   _StepState _stateFor(int stepNumber, int currentStep) {
