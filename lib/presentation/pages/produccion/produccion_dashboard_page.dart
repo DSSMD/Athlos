@@ -9,15 +9,15 @@ class ProduccionDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // 🚨 NOTA: ¡Ya no usamos Scaffold ni AppBar aquí!
     // Solo devolvemos el contenido que irá en el centro de la pantalla.
-    
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Resumen del Taller', 
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
+            'Resumen del Taller',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           // Aquí pondrías tus tarjetas de resumen, gráficos, etc.
@@ -29,7 +29,7 @@ class ProduccionDashboardPage extends StatelessWidget {
                 Card(child: Center(child: Text('Telas Agotadas: 3'))),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

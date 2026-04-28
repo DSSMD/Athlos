@@ -5,7 +5,6 @@
 // Recuerda que puedes extender esta paleta con más colores o variantes según lo necesites, pero es importante mantener una estructura clara para facilitar su uso por todo el equipo de desarrollo.
 // Si quieres, también puedes agregar funciones de utilidad para generar tonos dinámicos o para convertir colores a otros formatos, pero lo básico es tener esta paleta bien definida y documentada.
 
-
 import 'package:flutter/material.dart';
 
 class AppColors {

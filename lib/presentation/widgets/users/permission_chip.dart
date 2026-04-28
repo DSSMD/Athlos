@@ -28,9 +28,7 @@ class PermissionChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTypography.caption.copyWith(
-          color: AppColors.textSecondary,
-        ),
+        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
       ),
     );
   }

@@ -4,7 +4,7 @@
 // El diseño es moderno y minimalista, con un avatar circular que muestra las iniciales del usuario, su nombre y rol en texto, y un ícono de flecha para indicar que es un menú desplegable (aunque en esta versión solo muestra la opción de cerrar sesión al hacer clic)
 // IMPORTANTE: Este widget es independiente y se puede reutilizar en otras partes de la aplicación donde se requiera mostrar la información del usuario autenticado, como en un perfil de usuario o en una sección de configuración de cuenta.
 
-// NOTA: Para una implementación real, se podrían agregar más opciones al menú desplegable, como la posibilidad de editar el perfil, cambiar la contraseña, ver la actividad reciente, etc., y se podrían agregar animaciones suaves al mostrar el menú para mejorar la experiencia de usuario. 
+// NOTA: Para una implementación real, se podrían agregar más opciones al menú desplegable, como la posibilidad de editar el perfil, cambiar la contraseña, ver la actividad reciente, etc., y se podrían agregar animaciones suaves al mostrar el menú para mejorar la experiencia de usuario.
 
 // lib/presentation/widgets/auth_profile_menu.dart
 
@@ -62,7 +62,8 @@ class AuthProfileMenu extends ConsumerWidget {
                     name: nombre,
                     size: 36,
                     showPresence: true, // Ahora podemos mostrar si está online
-                    isOnline: true,     // Aquí podrías conectar un provider de presencia
+                    isOnline:
+                        true, // Aquí podrías conectar un provider de presencia
                   ),
                   if (showFullInfo && !isCollapsed) ...[
                     const SizedBox(width: 12),
@@ -74,20 +75,21 @@ class AuthProfileMenu extends ConsumerWidget {
                           Text(
                             nombre,
                             style: AppTypography.small.copyWith(
-                              color: AppColors.brandWhite, // O el color que definas
+                              color: AppColors
+                                  .brandWhite, // O el color que definas
                               fontWeight: FontWeight.bold,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            rolTexto,
-                            style: AppTypography.caption,
-                          ),
+                          Text(rolTexto, style: AppTypography.caption),
                         ],
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_right, 
-                        color: Colors.white24, size: 16),
+                    const Icon(
+                      Icons.keyboard_arrow_right,
+                      color: Colors.white24,
+                      size: 16,
+                    ),
                   ],
                 ],
               );
@@ -100,9 +102,9 @@ class AuthProfileMenu extends ConsumerWidget {
                 if (!isCollapsed) ...[
                   const SizedBox(width: 12),
                   const SizedBox(
-                    width: 16, 
-                    height: 16, 
-                    child: CircularProgressIndicator(strokeWidth: 2)
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ],
               ],

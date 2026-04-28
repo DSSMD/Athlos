@@ -27,7 +27,10 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 import '../../widgets/users/kpi_card.dart';
-import '../../widgets/users/search_input.dart';
+import '../../widgets/shared/empty_state.dart';
+import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/sticky_topbar.dart';
 
 import '../../../domain/models/usuario_model.dart';
 import '../../providers/usuario_provider.dart';
@@ -153,12 +156,17 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
       key: key,
       children: [
         // Topbar sticky con línea separadora
-        _StickyTopbar(
+        StickyTopbar(
           isMobile: isMobile,
+          title: 'Usuarios',
+          searchHint: 'Buscar usuario...',
           searchController: _searchController,
           onSearchChanged: (_) => setState(() {
-            _currentPage = 1; // 💡 Reiniciamos a pag 1 al buscar
+            _currentPage = 1;
           }),
+          newButtonLabelMobile: 'Nuevo',
+          newButtonLabelDesktop: 'Nuevo usuario',
+          onNewPressed: () => showUserFormDrawer(context),
         ),
         // Contenido scrolleable
         Expanded(
@@ -194,7 +202,8 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                _FilterChips(
+                FilterChips(
+                  labels: const ['Todos', 'Activos', 'Inactivos'],
                   selected: _selectedFilter,
                   counts: [
                     _countByFilter(allUsers, 0),
@@ -210,7 +219,11 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
                 // 💡 NUEVO: Pasamos paginatedUsers en lugar de la lista completa
                 if (users.isEmpty)
-                  const _EmptyState()
+                  const EmptyState(
+                    icon: Icons.search_off,
+                    title: 'No se encontraron usuarios',
+                    subtitle: 'Probá con otro término o filtro.',
+                  )
                 else if (isMobile)
                   _MobileList(users: paginatedUsers)
                 else
@@ -220,18 +233,19 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
                 // 💡 NUEVO: Llamamos a los widgets con sus nuevas variables
                 if (isMobile)
-                  _LoadMoreButton(
+                  LoadMoreButton(
                     hasMore: _currentPage < totalPages,
                     onPressed: () => setState(() => _currentPage++),
                   )
                 else
-                  _DesktopPagination(
+                  DesktopPagination(
                     currentPage: _currentPage,
                     totalPages: totalPages,
                     totalItems: totalItems,
                     itemsPerPage: _itemsPerPage,
                     onPageChanged: (page) =>
                         setState(() => _currentPage = page),
+                    recordsLabel: 'usuarios',
                   ),
               ],
             ),
@@ -247,10 +261,15 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        _StickyTopbar(
+        StickyTopbar(
           isMobile: isMobile,
+          title: 'Usuarios',
+          searchHint: 'Buscar usuario...',
           searchController: _searchController,
           onSearchChanged: (_) => setState(() {}),
+          newButtonLabelMobile: 'Nuevo',
+          newButtonLabelDesktop: 'Nuevo usuario',
+          onNewPressed: () => showUserFormDrawer(context),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -293,105 +312,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// HEADER — título + buscador + botón nuevo
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.isMobile,
-    required this.searchController,
-    required this.onSearchChanged,
-  });
-
-  final bool isMobile;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isMobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text('Usuarios', style: AppTypography.h1)),
-              ElevatedButton.icon(
-                onPressed: () => showUserFormDrawer(context),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Nuevo'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SearchInput(
-            hintText: 'Buscar usuario...',
-            controller: searchController,
-            onChanged: onSearchChanged,
-          ),
-        ],
-      );
-    }
-    // Desktop
-    return Row(
-      children: [
-        Text('Usuarios', style: AppTypography.h1),
-        const Spacer(),
-        SizedBox(
-          width: 320,
-          child: SearchInput(
-            hintText: 'Buscar usuario...',
-            controller: searchController,
-            onChanged: onSearchChanged,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        ElevatedButton.icon(
-          onPressed: () => showUserFormDrawer(context),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Nuevo usuario'),
-        ),
-      ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// STICKY TOPBAR — wrapper del header con línea separadora, siempre visible
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _StickyTopbar extends StatelessWidget {
-  const _StickyTopbar({
-    required this.isMobile,
-    required this.searchController,
-    required this.onSearchChanged,
-  });
-
-  final bool isMobile;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-        vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
-      ),
-      child: _Header(
-        isMobile: isMobile,
-        searchController: searchController,
-        onSearchChanged: onSearchChanged,
-      ),
     );
   }
 }
@@ -555,64 +475,6 @@ class _KpiRow extends StatelessWidget {
       );
 }
 // ══════════════════════════════════════════════════════════════════════════════
-// FILTER CHIPS — Todos / Activos / Inactivos
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({
-    required this.selected,
-    required this.counts,
-    required this.onChanged,
-  });
-
-  final int selected;
-  final List<int> counts;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const labels = ['Todos', 'Activos', 'Inactivos'];
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: List.generate(labels.length, (i) {
-        final isSelected = selected == i;
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => onChanged(i),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary500 : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: isSelected ? AppColors.primary500 : AppColors.border,
-                ),
-              ),
-              child: Text(
-                '${labels[i]} (${counts[i]})',
-                style: AppTypography.small.copyWith(
-                  color: isSelected
-                      ? AppColors.brandWhite
-                      : AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
 // DESKTOP TABLE — header + filas
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -708,148 +570,6 @@ class _MobileList extends StatelessWidget {
           if (i < users.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
-    );
-  }
-}
-// ══════════════════════════════════════════════════════════════════════════════
-// DESKTOP PAGINATION — Dinámico
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _DesktopPagination extends StatelessWidget {
-  const _DesktopPagination({
-    required this.currentPage,
-    required this.totalPages,
-    required this.totalItems,
-    required this.itemsPerPage,
-    required this.onPageChanged,
-  });
-
-  final int currentPage;
-  final int totalPages;
-  final int totalItems;
-  final int itemsPerPage;
-  final ValueChanged<int> onPageChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    // Si no hay ítems o solo hay 1 página, no mostramos la paginación
-    if (totalItems == 0 || totalPages <= 1) return const SizedBox.shrink();
-
-    // Calculamos los números a mostrar (ej. 1-10, 11-20)
-    final startItem = ((currentPage - 1) * itemsPerPage) + 1;
-    final endItem = (currentPage * itemsPerPage).clamp(0, totalItems);
-
-    return Row(
-      children: [
-        Text(
-          'Mostrando $startItem-$endItem de $totalItems registros',
-          style: AppTypography.small.copyWith(color: AppColors.textMuted),
-        ),
-        const Spacer(),
-        // Genera los botones numéricos automáticamente según las páginas
-        for (int i = 1; i <= totalPages; i++)
-          _pageBtn(
-            i.toString(),
-            selected: currentPage == i,
-            onTap: () => onPageChanged(i),
-          ),
-      ],
-    );
-  }
-
-  Widget _pageBtn(
-    String label, {
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.xs),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: selected ? null : onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primary500 : AppColors.neutral100,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              label,
-              style: AppTypography.small.copyWith(
-                color: selected ? AppColors.brandWhite : AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MOBILE "CARGAR MÁS..." — Dinámico
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({required this.hasMore, required this.onPressed});
-
-  final bool hasMore;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    // Si ya no hay más páginas, ocultamos el botón
-    if (!hasMore) return const SizedBox.shrink();
-
-    return Center(
-      child: TextButton(
-        onPressed: onPressed,
-        child: Text(
-          'Cargar más...',
-          style: AppTypography.small.copyWith(
-            color: AppColors.primary500,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// EMPTY STATE — cuando filtro/búsqueda no devuelve resultados
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl3),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.neutral50,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.search_off, size: 40, color: AppColors.textMuted),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No se encontraron usuarios',
-            style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 4),
-          Text('Probá con otro término o filtro.', style: AppTypography.small),
-        ],
-      ),
     );
   }
 }

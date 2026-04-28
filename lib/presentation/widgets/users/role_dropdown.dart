@@ -34,37 +34,37 @@ class RoleDropdown extends StatelessWidget {
             ),
             children: const [
               TextSpan(text: 'Rol'),
-              TextSpan(text: ' *', style: TextStyle(color: AppColors.error)),
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: AppColors.error),
+              ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
         DropdownButtonFormField<UserRole>(
-          initialValue: value, 
+          initialValue: value,
           onChanged: enabled ? onChanged : null,
           icon: const Icon(Icons.keyboard_arrow_down, size: 20),
           style: AppTypography.small.copyWith(color: AppColors.textPrimary),
           dropdownColor: AppColors.background,
           decoration: InputDecoration(
             hintText: 'Seleccionar rol',
-            hintStyle: AppTypography.small.copyWith(
-              color: AppColors.textMuted,
-            ),
+            hintStyle: AppTypography.small.copyWith(color: AppColors.textMuted),
           ),
           items: UserRole.values
-              .map((role) => DropdownMenuItem(
-                    value: role,
-                    child: Row(
-                      children: [
-                        RoleBadge(role: role),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          _descriptionFor(role),
-                          style: AppTypography.caption,
-                        ),
-                      ],
-                    ),
-                  ))
+              .map(
+                (role) => DropdownMenuItem(
+                  value: role,
+                  child: Row(
+                    children: [
+                      RoleBadge(role: role),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(_descriptionFor(role), style: AppTypography.caption),
+                    ],
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],

@@ -7,7 +7,6 @@
 // Además de los espaciados, también definimos aquí los radios de borde y las sombras para mantener todo lo relacionado con el diseño en un solo lugar.
 // Este enfoque modular facilita la consistencia visual y la mantenibilidad de tu app a medida que crece y evoluciona.
 
-
 import 'package:flutter/material.dart';
 
 class AppSpacing {
@@ -41,38 +40,18 @@ class AppShadows {
 
   // Elevación baja — cards, rows
   static const List<BoxShadow> sm = [
-    BoxShadow(
-      color: Color(0x0A000000),
-      offset: Offset(0, 1),
-      blurRadius: 2,
-    ),
+    BoxShadow(color: Color(0x0A000000), offset: Offset(0, 1), blurRadius: 2),
   ];
 
   // Elevación media — cards destacadas, dropdowns
   static const List<BoxShadow> md = [
-    BoxShadow(
-      color: Color(0x0F000000),
-      offset: Offset(0, 2),
-      blurRadius: 4,
-    ),
-    BoxShadow(
-      color: Color(0x0A000000),
-      offset: Offset(0, 1),
-      blurRadius: 2,
-    ),
+    BoxShadow(color: Color(0x0F000000), offset: Offset(0, 2), blurRadius: 4),
+    BoxShadow(color: Color(0x0A000000), offset: Offset(0, 1), blurRadius: 2),
   ];
 
   // Elevación alta — modales, diálogos
   static const List<BoxShadow> lg = [
-    BoxShadow(
-      color: Color(0x14000000),
-      offset: Offset(0, 10),
-      blurRadius: 15,
-    ),
-    BoxShadow(
-      color: Color(0x0A000000),
-      offset: Offset(0, 4),
-      blurRadius: 6,
-    ),
+    BoxShadow(color: Color(0x14000000), offset: Offset(0, 10), blurRadius: 15),
+    BoxShadow(color: Color(0x0A000000), offset: Offset(0, 4), blurRadius: 6),
   ];
 }

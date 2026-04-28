@@ -12,6 +12,11 @@ import '../../presentation/layouts/main_layout.dart';
 import '../../presentation/pages/produccion/produccion_dashboard_page.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
+import '../../presentation/pages/produccion/orden_page.dart';
+
+import '../../presentation/pages/admin/clientes_page.dart';
+
+//import '../../presentation/models/cliente_mock.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
@@ -82,17 +87,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(), // <-- Así de limpio
+        builder: (context, state) => const LoginPage(),
       ),
 
       // ROL 1: ADMINISTRADOR
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
-          pages: const [
-            Center(child: Text('Dashboard Admin General')),
-            UsuariosPage(),
-            Center(child: Text('Reportes Financieros')),
+          pages: [
+            const Center(child: Text('Dashboard Admin General')),
+            const UsuariosPage(),
+            const ClientesPage(),
+            const Center(child: Text('Reportes Financieros')),
           ],
           railDestinations: const [
             NavigationRailDestination(
@@ -102,6 +108,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             NavigationRailDestination(
               icon: Icon(Icons.people),
               label: Text('Usuarios'),
+            ),
+            // 👇 Icono corregido (adiós a los caracteres raros)
+            NavigationRailDestination(
+              icon: Icon(Icons.assignment_ind),
+              label: Text('Clientes'),
             ),
             NavigationRailDestination(
               icon: Icon(Icons.bar_chart),
@@ -117,6 +128,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               icon: Icon(Icons.people),
               label: 'Usuarios',
             ),
+            BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clientes'),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart),
               label: 'Reportes',
@@ -126,22 +138,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ROL 2: PRODUCCIÓN
+      // Indicación del PO (Den, 26/04/2026): producción no debe poder
+      // generar órdenes (su perfil es de trabajador). Órdenes movido al
+      // rol ventas. Quedan solo Taller e Inventario.
       GoRoute(
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: const [
             ProduccionDashboardPage(),
-            Center(child: Text('Registro de Ordenes')),
             Center(child: Text('Inventario Telas')),
           ],
           railDestinations: const [
             NavigationRailDestination(
               icon: Icon(Icons.precision_manufacturing),
               label: Text('Taller'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.assignment),
-              label: Text('Órdenes'),
             ),
             NavigationRailDestination(
               icon: Icon(Icons.inventory_2),
@@ -154,10 +164,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               label: 'Taller',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment),
-              label: 'Órdenes',
-            ),
-            BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2),
               label: 'Inventario',
             ),
@@ -166,31 +172,37 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // ROL 3: CAJAS / VENTAS
+      // Indicación del PO (Den, 26/04/2026): ventas debe tener Órdenes
+      // en su sidebar (es el rol comercial responsable de gestionarlas).
       GoRoute(
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: const [
             Center(child: Text('Dashboard Cajas')),
-            Center(child: Text('Punto de Venta (POS)')),
+            OrdenPage(),
           ],
           railDestinations: const [
             NavigationRailDestination(
-              icon: Icon(Icons.point_of_sale),
-              label: Text('Cajas'),
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: Text('Inicio'),
             ),
             NavigationRailDestination(
-              icon: Icon(Icons.shopping_cart),
-              label: Text('Ventas'),
+              icon: Icon(Icons.assignment_outlined), // Ícono de lista/orden
+              selectedIcon: Icon(Icons.assignment),
+              label: Text('Órdenes'),
             ),
           ],
           bottomNavItems: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.point_of_sale),
-              label: 'Cajas',
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Inicio',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart),
-              label: 'Ventas',
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment),
+              label: 'Órdenes',
             ),
           ],
         ),
