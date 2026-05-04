@@ -21,6 +21,7 @@ import 'core/router/app_router.dart';
 import 'core/inactivity/inactivity_detector.dart';
 import 'core/inactivity/session_expired_snackbar.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,11 +81,7 @@ class MyApp extends ConsumerWidget {
         ],
         supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
         locale: const Locale('es', 'ES'),
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          fontFamily: 'Montserrat',
-        ),
+        theme: AppTheme.light,
       ),
     );
   }

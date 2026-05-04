@@ -21,12 +21,29 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary500,
         onPrimary: AppColors.brandWhite,
+        primaryContainer: AppColors.primary100,
+        onPrimaryContainer: AppColors.primary900,
         secondary: AppColors.neutral800,
         onSecondary: AppColors.brandWhite,
+        secondaryContainer: AppColors.neutral100,
+        onSecondaryContainer: AppColors.neutral800,
+        tertiary: AppColors.primary500,
+        onTertiary: AppColors.brandWhite,
+        tertiaryContainer: AppColors.primary100,
+        onTertiaryContainer: AppColors.primary900,
         surface: AppColors.background,
         onSurface: AppColors.textPrimary,
+        surfaceContainerHighest: AppColors.surface,
+        surfaceContainerHigh: AppColors.surface,
+        surfaceContainer: AppColors.background,
+        surfaceContainerLow: AppColors.background,
+        surfaceContainerLowest: AppColors.background,
         error: AppColors.error,
         onError: AppColors.brandWhite,
+        errorContainer: AppColors.errorBg,
+        onErrorContainer: AppColors.error,
+        outline: AppColors.border,
+        outlineVariant: AppColors.neutral100,
       ),
 
       textTheme: const TextTheme(
@@ -103,6 +120,23 @@ class AppTheme {
         ),
       ),
 
+      // FilledButton (M3) — mismo rojo Athlos
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary500,
+          foregroundColor: AppColors.brandWhite,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          textStyle: AppTypography.small.copyWith(fontWeight: FontWeight.w500),
+        ),
+      ),
+
       // Botón secundario (outline)
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -160,6 +194,34 @@ class AppTheme {
           return AppColors.neutral400;
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary500;
+          }
+          return null;
+        }),
+        checkColor: WidgetStateProperty.all(AppColors.brandWhite),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+      ),
+
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary500;
+          }
+          return AppColors.neutral400;
+        }),
+      ),
+
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary500,
+        linearTrackColor: AppColors.neutral200,
+        circularTrackColor: AppColors.neutral200,
       ),
     );
   }
