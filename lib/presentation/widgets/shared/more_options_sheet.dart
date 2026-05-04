@@ -34,52 +34,75 @@ Future<void> showMoreOptionsSheet({
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppColors.background,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
     ),
     builder: (sheetContext) {
+      // Limitamos el alto a 85% de pantalla para que nunca tape el status bar
+      // y la lista de opciones se haga scrolleable si excede el espacio.
+      final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
+
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Grab handle
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.neutral200,
-                  borderRadius: BorderRadius.circular(AppRadius.full),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Grab handle
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral200,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.xs,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Más opciones',
-                  style: AppTypography.h3.copyWith(fontWeight: FontWeight.w600),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xs,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Más opciones',
+                      style: AppTypography.h3.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    itemCount: options.length,
+                    itemBuilder: (context, i) {
+                      final opt = options[i];
+                      return _MoreOptionCard(
+                        option: opt,
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          onSelected(opt.originalIndex);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            ...options.map(
-              (opt) => _MoreOptionCard(
-                option: opt,
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  onSelected(opt.originalIndex);
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
+          ),
         ),
       );
     },

@@ -48,10 +48,6 @@ class _MobileLayout extends ConsumerWidget {
         children: [
           MobileScreenHeader(
             title: 'Inventario',
-            trailing: _InventarioPrimaryButton(
-              label: 'Insumo',
-              onPressed: () => _todoNuevoInsumo(context),
-            ),
             bottom: MobileTabsRow(
               labels: const ['Stock', 'Movimientos'],
               selectedIndex: tab,
