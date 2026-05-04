@@ -1,20 +1,15 @@
 // lib/presentation/widgets/auth_profile_menu.dart
-// Widget para mostrar el menú de perfil del usuario autenticado, con su avatar, nombre, rol y la opción de cerrar sesión
-// Este widget se utiliza en el MainLayout para mostrar la información del usuario en la barra lateral (en Desktop) o en el AppBar (en Mobile)
-// El diseño es moderno y minimalista, con un avatar circular que muestra las iniciales del usuario, su nombre y rol en texto, y un ícono de flecha para indicar que es un menú desplegable (aunque en esta versión solo muestra la opción de cerrar sesión al hacer clic)
-// IMPORTANTE: Este widget es independiente y se puede reutilizar en otras partes de la aplicación donde se requiera mostrar la información del usuario autenticado, como en un perfil de usuario o en una sección de configuración de cuenta.
-
-// NOTA: Para una implementación real, se podrían agregar más opciones al menú desplegable, como la posibilidad de editar el perfil, cambiar la contraseña, ver la actividad reciente, etc., y se podrían agregar animaciones suaves al mostrar el menú para mejorar la experiencia de usuario.
-
-// lib/presentation/widgets/auth_profile_menu.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../pages/perfil/mi_perfil_page.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
-import '../theme/app_colors.dart'; // Asegúrate de que este archivo exista
-import 'user_avatar.dart'; // Importamos tu nuevo widget
 import 'logout_confirmation_dialog.dart';
+import 'user_avatar.dart';
 
 class AuthProfileMenu extends ConsumerWidget {
   final bool isCollapsed;
@@ -26,46 +21,114 @@ class AuthProfileMenu extends ConsumerWidget {
     this.showFullInfo = true,
   });
 
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => const LogoutConfirmationDialog(),
-    );
-
-    if (confirm == true) {
-      await ref.read(authServiceProvider).signOut();
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
 
+    // Mobile: avatar compacto que abre el bottom sheet
+    if (!showFullInfo) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: InkWell(
+          onTap: () => showAuthProfileSheet(context, ref),
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          hoverColor: Colors.white10,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: userProfileAsync.when(
+              data: (profile) {
+                final nombre = profile?['nombre'] ?? 'Usuario';
+                return UserAvatar(
+                  name: nombre,
+                  size: 32,
+                  showPresence: true,
+                  isOnline: true,
+                );
+              },
+              loading: () => const UserAvatar(name: '?', size: 32),
+              error: (_, __) =>
+                  const Icon(Icons.error, color: Colors.red, size: 32),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Desktop: PopupMenuButton anclado al avatar
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: InkWell(
-        onTap: () => _handleLogout(context, ref),
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: Colors.white10,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: userProfileAsync.when(
-            data: (profile) {
-              final nombre = profile?['nombre'] ?? 'Usuario';
-              final rolTexto = profile?['roles']?['nombre_rol'] ?? 'Sin Rol';
+      child: userProfileAsync.when(
+        data: (profile) {
+          final nombre = profile?['nombre'] ?? 'Usuario';
+          final rolTexto = profile?['roles']?['nombre_rol'] ?? 'Sin Rol';
 
-              return Row(
+          return PopupMenuButton<_ProfileAction>(
+            tooltip: '',
+            position: PopupMenuPosition.over,
+            offset: const Offset(0, -4),
+            color: AppColors.background,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            onSelected: (action) {
+              switch (action) {
+                case _ProfileAction.profile:
+                  _goToProfile(context);
+                  break;
+                case _ProfileAction.logout:
+                  _handleLogout(context, ref);
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<_ProfileAction>(
+                value: _ProfileAction.profile,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person_outline,
+                      size: 20,
+                      color: AppColors.textPrimary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      'Mi Perfil',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<_ProfileAction>(
+                value: _ProfileAction.logout,
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, size: 20, color: AppColors.error),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      'Cerrar Sesión',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // USAMOS TU NUEVO WIDGET AQUÍ
                   UserAvatar(
                     name: nombre,
                     size: 36,
-                    showPresence: true, // Ahora podemos mostrar si está online
-                    isOnline:
-                        true, // Aquí podrías conectar un provider de presencia
+                    showPresence: true,
+                    isOnline: true,
                   ),
-                  if (showFullInfo && !isCollapsed) ...[
+                  if (!isCollapsed) ...[
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -75,8 +138,7 @@ class AuthProfileMenu extends ConsumerWidget {
                           Text(
                             nombre,
                             style: AppTypography.small.copyWith(
-                              color: AppColors
-                                  .brandWhite, // O el color que definas
+                              color: AppColors.brandWhite,
                               fontWeight: FontWeight.bold,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -92,27 +154,145 @@ class AuthProfileMenu extends ConsumerWidget {
                     ),
                   ],
                 ],
-              );
-            },
-            loading: () => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar en estado de carga
-                const UserAvatar(name: '?', size: 36),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ],
-              ],
+              ),
             ),
-            error: (error, stack) => const Icon(Icons.error, color: Colors.red),
-          ),
+          );
+        },
+        loading: () => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const UserAvatar(name: '?', size: 36),
+            if (!isCollapsed) ...[
+              const SizedBox(width: 12),
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ],
+          ],
         ),
+        error: (error, stack) => const Icon(Icons.error, color: Colors.red),
       ),
     );
   }
+}
+
+enum _ProfileAction { profile, logout }
+
+void _goToProfile(BuildContext context) {
+  Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => const MiPerfilPage()));
+}
+
+Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => const LogoutConfirmationDialog(),
+  );
+
+  if (confirm == true) {
+    await ref.read(authServiceProvider).signOut();
+  }
+}
+
+/// Abre un bottom sheet con el menú de perfil (Mi Perfil / Cerrar Sesión).
+/// Diseñado para uso en mobile, desde el avatar del header.
+Future<void> showAuthProfileSheet(BuildContext context, WidgetRef ref) async {
+  final profileAsync = ref.read(userProfileProvider);
+  final nombre = profileAsync.value?['nombre'] ?? 'Usuario';
+  final rolTexto = profileAsync.value?['roles']?['nombre_rol'] ?? 'Sin Rol';
+
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.background,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Grab handle
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.neutral200,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+              ),
+            ),
+            // Header con avatar + nombre + rol
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  UserAvatar(name: nombre, size: 48),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          nombre,
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          rolTexto,
+                          style: AppTypography.caption,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.border),
+            ListTile(
+              leading: const Icon(
+                Icons.person_outline,
+                color: AppColors.textPrimary,
+              ),
+              title: Text(
+                'Mi Perfil',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _goToProfile(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.error),
+              title: Text(
+                'Cerrar Sesión',
+                style: AppTypography.body.copyWith(color: AppColors.error),
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _handleLogout(context, ref);
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
+      );
+    },
+  );
 }

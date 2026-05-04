@@ -39,11 +39,12 @@ class KpiCard extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             value,
+            textAlign: TextAlign.center,
             style: AppTypography.h1.copyWith(
               color: valueColor ?? AppColors.textPrimary,
               fontWeight: FontWeight.w600,
@@ -52,6 +53,7 @@ class KpiCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: AppTypography.small.copyWith(
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
@@ -61,8 +63,8 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               description!,
-              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
               textAlign: TextAlign.center,
+              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
             ),
           ],
         ],
