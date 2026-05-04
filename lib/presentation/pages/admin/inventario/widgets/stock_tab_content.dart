@@ -387,7 +387,7 @@ const _kColUnidad = 12;
 const _kColCosto = 12;
 const _kColValor = 14;
 const _kColEstado = 13;
-const _kColEditar = 8;
+const _kColEditar = 12;
 const _kColGap = AppSpacing.md;
 // Gap más amplio entre STOCK y NIVEL para que no se peguen visualmente.
 const _kColGapWide = AppSpacing.xl;
@@ -459,11 +459,8 @@ class _DesktopItemsTable extends StatelessWidget {
                     align: TextAlign.center,
                   ),
                   SizedBox(width: _kColGap),
-                  _HeaderCell(
-                    label: 'EDITAR',
-                    flex: _kColEditar,
-                    align: TextAlign.center,
-                  ),
+                  // Columna de acciones sin título (Historial / Activar).
+                  Expanded(flex: _kColEditar, child: SizedBox.shrink()),
                 ],
               ),
             ),
@@ -668,15 +665,27 @@ class _DesktopRow extends StatelessWidget {
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColEditar,
-            child: Center(
-              child: TextButton(
-                onPressed: () => _todoEditar(context),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => _todoHistorial(context),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Historial'),
                 ),
-                child: const Text('Editar'),
-              ),
+                TextButton(
+                  onPressed: () => _todoActivar(context),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Activar'),
+                ),
+              ],
             ),
           ),
         ],
@@ -823,10 +832,21 @@ class _MobileItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _todoEditar(context),
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Editar'),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _todoHistorial(context),
+                    icon: const Icon(Icons.history, size: 16),
+                    label: const Text('Historial'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _todoActivar(context),
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    label: const Text('Activar'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1061,11 +1081,21 @@ String _formatMoney(double n) {
   return '\$$buf';
 }
 
-void _todoEditar(BuildContext context) {
-  // TODO: implementar modal de edición de insumo en próximo sprint.
+void _todoHistorial(BuildContext context) {
+  // TODO: implementar Vista 4 KardexHistorial modal en próximo bloque.
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
-      content: Text('Editar insumo — pendiente'),
+      content: Text('Historial — pendiente Vista 4'),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
+
+void _todoActivar(BuildContext context) {
+  // TODO: implementar lógica Backend (toggle activo/inactivo del insumo).
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Activar — pendiente lógica backend'),
       duration: Duration(seconds: 2),
     ),
   );
