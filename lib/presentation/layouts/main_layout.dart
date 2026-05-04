@@ -1,24 +1,20 @@
 // lib/presentation/layouts/main_layout.dart
 // Layout principal que adapta su diseño según el tamaño de pantalla (Desktop vs Mobile)
-// En Desktop, muestra una barra lateral oscura con el logo, menú de navegación y perfil
-// En Mobile, muestra un AppBar con el logo y perfil, y un BottomNavigationBar para la navegación
-// El contenido central cambia según la pestaña seleccionada en el menú de navegación
-// IMPORTANTE: Este layout es el punto de entrada para la mayoría de las pantallas de la aplicación, y se encarga de manejar la navegación y la presentación general de la interfaz de usuario
-// NOTA: Para una implementación real, se podrían agregar animaciones suaves al cambiar entre pestañas, y se podrían optimizar los widgets para mejorar el rendimiento en dispositivos móviles, especialmente en pantallas pequeñas.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/navigation_provider.dart';
-import '../widgets/auth_profile_menu.dart';
+import '../theme/app_colors.dart';
+import '../theme/breakpoints.dart';
+import '../widgets/shared/more_options_sheet.dart';
 import 'athlos_sidebar.dart';
-//import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
 class SidebarCollapsedNotifier extends Notifier<bool> {
   @override
   bool build() => false; // Estado inicial: expandido (false)
 
-  // Función limpia para cambiar el estado
   void toggle() {
     state = !state;
   }
@@ -48,28 +44,21 @@ class MainLayout extends ConsumerWidget {
 
     final safeIndex = (rawIndex >= pages.length) ? 0 : rawIndex;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // BREAKPOINT: 800px para separar Desktop de Mobile
-        if (constraints.maxWidth >= 800) {
-          bool isExtended = constraints.maxWidth >= 1000;
-          return _buildDesktopLayout(context, ref, safeIndex, isExtended);
-        } else {
-          return _buildMobileLayout(context, ref, safeIndex);
-        }
-      },
-    );
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 800/1000.
+    if (context.isMobile) {
+      return _buildMobileLayout(context, ref, safeIndex);
+    }
+    // Desktop: sidebar extendido si la ventana es wide (>=1300).
+    final isExtended = context.isWide;
+    return _buildDesktopLayout(context, ref, safeIndex, isExtended);
   }
 
-  // DISEÑO DESKTOP (Nuevo Sidebar)
   Widget _buildDesktopLayout(
     BuildContext context,
     WidgetRef ref,
     int selectedIndex,
     bool isExtended,
   ) {
-    // Convertimos temporalmente tus railDestinations antiguos al nuevo formato SidebarItem
-    // NOTA: Lo ideal a futuro es que desde el router le pases directamente una lista de SidebarItem
     final isManuallyCollapsed = ref.watch(sidebarCollapsedProvider);
     final shouldCollapse = !isExtended || isManuallyCollapsed;
     final sidebarItems = railDestinations.map((dest) {
@@ -80,7 +69,6 @@ class MainLayout extends ConsumerWidget {
             (dest.icon as Icon).icon ??
             Icons.circle,
         label: (dest.label as Text).data ?? '',
-        // Asignamos todo a "principal" por ahora para que compile y funcione
         section: SidebarSection.principal,
       );
     }).toList();
@@ -88,7 +76,6 @@ class MainLayout extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          // TU NUEVO BARRA LATERAL ATHLOS
           AthlosSidebar(
             items: sidebarItems,
             selectedIndex: selectedIndex,
@@ -100,11 +87,9 @@ class MainLayout extends ConsumerWidget {
               ref.read(sidebarCollapsedProvider.notifier).toggle();
             },
           ),
-
-          // CONTENIDO CENTRAL
           Expanded(
             child: Container(
-              color: Colors.grey.shade100, // Fondo claro para las páginas
+              color: Colors.grey.shade100,
               child: pages[selectedIndex],
             ),
           ),
@@ -113,38 +98,119 @@ class MainLayout extends ConsumerWidget {
     );
   }
 
-  // DISEÑO MÓVIL
+  // DISEÑO MÓVIL — sin AppBar global; cada page maneja su propio header.
   Widget _buildMobileLayout(
     BuildContext context,
     WidgetRef ref,
     int selectedIndex,
   ) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
-        elevation: 0,
-        title: const Text(
-          'ATHLOS',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    final totalItems = bottomNavItems.length;
+    final useMoreTab = totalItems > 5;
+
+    final visibleItems = <BottomNavigationBarItem>[];
+    if (useMoreTab) {
+      // Primeros 4 items + "Más"
+      visibleItems.addAll(bottomNavItems.take(4));
+      visibleItems.add(
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.more_horiz),
+          label: 'Más',
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          // EL PERFIL EN MÓVIL (Arriba a la derecha)
-          const AuthProfileMenu(isCollapsed: false, showFullInfo: false),
-          const SizedBox(width: 10),
-        ],
-      ),
+      );
+    } else {
+      visibleItems.addAll(bottomNavItems);
+    }
+
+    final currentIndex = useMoreTab && selectedIndex >= 4 ? 4 : selectedIndex;
+
+    return Scaffold(
       body: pages[selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        selectedItemColor: Colors.red.shade700,
-        unselectedItemColor: Colors.grey,
+        currentIndex: currentIndex,
+        selectedItemColor: AppColors.primary500,
+        unselectedItemColor: AppColors.textMuted,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
-          ref.read(navigationIndexProvider.notifier).changeIndex(index);
+          if (useMoreTab && index == 4) {
+            _showMoreSheet(context, ref);
+          } else {
+            ref.read(navigationIndexProvider.notifier).changeIndex(index);
+          }
         },
-        items: bottomNavItems,
+        items: visibleItems,
       ),
     );
+  }
+
+  void _showMoreSheet(BuildContext context, WidgetRef ref) {
+    final hiddenItems = bottomNavItems.skip(4).toList();
+    final options = <MoreOption>[];
+
+    for (var i = 0; i < hiddenItems.length; i++) {
+      final item = hiddenItems[i];
+      final originalIndex = i + 4;
+      final label = item.label ?? '';
+      final iconData = (item.icon is Icon)
+          ? (item.icon as Icon).icon ?? Icons.circle
+          : Icons.circle;
+
+      options.add(
+        MoreOption(
+          icon: iconData,
+          iconBgColor: _colorForLabel(label),
+          label: label,
+          description: _descriptionForLabel(label),
+          originalIndex: originalIndex,
+        ),
+      );
+    }
+
+    showMoreOptionsSheet(
+      context: context,
+      options: options,
+      onSelected: (index) {
+        ref.read(navigationIndexProvider.notifier).changeIndex(index);
+      },
+    );
+  }
+
+  String _descriptionForLabel(String label) {
+    switch (label) {
+      case 'Clientes':
+        return 'Gestión y contactos';
+      case 'Pagos':
+        return 'Registro y cobros';
+      case 'Balance':
+        return 'Resumen financiero';
+      case 'Usuarios':
+        return 'Gestión y roles';
+      case 'Configuración':
+        return 'Backup y sistema';
+      case 'Avisos':
+      case 'Notificaciones':
+        return 'Alertas y urgencias';
+      default:
+        return '';
+    }
+  }
+
+  Color _colorForLabel(String label) {
+    switch (label) {
+      case 'Clientes':
+        return AppColors.primary500;
+      case 'Pagos':
+        return AppColors.success;
+      case 'Balance':
+        return AppColors.info;
+      case 'Usuarios':
+        return AppColors.neutral600;
+      case 'Configuración':
+        return AppColors.warning;
+      case 'Avisos':
+      case 'Notificaciones':
+        return AppColors.primary500;
+      default:
+        return AppColors.neutral600;
+    }
   }
 }

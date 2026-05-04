@@ -25,11 +25,14 @@ import '../../components/users/user_list_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 
 import '../../widgets/users/kpi_card.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 
 import '../../../domain/models/usuario_model.dart';
@@ -43,8 +46,6 @@ class UsuariosPage extends ConsumerStatefulWidget {
 }
 
 class _UsuariosPageState extends ConsumerState<UsuariosPage> {
-  static const double _mobileBreakpoint = 900;
-
   int _selectedTab = 0;
   int _selectedFilter = 0;
   final TextEditingController _searchController = TextEditingController();
@@ -91,39 +92,29 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     // 4. ¡AQUÍ ESTÁ LA MAGIA DE RIVERPOD! Escuchamos a Supabase
     final usuariosAsync = ref.watch(usuariosProvider);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < _mobileBreakpoint;
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+    final isMobile = context.isMobile;
 
-        // 5. MANEJAMOS LOS 3 ESTADOS (Cargando, Error, Datos reales)
-        return usuariosAsync.when(
-          loading: () => const Center(
-            child:
-                CircularProgressIndicator(), // Muestra un spinner mientras carga
+    return usuariosAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Center(child: Text('Error al cargar usuarios: $error')),
+      data: (usuariosReales) {
+        final filteredUsers = _getFilteredUsers(usuariosReales);
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedTab == 0
+                ? _buildUsuariosTab(
+                    isMobile,
+                    filteredUsers,
+                    usuariosReales,
+                    key: const ValueKey('usuarios'),
+                  )
+                : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
           ),
-          error: (error, stack) =>
-              Center(child: Text('Error al cargar usuarios: $error')),
-          data: (usuariosReales) {
-            // Cuando hay datos, aplicamos tus filtros
-            final filteredUsers = _getFilteredUsers(usuariosReales);
-
-            return Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _selectedTab == 0
-                    // NOTA: Tendrás que actualizar _buildUsuariosTab para que acepte
-                    // filteredUsers y usuariosReales como parámetros en lugar de usar getters globales
-                    ? _buildUsuariosTab(
-                        isMobile,
-                        filteredUsers,
-                        usuariosReales,
-                        key: const ValueKey('usuarios'),
-                      )
-                    : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
-              ),
-            );
-          },
         );
       },
     );
@@ -155,19 +146,28 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        // Topbar sticky con línea separadora
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Usuarios',
-          searchHint: 'Buscar usuario...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() {
-            _currentPage = 1;
-          }),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo usuario',
-          onNewPressed: () => showUserFormDrawer(context),
-        ),
+        // Header — mobile usa MobileScreenHeader, desktop mantiene StickyTopbar
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Usuarios',
+            trailing: _CompactNewButton(
+              label: 'Nuevo',
+              onPressed: () => showUserFormDrawer(context),
+            ),
+          )
+        else
+          StickyTopbar(
+            isMobile: isMobile,
+            title: 'Usuarios',
+            searchHint: 'Buscar usuario...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() {
+              _currentPage = 1;
+            }),
+            newButtonLabelMobile: 'Nuevo',
+            newButtonLabelDesktop: 'Nuevo usuario',
+            onNewPressed: () => showUserFormDrawer(context),
+          ),
         // Contenido scrolleable
         Expanded(
           child: SingleChildScrollView(
@@ -175,6 +175,14 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (isMobile) ...[
+                  SearchInput(
+                    hintText: 'Buscar usuario...',
+                    controller: _searchController,
+                    onChanged: (_) => setState(() => _currentPage = 1),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
                 _TabSelector(
                   selected: _selectedTab,
                   onChanged: (i) => setState(() {
@@ -261,16 +269,25 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Usuarios',
-          searchHint: 'Buscar usuario...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() {}),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo usuario',
-          onNewPressed: () => showUserFormDrawer(context),
-        ),
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Usuarios',
+            trailing: _CompactNewButton(
+              label: 'Nuevo',
+              onPressed: () => showUserFormDrawer(context),
+            ),
+          )
+        else
+          StickyTopbar(
+            isMobile: isMobile,
+            title: 'Usuarios',
+            searchHint: 'Buscar usuario...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() {}),
+            newButtonLabelMobile: 'Nuevo',
+            newButtonLabelDesktop: 'Nuevo usuario',
+            onNewPressed: () => showUserFormDrawer(context),
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
@@ -570,6 +587,49 @@ class _MobileList extends StatelessWidget {
           if (i < users.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPACT NEW BUTTON — para el header mobile (espacio limitado)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _CompactNewButton extends StatelessWidget {
+  const _CompactNewButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary500,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add, size: 16, color: AppColors.brandWhite),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                label,
+                style: AppTypography.small.copyWith(
+                  color: AppColors.brandWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

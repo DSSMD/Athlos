@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 
 import 'orden_draft.dart';
 import 'orden_info_card.dart';
@@ -59,7 +60,9 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
       if (!silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Añade al menos un producto para calcular materiales.'),
+            content: Text(
+              'Añade al menos un producto para calcular materiales.',
+            ),
           ),
         );
       }
@@ -166,29 +169,24 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 900;
-        return Column(
-          children: [
-            _Header(
-              isMobile: isMobile,
-              esValido: _draft.esValido,
-              onCancelar: _onCancelar,
-              onGuardarBorrador: _onGuardarBorrador,
-              onCrearOrden: _onCrearOrden,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(
-                  isMobile ? AppSpacing.lg : AppSpacing.xl2,
-                ),
-                child: isMobile ? _buildMobile() : _buildDesktop(),
-              ),
-            ),
-          ],
-        );
-      },
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+    final isMobile = context.isMobile;
+    return Column(
+      children: [
+        _Header(
+          isMobile: isMobile,
+          esValido: _draft.esValido,
+          onCancelar: _onCancelar,
+          onGuardarBorrador: _onGuardarBorrador,
+          onCrearOrden: _onCrearOrden,
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
+            child: isMobile ? _buildMobile() : _buildDesktop(),
+          ),
+        ),
+      ],
     );
   }
 
