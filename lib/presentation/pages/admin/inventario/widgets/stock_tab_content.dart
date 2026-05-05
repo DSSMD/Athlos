@@ -9,6 +9,7 @@ import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
 import '../../../../widgets/users/kpi_card.dart';
+import 'kardex_historial_modal.dart';
 
 class StockTabContent extends ConsumerWidget {
   const StockTabContent({super.key, required this.isMobile});
@@ -527,7 +528,7 @@ class _DesktopRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -670,12 +671,18 @@ class _DesktopRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 TextButton(
-                  onPressed: () => _todoHistorial(context),
+                  onPressed: () => _abrirHistorial(context, item),
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('Historial'),
+                  child: Text(
+                    'Historial',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primary500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => _todoActivar(context),
@@ -683,7 +690,13 @@ class _DesktopRow extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('Activar'),
+                  child: Text(
+                    'Activar',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.primary500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -837,7 +850,7 @@ class _MobileItemCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   TextButton.icon(
-                    onPressed: () => _todoHistorial(context),
+                    onPressed: () => _abrirHistorial(context, item),
                     icon: const Icon(Icons.history, size: 16),
                     label: const Text('Historial'),
                   ),
@@ -1081,14 +1094,8 @@ String _formatMoney(double n) {
   return '\$$buf';
 }
 
-void _todoHistorial(BuildContext context) {
-  // TODO: implementar Vista 4 KardexHistorial modal en próximo bloque.
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Historial — pendiente Vista 4'),
-      duration: Duration(seconds: 2),
-    ),
-  );
+void _abrirHistorial(BuildContext context, InventarioItemModel item) {
+  showKardexHistorialModal(context, item);
 }
 
 void _todoActivar(BuildContext context) {
