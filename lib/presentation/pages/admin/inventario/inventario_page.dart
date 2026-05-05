@@ -8,12 +8,13 @@ import '../../../theme/app_spacing.dart';
 import '../../../theme/app_typography.dart';
 import '../../../theme/breakpoints.dart';
 import '../../../providers/inventario_provider.dart';
+import '../../../providers/movimiento_provider.dart';
 import '../../../widgets/shared/mobile_screen_header.dart';
 import '../../../widgets/shared/mobile_tabs_row.dart';
 import '../../../widgets/shared/search_input.dart';
 import 'widgets/insumo_form_modal.dart';
 import 'widgets/movimiento_form_modal.dart';
-import 'widgets/movimientos_placeholder.dart';
+import 'widgets/movimientos_tab_content.dart';
 import 'widgets/stock_tab_content.dart';
 
 class _InventarioTabNotifier extends Notifier<int> {
@@ -59,17 +60,19 @@ class _MobileLayout extends ConsumerWidget {
           Expanded(
             child: tab == 0
                 ? const StockTabContent(isMobile: true)
-                : const MovimientosPlaceholder(),
+                : const MovimientosTabContent(isMobile: true),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showInventarioActionsSheet(context),
-        backgroundColor: AppColors.primary500,
-        foregroundColor: AppColors.brandWhite,
-        elevation: 4,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: tab == 0
+          ? FloatingActionButton(
+              onPressed: () => _showInventarioActionsSheet(context),
+              backgroundColor: AppColors.primary500,
+              foregroundColor: AppColors.brandWhite,
+              elevation: 4,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
@@ -209,9 +212,11 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
   @override
   void initState() {
     super.initState();
-    _searchCtrl = TextEditingController(
-      text: ref.read(inventarioFiltrosProvider).query,
-    );
+    final tab = ref.read(_inventarioTabProvider);
+    final initialQuery = tab == 0
+        ? ref.read(inventarioFiltrosProvider).query
+        : ref.read(movimientoFiltrosProvider).query;
+    _searchCtrl = TextEditingController(text: initialQuery);
   }
 
   @override
@@ -220,9 +225,31 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
     super.dispose();
   }
 
+  void _onTabChange(int newTab) {
+    final current = ref.read(_inventarioTabProvider);
+    if (current == newTab) return;
+    // Limpiar query del tab que dejamos (no queda filtro invisible) y del
+    // controller del search global. Se mantienen filtros visibles
+    // (categoría/área/tipo).
+    _searchCtrl.clear();
+    ref.read(inventarioFiltrosProvider.notifier).setQuery('');
+    ref.read(movimientoFiltrosProvider.notifier).setQuery('');
+    ref.read(_inventarioTabProvider.notifier).set(newTab);
+  }
+
+  void _onSearchChanged(String v) {
+    final tab = ref.read(_inventarioTabProvider);
+    if (tab == 0) {
+      ref.read(inventarioFiltrosProvider.notifier).setQuery(v);
+    } else {
+      ref.read(movimientoFiltrosProvider.notifier).setQuery(v);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(_inventarioTabProvider);
+    final isStock = tab == 0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -247,54 +274,51 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
                     SizedBox(width: wide ? AppSpacing.xl : AppSpacing.md),
                     _DesktopTabPill(
                       label: 'Stock',
-                      selected: tab == 0,
-                      onTap: () =>
-                          ref.read(_inventarioTabProvider.notifier).set(0),
+                      selected: isStock,
+                      onTap: () => _onTabChange(0),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     _DesktopTabPill(
                       label: 'Movimientos',
-                      selected: tab == 1,
-                      onTap: () =>
-                          ref.read(_inventarioTabProvider.notifier).set(1),
+                      selected: !isStock,
+                      onTap: () => _onTabChange(1),
                     ),
-                    const Spacer(),
-                    Flexible(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: wide ? 320 : 220),
-                        child: SearchInput(
-                          hintText: wide
-                              ? 'Buscar por nombre, código, proveedor...'
-                              : 'Buscar...',
-                          controller: _searchCtrl,
-                          onChanged: (v) => ref
-                              .read(inventarioFiltrosProvider.notifier)
-                              .setQuery(v),
-                        ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: SearchInput(
+                        hintText: isStock
+                            ? (wide
+                                ? 'Buscar por nombre, código, proveedor...'
+                                : 'Buscar...')
+                            : 'Buscar movimiento...',
+                        controller: _searchCtrl,
+                        onChanged: _onSearchChanged,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _InventarioPrimaryButton(
-                      label: 'Nuevo insumo',
-                      onPressed: () => showInsumoFormModal(context),
-                      iconOnly: !wide,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _InventarioPrimaryButton(
-                      label: 'Registrar movimiento',
-                      onPressed: () => showMovimientoFormModal(context),
-                      icon: Icons.swap_horiz,
-                      iconOnly: !wide,
-                    ),
+                    if (isStock) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      _InventarioPrimaryButton(
+                        label: 'Nuevo insumo',
+                        onPressed: () => showInsumoFormModal(context),
+                        iconOnly: !wide,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _InventarioPrimaryButton(
+                        label: 'Registrar movimiento',
+                        onPressed: () => showMovimientoFormModal(context),
+                        icon: Icons.swap_horiz,
+                        iconOnly: !wide,
+                      ),
+                    ],
                   ],
                 ),
               );
             },
           ),
           Expanded(
-            child: tab == 0
+            child: isStock
                 ? const StockTabContent(isMobile: false)
-                : const MovimientosPlaceholder(),
+                : const MovimientosTabContent(isMobile: false),
           ),
         ],
       ),

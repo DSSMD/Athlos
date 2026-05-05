@@ -48,6 +48,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
 
   InventarioItemModel? _insumo;
   TipoMovimiento? _tipo;
+  AreaMovimiento? _area;
   bool _saving = false;
   String? _insumoError;
 
@@ -169,11 +170,36 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
+            _label('Área *'),
+            DropdownButtonFormField<AreaMovimiento>(
+              initialValue: _area,
+              isExpanded: true,
+              items: AreaMovimiento.values
+                  .map(
+                    (a) => DropdownMenuItem(
+                      value: a,
+                      child: Text(a.label),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _saving
+                  ? null
+                  : (v) => setState(() => _area = v),
+              validator: (v) =>
+                  v == null ? 'Seleccioná un área' : null,
+            ),
+            const SizedBox(height: AppSpacing.lg),
             _label('Tipo de movimiento'),
+            // El usuario solo crea movimientos manuales (ingreso/salida).
+            // TODO Den/futuro backend: los movimientos `auto` se generan
+            // automáticamente al avanzar una orden de producción. Los
+            // `ajuste` se crean desde una pantalla específica de inventario
+            // físico que aún no existe. Por eso el dropdown del form solo
+            // muestra ingreso/salida.
             DropdownButtonFormField<TipoMovimiento>(
               initialValue: _tipo,
               isExpanded: true,
-              items: TipoMovimiento.values
+              items: const [TipoMovimiento.ingreso, TipoMovimiento.salida]
                   .map(
                     (t) => DropdownMenuItem(
                       value: t,
@@ -321,11 +347,12 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
       await ref
           .read(movimientoProvider.notifier)
           .crearMovimiento(
-            insumo: _insumo!,
+            idInsumo: _insumo!.id,
             tipo: _tipo!,
             cantidad: cantidad,
             motivo: _motivoCtrl.text.trim(),
             usuario: usuario,
+            area: _area!,
           );
 
       if (!mounted) return;
