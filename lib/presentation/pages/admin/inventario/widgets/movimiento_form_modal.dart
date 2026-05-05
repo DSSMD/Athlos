@@ -49,6 +49,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
   InventarioItemModel? _insumo;
   TipoMovimiento? _tipo;
   bool _saving = false;
+  String? _insumoError;
 
   @override
   void dispose() {
@@ -129,25 +130,34 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _label('Insumo'),
-            DropdownButtonFormField<InventarioItemModel>(
-              initialValue: _insumo,
-              isExpanded: true,
-              items: insumos
-                  .map(
-                    (i) => DropdownMenuItem(
-                      value: i,
-                      child: Text(
-                        '${i.codigo} — ${i.nombre}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: _saving
-                  ? null
-                  : (v) => setState(() => _insumo = v),
-              validator: (v) =>
-                  v == null ? 'Seleccioná un insumo' : null,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return DropdownMenu<InventarioItemModel>(
+                  initialSelection: _insumo,
+                  enabled: !_saving,
+                  enableFilter: true,
+                  enableSearch: true,
+                  requestFocusOnTap: true,
+                  width: constraints.maxWidth,
+                  menuHeight: 300,
+                  hintText: 'Buscar insumo...',
+                  errorText: _insumoError,
+                  dropdownMenuEntries: insumos
+                      .map(
+                        (i) => DropdownMenuEntry<InventarioItemModel>(
+                          value: i,
+                          label: '${i.codigo} — ${i.nombre}',
+                        ),
+                      )
+                      .toList(),
+                  onSelected: _saving
+                      ? null
+                      : (v) => setState(() {
+                          _insumo = v;
+                          _insumoError = null;
+                        }),
+                );
+              },
             ),
             if (_insumo != null) ...[
               const SizedBox(height: AppSpacing.xs),
@@ -266,7 +276,12 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
   }
 
   Future<void> _onProcesar() async {
-    if (!_formKey.currentState!.validate()) return;
+    // DropdownMenu no integra con FormState, validamos a mano.
+    setState(() {
+      _insumoError = _insumo == null ? 'Seleccioná un insumo' : null;
+    });
+    final formOk = _formKey.currentState!.validate();
+    if (!formOk || _insumo == null) return;
 
     final confirm = await showDialog<bool>(
       context: context,

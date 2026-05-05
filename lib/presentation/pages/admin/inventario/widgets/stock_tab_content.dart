@@ -212,15 +212,21 @@ class _FiltrosCard extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _CategoriaChip(
-                      label: 'Todos',
-                      active:
-                          filtros.categoria == null && !filtros.stockBajoOnly,
-                      onTap: () {
+              child: Scrollbar(
+                thumbVisibility: true,
+                trackVisibility: true,
+                thickness: 4,
+                radius: const Radius.circular(2),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      _CategoriaChip(
+                        label: 'Todos',
+                        active:
+                            filtros.categoria == null && !filtros.stockBajoOnly,
+                        onTap: () {
                         filtrosNotifier.setCategoria(null);
                         if (filtros.stockBajoOnly) {
                           filtrosNotifier.toggleStockBajo();
@@ -256,7 +262,8 @@ class _FiltrosCard extends ConsumerWidget {
                         },
                       ),
                     ],
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
