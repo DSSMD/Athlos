@@ -10,11 +10,14 @@ class InventarioService {
   // Mientras backend no exponga la tabla `insumos`, devolvemos mocks.
   static const bool _useMockData = true;
 
+  // MOCK — lista mutable en memoria. Cuando exista backend, eliminar.
+  final List<InventarioItemModel> _mockItems = [..._mockSeed];
+
   SupabaseClient get _client => Supabase.instance.client;
 
   Future<List<InventarioItemModel>> obtenerInventario() async {
     if (_useMockData) {
-      return _mockInventario;
+      return List.unmodifiable(_mockItems);
     }
 
     // TODO: cuando backend exponga la tabla, ajustar columnas/relaciones.
@@ -23,11 +26,46 @@ class InventarioService {
         .map((e) => InventarioItemModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<InventarioItemModel> crearInsumo({
+    required String codigo,
+    required String nombre,
+    required CategoriaInsumo categoria,
+    required double stockMinimo,
+    required String unidad,
+    required double costoUnitario,
+    required bool dimensionable,
+    String? atributosTecnicosJson,
+  }) async {
+    // MOCK — eliminar / reemplazar con Supabase cuando exista insert.
+    // Stock inicia en 0 (anotación de Den en el PDF).
+    final nuevo = InventarioItemModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      codigo: codigo,
+      nombre: nombre,
+      categoria: categoria,
+      stockActual: 0,
+      stockMinimo: stockMinimo,
+      unidad: unidad,
+      costoUnitario: costoUnitario,
+      dimensionable: dimensionable,
+      atributosTecnicosJson: atributosTecnicosJson,
+    );
+
+    if (_useMockData) {
+      _mockItems.add(nuevo);
+    } else {
+      // TODO: insertar en Supabase tabla `insumos`.
+      throw UnimplementedError('Backend pendiente');
+    }
+
+    return nuevo;
+  }
 }
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 
-const List<InventarioItemModel> _mockInventario = [
+const List<InventarioItemModel> _mockSeed = [
   InventarioItemModel(
     id: '3',
     codigo: 'INS-003',

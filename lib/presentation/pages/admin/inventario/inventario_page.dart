@@ -11,6 +11,7 @@ import '../../../providers/inventario_provider.dart';
 import '../../../widgets/shared/mobile_screen_header.dart';
 import '../../../widgets/shared/mobile_tabs_row.dart';
 import '../../../widgets/shared/search_input.dart';
+import 'widgets/insumo_form_modal.dart';
 import 'widgets/movimiento_form_modal.dart';
 import 'widgets/movimientos_placeholder.dart';
 import 'widgets/stock_tab_content.dart';
@@ -117,7 +118,7 @@ Future<void> _showInventarioActionsSheet(BuildContext context) {
               label: 'Nuevo insumo',
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                _todoNuevoInsumo(context);
+                showInsumoFormModal(context);
               },
             ),
             _ActionTile(
@@ -275,7 +276,7 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
                     const SizedBox(width: AppSpacing.sm),
                     _InventarioPrimaryButton(
                       label: 'Nuevo insumo',
-                      onPressed: () => _todoNuevoInsumo(context),
+                      onPressed: () => showInsumoFormModal(context),
                       iconOnly: !wide,
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -300,19 +301,6 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
     );
   }
 }
-
-// ─── ACTIONS (TODO) ──────────────────────────────────────────────────────────
-
-void _todoNuevoInsumo(BuildContext context) {
-  // TODO: implementar modal "Nuevo Insumo".
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Nuevo insumo — pendiente'),
-      duration: Duration(seconds: 2),
-    ),
-  );
-}
-
 
 // ─── BUTTONS ─────────────────────────────────────────────────────────────────
 

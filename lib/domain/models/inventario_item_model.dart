@@ -55,6 +55,8 @@ class InventarioItemModel {
     required this.stockMinimo,
     required this.unidad,
     required this.costoUnitario,
+    this.dimensionable = false,
+    this.atributosTecnicosJson,
   });
 
   final String id;
@@ -65,6 +67,8 @@ class InventarioItemModel {
   final double stockMinimo;
   final String unidad;
   final double costoUnitario;
+  final bool dimensionable;
+  final String? atributosTecnicosJson;
 
   double get valorTotal => stockActual * costoUnitario;
 
@@ -89,6 +93,8 @@ class InventarioItemModel {
       stockMinimo: (json['stock_minimo'] as num?)?.toDouble() ?? 0,
       unidad: (json['unidad'] ?? 'unidades') as String,
       costoUnitario: (json['costo_unitario'] as num?)?.toDouble() ?? 0,
+      dimensionable: (json['dimensionable'] as bool?) ?? false,
+      atributosTecnicosJson: json['atributos_tecnicos_json'] as String?,
     );
   }
 
@@ -102,6 +108,9 @@ class InventarioItemModel {
       'stock_minimo': stockMinimo,
       'unidad': unidad,
       'costo_unitario': costoUnitario,
+      'dimensionable': dimensionable,
+      if (atributosTecnicosJson != null)
+        'atributos_tecnicos_json': atributosTecnicosJson,
     };
   }
 }

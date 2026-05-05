@@ -32,6 +32,58 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     state = await AsyncValue.guard(_fetch);
   }
 
+  /// MOCK — crea un insumo a través del service y lo agrega al state local.
+  /// Cuando exista backend, el service hará el INSERT y ya no será mock.
+  Future<InventarioItemModel> crearInsumo({
+    required String codigo,
+    required String nombre,
+    required CategoriaInsumo categoria,
+    required double stockMinimo,
+    required String unidad,
+    required double costoUnitario,
+    required bool dimensionable,
+    String? atributosTecnicosJson,
+  }) async {
+    final service = ref.read(inventarioServiceProvider);
+    final nuevo = await service.crearInsumo(
+      codigo: codigo,
+      nombre: nombre,
+      categoria: categoria,
+      stockMinimo: stockMinimo,
+      unidad: unidad,
+      costoUnitario: costoUnitario,
+      dimensionable: dimensionable,
+      atributosTecnicosJson: atributosTecnicosJson,
+    );
+    final actuales = state.value ?? const <InventarioItemModel>[];
+    state = AsyncValue.data([...actuales, nuevo]);
+    return nuevo;
+  }
+
+  /// Genera el siguiente código `INS-NNN` correlativo basado en la lista
+  /// actual. Si no hay items, devuelve `INS-001`.
+  String generarSiguienteCodigo() {
+    final items = state.value ?? const <InventarioItemModel>[];
+    if (items.isEmpty) return 'INS-001';
+    var maxNumero = 0;
+    final regex = RegExp(r'INS-(\d+)');
+    for (final item in items) {
+      final match = regex.firstMatch(item.codigo);
+      if (match != null) {
+        final n = int.tryParse(match.group(1)!) ?? 0;
+        if (n > maxNumero) maxNumero = n;
+      }
+    }
+    return 'INS-${(maxNumero + 1).toString().padLeft(3, '0')}';
+  }
+
+  /// True si ya existe un insumo con ese nombre (case-insensitive, trimmed).
+  bool nombreYaExiste(String nombre) {
+    final items = state.value ?? const <InventarioItemModel>[];
+    final target = nombre.toLowerCase().trim();
+    return items.any((item) => item.nombre.toLowerCase().trim() == target);
+  }
+
   /// MOCK — reemplaza el stock de un insumo en la lista en memoria.
   /// Cuando exista backend, esto debe disparar UPDATE en Supabase y
   /// volver a hacer fetch (o aplicar optimistic update + reconciliar).
