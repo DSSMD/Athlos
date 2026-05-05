@@ -31,6 +31,28 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(_fetch);
   }
+
+  /// MOCK — reemplaza el stock de un insumo en la lista en memoria.
+  /// Cuando exista backend, esto debe disparar UPDATE en Supabase y
+  /// volver a hacer fetch (o aplicar optimistic update + reconciliar).
+  void actualizarStock(String idInsumo, double nuevoStock) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((item) {
+      if (item.id != idInsumo) return item;
+      return InventarioItemModel(
+        id: item.id,
+        codigo: item.codigo,
+        nombre: item.nombre,
+        categoria: item.categoria,
+        stockActual: nuevoStock,
+        stockMinimo: item.stockMinimo,
+        unidad: item.unidad,
+        costoUnitario: item.costoUnitario,
+      );
+    }).toList();
+    state = AsyncValue.data(updated);
+  }
 }
 
 // 3. Estado de filtros

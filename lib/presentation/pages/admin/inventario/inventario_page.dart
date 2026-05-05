@@ -11,6 +11,7 @@ import '../../../providers/inventario_provider.dart';
 import '../../../widgets/shared/mobile_screen_header.dart';
 import '../../../widgets/shared/mobile_tabs_row.dart';
 import '../../../widgets/shared/search_input.dart';
+import 'widgets/movimiento_form_modal.dart';
 import 'widgets/movimientos_placeholder.dart';
 import 'widgets/stock_tab_content.dart';
 
@@ -124,7 +125,7 @@ Future<void> _showInventarioActionsSheet(BuildContext context) {
               label: 'Registrar movimiento',
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                _todoRegistrarMovimiento(context);
+                showMovimientoFormModal(context);
               },
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -280,7 +281,7 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
                     const SizedBox(width: AppSpacing.sm),
                     _InventarioPrimaryButton(
                       label: 'Registrar movimiento',
-                      onPressed: () => _todoRegistrarMovimiento(context),
+                      onPressed: () => showMovimientoFormModal(context),
                       icon: Icons.swap_horiz,
                       iconOnly: !wide,
                     ),
@@ -312,15 +313,6 @@ void _todoNuevoInsumo(BuildContext context) {
   );
 }
 
-void _todoRegistrarMovimiento(BuildContext context) {
-  // TODO: implementar modal "Registrar Movimiento".
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Registrar movimiento — pendiente'),
-      duration: Duration(seconds: 2),
-    ),
-  );
-}
 
 // ─── BUTTONS ─────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/inventario_item_model.dart';
+import '../../../../../domain/models/movimiento_model.dart';
+import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
@@ -8,11 +11,7 @@ import '../../../../theme/breakpoints.dart';
 
 /// Modal de visualización del historial de movimientos de un insumo.
 ///
-/// En desktop se muestra como Dialog centrado.
-/// En mobile se muestra fullscreen.
-///
-/// Por ahora SIN DATOS — empty state. Cuando backend exponga la
-/// tabla `movimiento_insumo`, conectar acá.
+/// Desktop: Dialog centrado. Mobile: fullscreen.
 void showKardexHistorialModal(BuildContext context, InventarioItemModel item) {
   if (context.isMobile) {
     Navigator.of(context).push(
@@ -30,7 +29,7 @@ void showKardexHistorialModal(BuildContext context, InventarioItemModel item) {
   }
 }
 
-class KardexHistorialModal extends StatelessWidget {
+class KardexHistorialModal extends ConsumerWidget {
   const KardexHistorialModal({
     super.key,
     required this.item,
@@ -41,7 +40,9 @@ class KardexHistorialModal extends StatelessWidget {
   final bool isMobile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final movimientos = ref.watch(movimientosPorInsumoProvider(item.id));
+
     if (isMobile) {
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -51,7 +52,7 @@ class KardexHistorialModal extends StatelessWidget {
               _buildHeader(context),
               _buildItemInfo(),
               const Divider(height: 1, color: AppColors.border),
-              Expanded(child: _buildBody()),
+              Expanded(child: _buildBody(movimientos)),
             ],
           ),
         ),
@@ -71,7 +72,7 @@ class KardexHistorialModal extends StatelessWidget {
             _buildHeader(context),
             _buildItemInfo(),
             const Divider(height: 1, color: AppColors.border),
-            Flexible(child: _buildBody()),
+            Flexible(child: _buildBody(movimientos)),
           ],
         ),
       ),
@@ -143,35 +144,181 @@ class KardexHistorialModal extends StatelessWidget {
     );
   }
 
-  Widget _buildBody() {
-    // TODO: cuando backend exponga movimiento_insumo de este item,
-    // construir tabla con: fecha, usuario, tipo (ingreso/salida), cantidad.
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl2),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.history, size: 64, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Sin movimientos registrados',
-              style: AppTypography.h3.copyWith(
-                color: AppColors.textSecondary,
+  Widget _buildBody(List<MovimientoModel> movimientos) {
+    if (movimientos.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl2),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.history, size: 64, color: AppColors.textMuted),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Sin movimientos registrados',
+                style: AppTypography.h3.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Los movimientos de este insumo aparecerán acá cuando se '
-              'registren entradas o salidas.',
-              style: AppTypography.small.copyWith(color: AppColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Los movimientos de este insumo aparecerán acá cuando se '
+                'registren entradas o salidas.',
+                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border)),
+          ),
+          child: Row(
+            children: const [
+              _HeaderCell('FECHA', flex: 4),
+              SizedBox(width: AppSpacing.sm),
+              _HeaderCell('USUARIO', flex: 3),
+              SizedBox(width: AppSpacing.sm),
+              _HeaderCell('TIPO', flex: 2),
+              SizedBox(width: AppSpacing.sm),
+              _HeaderCell('CANTIDAD', flex: 3, align: TextAlign.right),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            itemCount: movimientos.length,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, color: AppColors.border),
+            itemBuilder: (_, i) => _MovimientoRow(movimiento: movimientos[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderCell extends StatelessWidget {
+  const _HeaderCell(this.label, {required this.flex, this.align = TextAlign.left});
+  final String label;
+  final int flex;
+  final TextAlign align;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        textAlign: align,
+        style: AppTypography.caption.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.5,
         ),
       ),
     );
+  }
+}
+
+class _MovimientoRow extends StatelessWidget {
+  const _MovimientoRow({required this.movimiento});
+
+  final MovimientoModel movimiento;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIngreso = movimiento.tipo == TipoMovimiento.ingreso;
+    final color = isIngreso ? AppColors.success : AppColors.error;
+    final signo = isIngreso ? '+' : '-';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              _formatFecha(movimiento.fecha),
+              style: AppTypography.small,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: 3,
+            child: Text(
+              movimiento.usuario,
+              style: AppTypography.small,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  movimiento.tipo.label,
+                  style: AppTypography.caption.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            flex: 3,
+            child: Text(
+              '$signo${_formatCantidad(movimiento.cantidad)}',
+              textAlign: TextAlign.right,
+              style: AppTypography.small.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatFecha(DateTime d) {
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final hh = d.hour.toString().padLeft(2, '0');
+    final mn = d.minute.toString().padLeft(2, '0');
+    return '$dd/$mm/${d.year} $hh:$mn';
+  }
+
+  String _formatCantidad(double n) {
+    if (n == n.truncateToDouble()) return n.toInt().toString();
+    return n.toStringAsFixed(2);
   }
 }
