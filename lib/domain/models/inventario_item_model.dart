@@ -1,4 +1,5 @@
 // lib/domain/models/inventario_item_model.dart
+import 'dart:convert';
 
 enum StockState { ok, alerta, bajo, critico }
 
@@ -84,24 +85,51 @@ class InventarioItemModel {
   }
 
   factory InventarioItemModel.fromJson(Map<String, dynamic> json) {
+    // Extraemos el nombre de la unidad del objeto anidado
+    // Supabase devuelve la relación como un objeto o una lista
+    final unidadData = json['unidad_medida'];
+    String nombreUnidad = 'N/A';
+
+    // 2. Extraemos el texto "nom_unidad"
+    if (unidadData != null) {
+      if (unidadData is Map) {
+        nombreUnidad = unidadData['nom_unidad']?.toString() ?? 'N/A';
+      } else if (unidadData is List && unidadData.isNotEmpty) {
+        nombreUnidad = unidadData[0]['nom_unidad']?.toString() ?? 'N/A';
+      }
+    }
+
+    final catData = json['categoria_insumo'];
+    String nombreCategoria = 'Sin categoría';
+
+    if (catData != null) {
+      if (catData is Map) {
+        nombreCategoria =
+            catData['nombre_categoria']?.toString() ?? 'Sin categoría';
+      } else if (catData is List && catData.isNotEmpty) {
+        nombreCategoria =
+            catData[0]['nombre_categoria']?.toString() ?? 'Sin categoría';
+      }
+    }
     return InventarioItemModel(
-      id: json['id'].toString(),
-      codigo: (json['codigo'] ?? '') as String,
+      id: json['id_insumo'] ?? '',
+      codigo: json['id_insumo'].toString().substring(0, 8).toUpperCase(),
       nombre: (json['nombre'] ?? '') as String,
-      categoria: CategoriaInsumo.fromString(json['categoria'] as String?),
+      categoria: CategoriaInsumo.fromString(nombreCategoria),
       stockActual: (json['stock_actual'] as num?)?.toDouble() ?? 0,
       stockMinimo: (json['stock_minimo'] as num?)?.toDouble() ?? 0,
-      unidad: (json['unidad'] ?? 'unidades') as String,
+      unidad: nombreUnidad,
       costoUnitario: (json['costo_unitario'] as num?)?.toDouble() ?? 0,
       dimensionable: (json['dimensionable'] as bool?) ?? false,
-      atributosTecnicosJson: json['atributos_tecnicos_json'] as String?,
+      atributosTecnicosJson: json['atributos_tecnicos'] != null
+          ? jsonEncode(json['atributos_tecnicos'])
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'codigo': codigo,
+      'id_insumo': codigo,
       'nombre': nombre,
       'categoria': categoria.name,
       'stock_actual': stockActual,

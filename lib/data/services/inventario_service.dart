@@ -8,15 +8,37 @@ class InventarioService {
   InventarioService();
 
   // Mientras backend no exponga la tabla `insumos`, devolvemos mocks.
-  static const bool _useMockData = true;
+  //static const bool _useMockData = true;
 
   // MOCK — lista mutable en memoria. Cuando exista backend, eliminar.
-  final List<InventarioItemModel> _mockItems = [..._mockSeed];
+  //inal List<InventarioItemModel> _mockItems = [..._mockSeed];
 
   SupabaseClient get _client => Supabase.instance.client;
 
   Future<List<InventarioItemModel>> obtenerInventario() async {
-    if (_useMockData) {
+    try {
+      // Hacemos la consulta real a la tabla 'insumo' y ordenamos alfabéticamente
+      final data = await _client
+          .from(
+            'insumo',
+          ) // Asegúrate de que este sea el nombre exacto de tu tabla
+          .select('''
+          *, 
+          unidad_medida(nom_unidad), 
+          categoria_insumo(nombre_categoria)
+        ''')
+          .order('nombre', ascending: true);
+
+      // Convertimos la respuesta de Supabase (JSON) a nuestro Modelo de Flutter
+      return (data as List)
+          .map((e) => InventarioItemModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('🚨 ERROR SUPABASE: $e');
+      // Es buena práctica atrapar el error para que el Provider lo maneje
+      throw Exception('Error al obtener el inventario de Supabase: $e');
+    }
+    /*if (_useMockData) {
       return List.unmodifiable(_mockItems);
     }
 
@@ -24,7 +46,7 @@ class InventarioService {
     final data = await _client.from('insumos').select();
     return (data as List)
         .map((e) => InventarioItemModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+        .toList();*/
   }
 
   Future<InventarioItemModel> crearInsumo({
@@ -37,9 +59,38 @@ class InventarioService {
     required bool dimensionable,
     String? atributosTecnicosJson,
   }) async {
+    try {
+      // Armamos el payload (JSON) que vamos a enviar a la base de datos
+      final payload = {
+        'id_insumo': codigo,
+        'nombre': nombre,
+        // Convertimos el enum a String para guardarlo en BD (ej: "telas")
+        'categoria': categoria.name,
+        'stock_actual': 0, // Como pidió Den, siempre inicia en 0
+        'stock_minimo': stockMinimo,
+        'unidad': unidad,
+        'costo_unitario': costoUnitario,
+        'dimensionable': dimensionable,
+        if (atributosTecnicosJson != null)
+          'atributos_tecnicos_json': atributosTecnicosJson,
+      };
+
+      // Insertamos y le pedimos a Supabase que nos devuelva la fila recién creada (.select().single())
+      final response = await _client
+          .from('insumo')
+          .insert(payload)
+          .select()
+          .single();
+
+      // Devolvemos el modelo creado para que la UI se actualice al instante
+      return InventarioItemModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al crear el insumo en Supabase: $e');
+    }
+
     // MOCK — eliminar / reemplazar con Supabase cuando exista insert.
     // Stock inicia en 0 (anotación de Den en el PDF).
-    final nuevo = InventarioItemModel(
+    /*final nuevo = InventarioItemModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       codigo: codigo,
       nombre: nombre,
@@ -59,12 +110,12 @@ class InventarioService {
       throw UnimplementedError('Backend pendiente');
     }
 
-    return nuevo;
+    return nuevo;*/
   }
 }
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
-
+/*
 const List<InventarioItemModel> _mockSeed = [
   InventarioItemModel(
     id: '3',
@@ -146,4 +197,4 @@ const List<InventarioItemModel> _mockSeed = [
     unidad: 'metros',
     costoUnitario: 42.0,
   ),
-];
+];*/

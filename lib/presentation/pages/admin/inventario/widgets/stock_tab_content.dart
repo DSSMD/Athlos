@@ -227,41 +227,41 @@ class _FiltrosCard extends ConsumerWidget {
                         active:
                             filtros.categoria == null && !filtros.stockBajoOnly,
                         onTap: () {
-                        filtrosNotifier.setCategoria(null);
-                        if (filtros.stockBajoOnly) {
-                          filtrosNotifier.toggleStockBajo();
-                        }
-                        onPageReset();
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _CategoriaChip(
-                      label: 'Stock bajo',
-                      active: filtros.stockBajoOnly,
-                      onTap: () {
-                        filtrosNotifier.toggleStockBajo();
-                        onPageReset();
-                      },
-                    ),
-                    for (final cat in const [
-                      CategoriaInsumo.telas,
-                      CategoriaInsumo.hilos,
-                      CategoriaInsumo.accesorios,
-                      CategoriaInsumo.etiquetas,
-                      CategoriaInsumo.empaque,
-                    ]) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      _CategoriaChip(
-                        label: cat.label,
-                        active: filtros.categoria == cat,
-                        onTap: () {
-                          filtrosNotifier.setCategoria(
-                            filtros.categoria == cat ? null : cat,
-                          );
+                          filtrosNotifier.setCategoria(null);
+                          if (filtros.stockBajoOnly) {
+                            filtrosNotifier.toggleStockBajo();
+                          }
                           onPageReset();
                         },
                       ),
-                    ],
+                      const SizedBox(width: AppSpacing.sm),
+                      _CategoriaChip(
+                        label: 'Stock bajo',
+                        active: filtros.stockBajoOnly,
+                        onTap: () {
+                          filtrosNotifier.toggleStockBajo();
+                          onPageReset();
+                        },
+                      ),
+                      for (final cat in const [
+                        CategoriaInsumo.telas,
+                        CategoriaInsumo.hilos,
+                        CategoriaInsumo.accesorios,
+                        CategoriaInsumo.etiquetas,
+                        CategoriaInsumo.empaque,
+                      ]) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        _CategoriaChip(
+                          label: cat.label,
+                          active: filtros.categoria == cat,
+                          onTap: () {
+                            filtrosNotifier.setCategoria(
+                              filtros.categoria == cat ? null : cat,
+                            );
+                            onPageReset();
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),
