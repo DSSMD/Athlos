@@ -67,6 +67,7 @@ class MainLayout extends ConsumerWidget {
     WidgetRef ref,
     int selectedIndex,
     bool isExtended,
+    
   ) {
     // Convertimos temporalmente tus railDestinations antiguos al nuevo formato SidebarItem
     // NOTA: Lo ideal a futuro es que desde el router le pases directamente una lista de SidebarItem
