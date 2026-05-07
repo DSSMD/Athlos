@@ -21,6 +21,9 @@ import 'core/router/app_router.dart';
 import 'core/inactivity/inactivity_detector.dart';
 import 'core/inactivity/session_expired_snackbar.dart';
 import 'presentation/providers/auth_provider.dart';
+// NUEVAS IMPORTACIONES PARA EL CHEQUEO DE CONEXION
+import 'presentation/widgets/shared/no_internet_overlay.dart';
+import 'presentation/providers/connectivity_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +57,8 @@ class MyApp extends ConsumerWidget {
     // no corre para no gastar recursos.
     final authAsync = ref.watch(authStateProvider);
     final isLoggedIn = authAsync.value?.session != null;
+    //para la conexion de internte esto revisa
+    final hasInternet = ref.watch(isConnectedProvider);
 
     // SCRUM-58: envolvemos la app con InactivityDetector. Al vencerse el
     // timeout de 30 minutos, se llama signOut() y se muestra un snackbar.
@@ -85,6 +90,25 @@ class MyApp extends ConsumerWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           fontFamily: 'Montserrat',
         ),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              // 1. La aplicación normal con el InactivityDetector y el Router
+              child!, 
+              
+              // 2. Si se cae el internet, dibujamos el escudo por encima de TODO
+              if (!hasInternet)
+                Positioned.fill(
+                  child: NoInternetOverlay(
+                    onRetry: () {
+                      // Forzamos la verificación manual
+                      ref.read(isConnectedProvider.notifier).checkConnectionManual();
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
