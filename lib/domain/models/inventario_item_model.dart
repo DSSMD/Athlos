@@ -115,7 +115,7 @@ class InventarioItemModel {
       id: json['id_insumo'] ?? '',
       codigo: json['id_insumo'].toString().substring(0, 8).toUpperCase(),
       nombre: (json['nombre'] ?? '') as String,
-      categoria: CategoriaInsumo.fromString(nombreCategoria),
+      categoria: json['categoria_enum'] ?? CategoriaInsumo.telas,
       stockActual: (json['stock_actual'] as num?)?.toDouble() ?? 0,
       stockMinimo: (json['stock_minimo'] as num?)?.toDouble() ?? 0,
       unidad: nombreUnidad,

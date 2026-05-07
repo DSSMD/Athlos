@@ -37,9 +37,9 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
   Future<InventarioItemModel> crearInsumo({
     required String codigo,
     required String nombre,
-    required CategoriaInsumo categoria,
+    required int idCategoria,
     required double stockMinimo,
-    required String unidad,
+    required int idUnidad,
     required double costoUnitario,
     required bool dimensionable,
     String? atributosTecnicosJson,
@@ -48,9 +48,9 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     final nuevo = await service.crearInsumo(
       codigo: codigo,
       nombre: nombre,
-      categoria: categoria,
+      idCategoria: idCategoria,
       stockMinimo: stockMinimo,
-      unidad: unidad,
+      idUnidad: idUnidad,
       costoUnitario: costoUnitario,
       dimensionable: dimensionable,
       atributosTecnicosJson: atributosTecnicosJson,

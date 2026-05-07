@@ -29,32 +29,68 @@ class InventarioService {
         ''')
           .order('nombre', ascending: true);
 
-      // Convertimos la respuesta de Supabase (JSON) a nuestro Modelo de Flutter
-      return (data as List)
-          .map((e) => InventarioItemModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      print('🚨 ERROR SUPABASE: $e');
-      // Es buena práctica atrapar el error para que el Provider lo maneje
-      throw Exception('Error al obtener el inventario de Supabase: $e');
-    }
-    /*if (_useMockData) {
-      return List.unmodifiable(_mockItems);
-    }
+      return (data as List).map((e) {
+        final json = e as Map<String, dynamic>;
 
-    // TODO: cuando backend exponga la tabla, ajustar columnas/relaciones.
-    final data = await _client.from('insumos').select();
-    return (data as List)
-        .map((e) => InventarioItemModel.fromJson(e as Map<String, dynamic>))
-        .toList();*/
+        // 1. Extraemos el texto de la base de datos (ej. "Telas")
+        final catData = json['categoria_insumo'];
+        String nombreCat = 'telas'; // valor por defecto seguro
+        if (catData != null && catData is Map) {
+          nombreCat = catData['nombre_categoria']?.toString() ?? 'telas';
+        }
+
+        // 2. Lo convertimos al Enum que el Frontend necesita
+        final catEnum = CategoriaInsumo.values.firstWhere(
+          (enumItem) => enumItem.name.toLowerCase() == nombreCat.toLowerCase(),
+          orElse: () => CategoriaInsumo.telas,
+        );
+
+        // 3. Modificamos el JSON temporalmente para que tu fromJson lo lea perfecto
+        json['categoria_enum'] = catEnum;
+
+        return InventarioItemModel.fromJson(json);
+      }).toList();
+    } catch (e) {
+      print('🚨 ERROR SUPABASE LECTURA: $e');
+      throw Exception('Error al obtener el inventario: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerCategoriasDropdown() async {
+    try {
+      final data = await _client
+          .from('categoria_insumo') // Reemplaza si tu tabla tiene otro nombre
+          .select('id_categoria, nombre_categoria')
+          .order('id_categoria', ascending: true);
+
+      // Devolvemos una lista cruda para que el Dropdown la lea fácilmente
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('🚨 ERROR AL CARGAR CATEGORÍAS DROPDOWN: $e');
+      throw Exception('Error al cargar opciones de categorías');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerUnidadesDropdown() async {
+    try {
+      final data = await _client
+          .from('unidad_medida') // Reemplaza si tu tabla tiene otro nombre
+          .select('id_unidad, nom_unidad')
+          .order('id_unidad', ascending: true);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('🚨 ERROR AL CARGAR UNIDADES DROPDOWN: $e');
+      throw Exception('Error al cargar opciones de unidades');
+    }
   }
 
   Future<InventarioItemModel> crearInsumo({
     required String codigo,
     required String nombre,
-    required CategoriaInsumo categoria,
+    required int idCategoria,
     required double stockMinimo,
-    required String unidad,
+    required int idUnidad,
     required double costoUnitario,
     required bool dimensionable,
     String? atributosTecnicosJson,
@@ -62,17 +98,15 @@ class InventarioService {
     try {
       // Armamos el payload (JSON) que vamos a enviar a la base de datos
       final payload = {
-        'id_insumo': codigo,
         'nombre': nombre,
         // Convertimos el enum a String para guardarlo en BD (ej: "telas")
-        'categoria': categoria.name,
+        'id_categoria': idCategoria,
         'stock_actual': 0, // Como pidió Den, siempre inicia en 0
         'stock_minimo': stockMinimo,
-        'unidad': unidad,
+        'id_unidad': idUnidad,
         'costo_unitario': costoUnitario,
-        'dimensionable': dimensionable,
         if (atributosTecnicosJson != null)
-          'atributos_tecnicos_json': atributosTecnicosJson,
+          'atributos_tecnicos': atributosTecnicosJson,
       };
 
       // Insertamos y le pedimos a Supabase que nos devuelva la fila recién creada (.select().single())

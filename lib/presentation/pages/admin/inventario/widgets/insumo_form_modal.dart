@@ -46,8 +46,8 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
   final _costoCtrl = TextEditingController();
   final _atributosCtrl = TextEditingController();
 
-  CategoriaInsumo? _categoria;
-  String? _unidad;
+  int? _idCategoriaSeleccionada;
+  int? _idUnidadSeleccionada;
   bool _dimensionable = false;
   bool _saving = false;
 
@@ -147,36 +147,79 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
             ),
             const SizedBox(height: AppSpacing.lg),
             _label('Categoría *'),
-            DropdownButtonFormField<CategoriaInsumo>(
-              initialValue: _categoria,
-              isExpanded: true,
-              items: CategoriaInsumo.values
-                  .map(
-                    (c) =>
-                        DropdownMenuItem(value: c, child: Text(c.label)),
-                  )
-                  .toList(),
-              onChanged: _saving
-                  ? null
-                  : (v) => setState(() => _categoria = v),
-              validator: (v) =>
-                  v == null ? 'Seleccioná una categoría' : null,
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: ref
+                  .read(inventarioServiceProvider)
+                  .obtenerCategoriasDropdown(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Mantiene el diseño mientras carga
+                  return const LinearProgressIndicator();
+                }
+
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data!.isEmpty) {
+                  return const Text(
+                    'Error al cargar categorías. Revise su conexión.',
+                  );
+                }
+
+                final categoriasBD = snapshot.data!;
+
+                return DropdownButtonFormField<int>(
+                  initialValue: _idCategoriaSeleccionada,
+                  isExpanded: true,
+                  items: categoriasBD.map((cat) {
+                    return DropdownMenuItem<int>(
+                      value: cat['id_categoria'] as int,
+                      child: Text(cat['nombre_categoria'].toString()),
+                    );
+                  }).toList(),
+                  onChanged: _saving
+                      ? null
+                      : (v) => setState(() => _idCategoriaSeleccionada = v),
+                  validator: (v) =>
+                      v == null ? 'Seleccioná una categoría' : null,
+                );
+              },
             ),
-            const SizedBox(height: AppSpacing.lg),
             _label('Unidad de medida *'),
-            DropdownButtonFormField<String>(
-              initialValue: _unidad,
-              isExpanded: true,
-              items: _kUnidades
-                  .map(
-                    (u) => DropdownMenuItem(value: u, child: Text(u)),
-                  )
-                  .toList(),
-              onChanged: _saving
-                  ? null
-                  : (v) => setState(() => _unidad = v),
-              validator: (v) =>
-                  v == null ? 'Seleccioná una unidad' : null,
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: ref
+                  .read(inventarioServiceProvider)
+                  .obtenerUnidadesDropdown(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const LinearProgressIndicator();
+                }
+
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data!.isEmpty) {
+                  return const Text(
+                    'Error al cargar unidades. Revise su conexión.',
+                  );
+                }
+
+                final unidadesBD = snapshot.data!;
+
+                return DropdownButtonFormField<int>(
+                  // <--- ¡Asegúrate de que tu variable _idUnidadSeleccionada sea de tipo int?!
+                  initialValue: _idUnidadSeleccionada,
+                  isExpanded: true,
+                  items: unidadesBD.map((uni) {
+                    return DropdownMenuItem<int>(
+                      value: uni['id_unidad'] as int,
+                      child: Text(uni['nom_unidad'].toString()),
+                    );
+                  }).toList(),
+                  onChanged: _saving
+                      ? null
+                      : (v) => setState(() => _idUnidadSeleccionada = v),
+                  validator: (v) => v == null ? 'Seleccioná una unidad' : null,
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.lg),
             _label('Stock mínimo *'),
@@ -261,9 +304,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
             Text(
               'El stock inicia en 0. Una vez creado, no podrás cambiar estos '
               'datos.',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textMuted,
-              ),
+              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
             ),
           ],
         ),
@@ -352,22 +393,21 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
     final stockMin = double.parse(
       _stockMinCtrl.text.trim().replaceAll(',', '.'),
     );
-    final costo = double.parse(
-      _costoCtrl.text.trim().replaceAll(',', '.'),
-    );
+    final costo = double.parse(_costoCtrl.text.trim().replaceAll(',', '.'));
     final atributos = _atributosCtrl.text.trim();
 
     try {
       final nuevo = await notifier.crearInsumo(
         codigo: codigo,
         nombre: _nombreCtrl.text.trim(),
-        categoria: _categoria!,
+        idCategoria: _idCategoriaSeleccionada!,
         stockMinimo: stockMin,
-        unidad: _unidad!,
+        idUnidad: _idUnidadSeleccionada!,
         costoUnitario: costo,
         dimensionable: _dimensionable,
-        atributosTecnicosJson:
-            _dimensionable && atributos.isNotEmpty ? atributos : null,
+        atributosTecnicosJson: _dimensionable && atributos.isNotEmpty
+            ? atributos
+            : null,
       );
 
       if (!mounted) return;
