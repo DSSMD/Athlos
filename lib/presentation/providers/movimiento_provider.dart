@@ -184,8 +184,8 @@ class MovimientoKpis {
 /// KPIs del mes calendario actual derivados de movimientoProvider +
 /// inventarioProvider (para calcular valor monetario de las compras).
 final movimientoKpisProvider = Provider<MovimientoKpis>((ref) {
-  final movimientos = ref.watch(movimientoProvider).value ??
-      const <MovimientoModel>[];
+  final movimientos =
+      ref.watch(movimientoProvider).value ?? const <MovimientoModel>[];
   final inventario =
       ref.watch(inventarioProvider).value ?? const <InventarioItemModel>[];
 

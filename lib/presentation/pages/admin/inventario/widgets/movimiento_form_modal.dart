@@ -175,18 +175,10 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               initialValue: _area,
               isExpanded: true,
               items: AreaMovimiento.values
-                  .map(
-                    (a) => DropdownMenuItem(
-                      value: a,
-                      child: Text(a.label),
-                    ),
-                  )
+                  .map((a) => DropdownMenuItem(value: a, child: Text(a.label)))
                   .toList(),
-              onChanged: _saving
-                  ? null
-                  : (v) => setState(() => _area = v),
-              validator: (v) =>
-                  v == null ? 'Seleccioná un área' : null,
+              onChanged: _saving ? null : (v) => setState(() => _area = v),
+              validator: (v) => v == null ? 'Seleccioná un área' : null,
             ),
             const SizedBox(height: AppSpacing.lg),
             _label('Tipo de movimiento'),
@@ -200,18 +192,10 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               initialValue: _tipo,
               isExpanded: true,
               items: const [TipoMovimiento.ingreso, TipoMovimiento.salida]
-                  .map(
-                    (t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(t.label),
-                    ),
-                  )
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                   .toList(),
-              onChanged: _saving
-                  ? null
-                  : (v) => setState(() => _tipo = v),
-              validator: (v) =>
-                  v == null ? 'Seleccioná un tipo' : null,
+              onChanged: _saving ? null : (v) => setState(() => _tipo = v),
+              validator: (v) => v == null ? 'Seleccioná un tipo' : null,
             ),
             const SizedBox(height: AppSpacing.lg),
             _label('Cantidad'),
@@ -221,9 +205,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
                 decimal: true,
               ),
               enabled: !_saving,
-              decoration: const InputDecoration(
-                hintText: 'Ej: 25',
-              ),
+              decoration: const InputDecoration(hintText: 'Ej: 25'),
               validator: (v) {
                 final raw = (v ?? '').trim();
                 if (raw.isEmpty) return 'Ingresá una cantidad';

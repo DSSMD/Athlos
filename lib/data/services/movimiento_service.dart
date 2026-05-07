@@ -4,13 +4,14 @@
 //
 // IMPORTANTE: `idInsumo` matchea con `InventarioItemModel.id` (no con codigo).
 // Los IDs del seed actual de inventario son '1', '2', ..., '10'.
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/movimiento_model.dart';
 
 class MovimientoService {
   MovimientoService();
 
-  static const bool _useMockData = true;
+  static const bool _useMockData = false;
+  SupabaseClient get _client => Supabase.instance.client;
 
   // Lista mockeada en memoria con datos variados para verificar la UI del
   // tab Movimientos. Si _useMockData = false, esto nunca se usa.
@@ -20,8 +21,20 @@ class MovimientoService {
     if (_useMockData) {
       return List.unmodifiable(_mock);
     }
+    try {
+      final data = await _client
+          .from('movimiento_insumo')
+          .select()
+          .order('fecha', ascending: false);
+
+      // Usamos el fromJson de Den
+      return (data as List)
+          .map((e) => MovimientoModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener movimientos: $e');
+    }
     // TODO: query a Supabase tabla `movimiento_insumo`.
-    throw UnimplementedError();
   }
 
   Future<List<MovimientoModel>> obtenerMovimientosPorInsumo(
@@ -31,7 +44,19 @@ class MovimientoService {
       return _mock.where((m) => m.idInsumo == idInsumo).toList();
     }
     // TODO: query filtrado por id_insumo en Supabase.
-    throw UnimplementedError();
+    try {
+      final data = await _client
+          .from('movimiento_insumo')
+          .select()
+          .eq('id_insumo', idInsumo)
+          .order('fecha', ascending: false);
+
+      return (data as List)
+          .map((e) => MovimientoModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener movimientos del insumo: $e');
+    }
   }
 
   Future<MovimientoModel> crearMovimiento({
@@ -43,25 +68,56 @@ class MovimientoService {
     required AreaMovimiento area,
     required double stockAntes,
   }) async {
-    // Calcular stock después según tipo.
-    // TODO Den: confirmar comportamiento exacto para `ajuste` (positivo o
-    // negativo según signo de cantidad). Por ahora ajuste se trata como
-    // delta positivo (suma).
-    final double stockDespues;
-    switch (tipo) {
-      case TipoMovimiento.ingreso:
-      case TipoMovimiento.ajuste:
-        stockDespues = stockAntes + cantidad;
-        break;
-      case TipoMovimiento.salida:
-      case TipoMovimiento.auto:
-        stockDespues = stockAntes - cantidad;
-        break;
-    }
+    try {
+      final insumo = await _client
+          .from('insumo')
+          .select('costo_unitario')
+          .eq('id_insumo', idInsumo)
+          .single();
+      final costoUnitario = (insumo['costo_unitario'] ?? 0).toDouble();
 
-    // Auto-generar referencia "Manual #M-XXX" para movimientos creados
-    // desde el form. TODO Den: ajustar formato o conectar con sistema de
-    // órdenes/compras cuando exista backend.
+      // 1. OBLIGAMOS A LA BD A USAR SOLO 1 (ENTRADA) o 2 (SALIDA)
+      int idEstado = 1;
+      if (tipo == TipoMovimiento.salida || tipo == TipoMovimiento.auto) {
+        idEstado = 2;
+      } else if (tipo == TipoMovimiento.ajuste && cantidad < 0) {
+        idEstado = 2; // Si es ajuste negativo, es salida
+      }
+
+      // 2. EL TRUCO: Le pegamos una etiqueta secreta al motivo
+      String motivoFinal = motivo;
+      if (tipo == TipoMovimiento.auto) motivoFinal = '[AUTO] $motivo';
+      if (tipo == TipoMovimiento.ajuste) motivoFinal = '[AJUSTE] $motivo';
+
+      final idUsuario =
+          _client.auth.currentUser?.id ??
+          '00000000-0000-0000-0000-000000000000';
+
+      final payload = {
+        'id_insumo': idInsumo,
+        'id_estado_mov': idEstado, // Solo envía 1 o 2
+        'id_usuario': idUsuario,
+        'cantidad': cantidad.abs(),
+        'motivo': motivoFinal, // Envía el motivo con la etiqueta
+        'costo_unitario_transaccional': costoUnitario,
+        'subtotal_movimiento': cantidad.abs() * costoUnitario,
+      };
+
+      final response = await _client
+          .from('movimiento_insumo')
+          .insert(payload)
+          .select()
+          .single();
+      return MovimientoModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al crear movimiento: $e');
+    }
+  }
+
+  // Auto-generar referencia "Manual #M-XXX" para movimientos creados
+  // desde el form. TODO Den: ajustar formato o conectar con sistema de
+  // órdenes/compras cuando exista backend.
+  /*
     final manualesCount = _mock
         .where((m) => m.referencia.startsWith('Manual #M-'))
         .length;
@@ -90,7 +146,7 @@ class MovimientoService {
     }
 
     return nuevo;
-  }
+    */
 }
 
 // ─── MOCK SEED ────────────────────────────────────────────────────────────────
