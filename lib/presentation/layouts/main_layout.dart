@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/auth_profile_menu.dart';
 import 'athlos_sidebar.dart';
+import 'package:window_manager/window_manager.dart';
 //import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
@@ -89,6 +90,29 @@ class MainLayout extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
+          // 1. --- NUEVA BARRA SUPERIOR NATIVA (ATHLOS) ---
+          DragToMoveArea(
+            child: Container(
+              height: 32, // Altura estándar de la barra de sistema
+              color: const Color(0xFF0A0A0A), // Negro corporativo Athlos
+              child: const Row(
+                children: [
+                  SizedBox(width: 16),
+                  Text(
+                    'Athlos Workspace', 
+                    style: TextStyle(color: Colors.white70, fontSize: 12)
+                  ),
+                  Spacer(),
+                  // Botones nativos de minimizar, maximizar y cerrar
+                  WindowCaption(
+                    brightness: Brightness.dark,
+                    backgroundColor: Colors.transparent,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
           // TU NUEVO BARRA LATERAL ATHLOS
           AthlosSidebar(
             items: sidebarItems,
