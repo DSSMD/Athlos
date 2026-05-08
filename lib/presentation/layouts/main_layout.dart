@@ -49,7 +49,7 @@ class MainLayout extends ConsumerWidget {
     final rawIndex = ref.watch(navigationIndexProvider);
     final safeIndex = (rawIndex >= pages.length) ? 0 : rawIndex;
 
-    // 👇 1. ENVOLVEMOS TODO EN UN FOCUS PARA ESCUCHAR EL TECLADO 👇
+    //  ENVOLVEMOS TODO EN UN FOCUS PARA ESCUCHAR EL TECLADO 
     return Focus(
       autofocus: true, // Asegura que escuche el teclado desde que se abre
       onKeyEvent: (FocusNode node, KeyEvent event) {
@@ -61,7 +61,7 @@ class MainLayout extends ConsumerWidget {
         }
         return KeyEventResult.ignored; // Ignora cualquier otra tecla
       },
-      // 👇 2. TU POPSCOPE ACTUAL SE QUEDA INTACTO AQUÍ ADENTRO 👇
+      //POPSCOPE ACTUAL
       child: PopScope(
         canPop: false, 
         onPopInvokedWithResult: (bool didPop, dynamic result) async {
