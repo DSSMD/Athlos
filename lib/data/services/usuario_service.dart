@@ -11,11 +11,20 @@ class UsuarioService {
   // ══════════════════════════════════════════════════════════════════════════
   Future<List<UsuarioModel>> obtenerUsuarios() async {
     try {
+      // 💡 CAMBIO: Agregamos el Deep Join para traer datos del trabajador y su área
       final response = await _supabase
           .from('profiles')
           .select('''
-        id, nombre, apellido, email, telefono, activo, ultimo_acceso, roles (nombre_rol)
-      ''')
+            id, nombre, apellido, email, telefono, activo, ultimo_acceso, 
+            roles (nombre_rol),
+            trabajadores (
+              id_trabajador, 
+              tarifa_pago_base, 
+              fecha_contratacion, 
+              id_area,
+              area_produccion (nombre_area)
+            )
+          ''')
           .order('created_at', ascending: false);
 
       return (response as List<dynamic>)
@@ -36,10 +45,12 @@ class UsuarioService {
     required String password,
     required String? telefono,
     required UserRole rol,
+    int? idArea,
+    double? tarifaPagoBase,
   }) async {
     try {
       final session = _supabase.auth.currentSession;
-      // Le "gritamos" a la función en la nube de Supabase que haga el trabajo
+      
       final response = await _supabase.functions.invoke(
         'admin_crear_usuario', 
         headers: {
@@ -52,15 +63,20 @@ class UsuarioService {
           'apellido': apellido,
           'telefono': telefono,
           'id_rol': _roleToInt(rol),
+          // 👇 Mandamos los datos laborales directamente al servidor
+          'id_area': idArea,
+          'tarifa_pago_base': tarifaPagoBase, 
         },
       );
-      // Verificamos si la función nos respondió con éxito
+
       if (response.status != 200 && response.status != 201) {
         throw Exception('Error del servidor: ${response.data}');
       }
-      } on FunctionException catch (e) {
-      // Si el error viene de Supabase (ej: ya existe el correo), 
-      // lo pasamos tal cual hacia la interfaz visual.
+      
+      // ¡Y listo! Ya no hacemos el insert desde Flutter.
+      // El servidor se encarga de crear el auth, el profile y el trabajador de forma segura.
+
+    } on FunctionException catch (e) {
       rethrow;
     } catch (e) {
       throw Exception('Error al crear usuario: $e');
@@ -77,10 +93,12 @@ class UsuarioService {
     required String? telefono,
     required UserRole rol,
     required bool activo,
+    // 💡 CAMBIO: Nuevos parámetros opcionales
+    int? idArea,
+    double? tarifaPagoBase,
   }) async {
     try {
-      // Esto sí lo podemos hacer directo desde Flutter porque somos Admin
-      // y tenemos permiso en el RLS de la tabla profiles.
+      // 1. Actualizamos el Profile (Datos Personales / Acceso)
       await _supabase
           .from('profiles')
           .update({
@@ -91,6 +109,31 @@ class UsuarioService {
             'activo': activo,
           })
           .eq('id', id);
+
+      // 2. Actualizamos o Creamos el registro de Trabajador (Datos Laborales)
+      if (idArea != null) {
+        // Verificamos si ya existe como trabajador
+        final checkTrabajador = await _supabase
+            .from('trabajadores')
+            .select('id_trabajador')
+            .eq('id_usuario', id)
+            .maybeSingle();
+
+        if (checkTrabajador != null) {
+          // Si ya era trabajador, solo actualizamos su área/tarifa
+          await _supabase.from('trabajadores').update({
+            'id_area': idArea,
+            'tarifa_pago_base': tarifaPagoBase ?? 0.00,
+          }).eq('id_usuario', id);
+        } else {
+          // Si antes no era trabajador (ej. pasó de Administrador a Producción), lo insertamos
+          await _supabase.from('trabajadores').insert({
+            'id_usuario': id,
+            'id_area': idArea,
+            'tarifa_pago_base': tarifaPagoBase ?? 0.00,
+          });
+        }
+      }
     } catch (e) {
       throw Exception('Error al actualizar usuario: $e');
     }
