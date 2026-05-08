@@ -1,3 +1,5 @@
+// lib/data/services/usuario_service.dart
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/usuario_model.dart';
 
@@ -11,7 +13,6 @@ class UsuarioService {
   // ══════════════════════════════════════════════════════════════════════════
   Future<List<UsuarioModel>> obtenerUsuarios() async {
     try {
-      // 💡 CAMBIO: Agregamos el Deep Join para traer datos del trabajador y su área
       final response = await _supabase
           .from('profiles')
           .select('''
@@ -63,7 +64,6 @@ class UsuarioService {
           'apellido': apellido,
           'telefono': telefono,
           'id_rol': _roleToInt(rol),
-          // 👇 Mandamos los datos laborales directamente al servidor
           'id_area': idArea,
           'tarifa_pago_base': tarifaPagoBase, 
         },
@@ -73,10 +73,7 @@ class UsuarioService {
         throw Exception('Error del servidor: ${response.data}');
       }
       
-      // ¡Y listo! Ya no hacemos el insert desde Flutter.
-      // El servidor se encarga de crear el auth, el profile y el trabajador de forma segura.
-
-    } on FunctionException catch (e) {
+    } on FunctionException {
       rethrow;
     } catch (e) {
       throw Exception('Error al crear usuario: $e');
@@ -93,7 +90,6 @@ class UsuarioService {
     required String? telefono,
     required UserRole rol,
     required bool activo,
-    // 💡 CAMBIO: Nuevos parámetros opcionales
     int? idArea,
     double? tarifaPagoBase,
   }) async {

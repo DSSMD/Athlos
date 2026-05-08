@@ -1,7 +1,8 @@
 // lib/domain/models/usuario_model.dart
 
-enum UserRole { administrador, produccion, cajas, invitado }
+// Este modelo representa a un usuario del sistema, incluyendo tanto su información básica
 
+enum UserRole { administrador, produccion, cajas, invitado }
 enum UserStatus { activo, inactivo }
 
 class UsuarioModel {
@@ -13,6 +14,15 @@ class UsuarioModel {
   final UserStatus status;
   final DateTime? lastAccess;
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // CAMPOS: DATOS DE TRABAJADOR (Recursos Humanos)
+  // ══════════════════════════════════════════════════════════════════════════
+  final String? idTrabajador;
+  final int? idArea;
+  final String? nombreArea;
+  final double? tarifaPagoBase;
+  final DateTime? fechaContratacion;
+
   UsuarioModel({
     required this.id,
     required this.name,
@@ -21,7 +31,16 @@ class UsuarioModel {
     required this.role,
     required this.status,
     this.lastAccess,
+
+    this.idTrabajador,
+    this.idArea,
+    this.nombreArea,
+    this.tarifaPagoBase,
+    this.fechaContratacion,
   });
+
+  // 💡 Getter útil para saber rápidamente si este usuario es de producción/trabajador
+  bool get isTrabajador => idTrabajador != null;
 
   // Getter que genera la lista hardcodeada según el rol actual
   List<String> get permissions {
@@ -45,6 +64,40 @@ class UsuarioModel {
     final String nombreCompleto = '$nombre $apellido'.trim();
     final rawPhone = json['telefono']?.toString();
 
+    // ════════════════════════════════════════════════════════════════════════
+    // EXTRACCIÓN DE DATOS DEL TRABAJADOR (Si existen)
+    // Como la consulta principal será a "profiles", Supabase devolverá
+    // la relación "trabajadores" como una lista (array) de objetos.
+    // ════════════════════════════════════════════════════════════════════════
+    String? tId;
+    int? aId;
+    String? aNombre;
+    double? tTarifa;
+    DateTime? tFecha;
+
+    final trabajadoresData = json['trabajadores'];
+    // Verificamos si trajo datos de trabajador y si es una lista con al menos un elemento
+    if (trabajadoresData != null && trabajadoresData is List && trabajadoresData.isNotEmpty) {
+      final trabajador = trabajadoresData.first; // Tomamos el registro asociado
+      
+      tId = trabajador['id_trabajador']?.toString();
+      tTarifa = trabajador['tarifa_pago_base'] != null 
+          ? (trabajador['tarifa_pago_base'] as num).toDouble() 
+          : null;
+      tFecha = trabajador['fecha_contratacion'] != null 
+          ? DateTime.tryParse(trabajador['fecha_contratacion'].toString()) 
+          : null;
+
+      // Extraemos el área (si se hizo el join correcto)
+      final areaData = trabajador['area_produccion'];
+      if (areaData != null) {
+        aId = areaData['id_area'];
+        aNombre = areaData['nombre_area']?.toString();
+      } else {
+        aId = trabajador['id_area']; // Fallback por si solo viene el ID
+      }
+    }
+
     return UsuarioModel(
       id: json['id'] as String,
       name: nombreCompleto.isEmpty ? 'Sin nombre' : nombreCompleto,
@@ -55,6 +108,13 @@ class UsuarioModel {
       lastAccess: json['ultimo_acceso'] != null
           ? DateTime.tryParse(json['ultimo_acceso'].toString())
           : null,
+      
+      // Asignamos los datos del trabajador (serán null si no era trabajador)
+      idTrabajador: tId,
+      idArea: aId,
+      nombreArea: aNombre,
+      tarifaPagoBase: tTarifa,
+      fechaContratacion: tFecha,
     );
   }
 
