@@ -115,11 +115,17 @@ class InventarioItemModel {
       id: json['id_insumo'] ?? '',
       codigo: json['id_insumo'].toString().substring(0, 8).toUpperCase(),
       nombre: (json['nombre'] ?? '') as String,
-      categoria: json['categoria_enum'] ?? CategoriaInsumo.telas,
-      stockActual: (json['stock_actual'] as num?)?.toDouble() ?? 0,
-      stockMinimo: (json['stock_minimo'] as num?)?.toDouble() ?? 0,
+      categoria: CategoriaInsumo.fromString(nombreCategoria),
+      stockActual: json['stock_actual'] != null
+          ? double.tryParse(json['stock_actual'].toString()) ?? 0.0
+          : 0.0,
+      stockMinimo: json['stock_minimo'] != null
+          ? double.tryParse(json['stock_minimo'].toString()) ?? 0.0
+          : 0.0,
       unidad: nombreUnidad,
-      costoUnitario: (json['costo_unitario'] as num?)?.toDouble() ?? 0,
+      costoUnitario: json['costo_unitario'] != null
+          ? double.tryParse(json['costo_unitario'].toString()) ?? 0.0
+          : 0.0,
       dimensionable: (json['dimensionable'] as bool?) ?? false,
       atributosTecnicosJson: json['atributos_tecnicos'] != null
           ? jsonEncode(json['atributos_tecnicos'])

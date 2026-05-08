@@ -83,16 +83,33 @@ class MovimientoModel {
 
     if (motivoCrudo.startsWith('[AUTO]')) {
       tipoBD = TipoMovimiento.auto;
-      motivoCrudo = motivoCrudo.replaceFirst(
-        '[AUTO] ',
-        '',
-      ); // Limpiamos el texto
+      motivoCrudo = motivoCrudo.replaceFirst('[AUTO] ', '');
     } else if (motivoCrudo.startsWith('[AJUSTE]')) {
       tipoBD = TipoMovimiento.ajuste;
-      motivoCrudo = motivoCrudo.replaceFirst(
-        '[AJUSTE] ',
-        '',
-      ); // Limpiamos el texto
+      motivoCrudo = motivoCrudo.replaceFirst('[AJUSTE] ', '');
+    }
+    String usuarioConcatenado = 'Sistema';
+
+    if (json['profiles'] != null) {
+      final perfil = json['profiles'] as Map<String, dynamic>;
+
+      // Sacamos nombre y apellido (tomamos solo la primera palabra si hay varias)
+      final nombre = (perfil['nombre']?.toString() ?? '').split(' ').first;
+      final apellido = (perfil['apellido']?.toString() ?? '').split(' ').first;
+
+      // Navegamos un nivel más para llegar a la tabla roles
+      String nombreRol = 'Usuario';
+      if (perfil['roles'] != null) {
+        final rolData = perfil['roles'] as Map<String, dynamic>;
+        // Intentamos buscar la columna nombre o nombre_rol (ajusta según tu tabla roles)
+        nombreRol =
+            rolData['nombre_rol']?.toString() ??
+            rolData['nombre']?.toString() ??
+            rolData['nom_rol']?.toString() ??
+            'Personal';
+      }
+
+      usuarioConcatenado = '$nombre $apellido ($nombreRol)'.trim();
     }
 
     // 2. Extraer el UUID generado por Supabase para la referencia
@@ -113,7 +130,7 @@ class MovimientoModel {
       fecha: json['fecha'] != null
           ? DateTime.parse(json['fecha'])
           : DateTime.now(),
-      usuario: 'Sistema',
+      usuario: usuarioConcatenado,
       area: AreaMovimiento.general,
       referencia: refVisual,
       stockAntes: 0.0,

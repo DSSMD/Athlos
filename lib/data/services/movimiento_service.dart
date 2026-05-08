@@ -24,7 +24,8 @@ class MovimientoService {
     try {
       final data = await _client
           .from('movimiento_insumo')
-          .select()
+          // En obtenerMovimientos y obtenerMovimientosPorInsumo
+          .select('*, profiles(nombre, apellido, roles(*))')
           .order('fecha', ascending: false);
 
       // Usamos el fromJson de Den
@@ -47,7 +48,7 @@ class MovimientoService {
     try {
       final data = await _client
           .from('movimiento_insumo')
-          .select()
+          .select('*, profiles(*)')
           .eq('id_insumo', idInsumo)
           .order('fecha', ascending: false);
 

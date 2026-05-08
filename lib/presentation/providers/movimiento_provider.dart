@@ -47,6 +47,7 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
     required AreaMovimiento area,
   }) async {
     // Obtener stock actual del insumo ANTES del movimiento.
+
     final inventario =
         ref.read(inventarioProvider).value ?? const <InventarioItemModel>[];
     final item = inventario.firstWhere((i) => i.id == idInsumo);
@@ -68,9 +69,7 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
     state = AsyncValue.data([...actuales, movimiento]);
 
     // Ajustar stock del insumo según lo que calculó el service.
-    ref
-        .read(inventarioProvider.notifier)
-        .actualizarStock(idInsumo, movimiento.stockDespues);
+    ref.invalidate(inventarioProvider);
 
     return movimiento;
   }

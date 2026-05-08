@@ -113,7 +113,9 @@ class InventarioService {
       final response = await _client
           .from('insumo')
           .insert(payload)
-          .select()
+          .select(
+            '*, unidad_medida(nom_unidad), categoria_insumo(nombre_categoria)',
+          )
           .single();
 
       // Devolvemos el modelo creado para que la UI se actualice al instante
