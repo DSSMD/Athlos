@@ -8,9 +8,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart'; // <-- Añade esta línea
 import '../providers/navigation_provider.dart';
 import '../widgets/auth_profile_menu.dart';
 import 'athlos_sidebar.dart';
+import '../widgets/shared/exit_confirmation_dialog.dart';
 //import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
@@ -45,19 +47,39 @@ class MainLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rawIndex = ref.watch(navigationIndexProvider);
-
     final safeIndex = (rawIndex >= pages.length) ? 0 : rawIndex;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // BREAKPOINT: 800px para separar Desktop de Mobile
-        if (constraints.maxWidth >= 800) {
-          bool isExtended = constraints.maxWidth >= 1000;
-          return _buildDesktopLayout(context, ref, safeIndex, isExtended);
-        } else {
-          return _buildMobileLayout(context, ref, safeIndex);
+    // 👇 1. ENVOLVEMOS TODO EN UN FOCUS PARA ESCUCHAR EL TECLADO 👇
+    return Focus(
+      autofocus: true, // Asegura que escuche el teclado desde que se abre
+      onKeyEvent: (FocusNode node, KeyEvent event) {
+        // Si la tecla presionada es "Escape"
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+          // Disparamos tu modal oscuro con colores de Athlos
+          ExitConfirmationDialog.show(context);
+          return KeyEventResult.handled; // Le avisa a Flutter que la tecla fue procesada
         }
+        return KeyEventResult.ignored; // Ignora cualquier otra tecla
       },
+      // 👇 2. TU POPSCOPE ACTUAL SE QUEDA INTACTO AQUÍ ADENTRO 👇
+      child: PopScope(
+        canPop: false, 
+        onPopInvokedWithResult: (bool didPop, dynamic result) async {
+          if (didPop) return;
+          await ExitConfirmationDialog.show(context);
+        },
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // BREAKPOINT: 800px para separar Desktop de Mobile
+            if (constraints.maxWidth >= 800) {
+              bool isExtended = constraints.maxWidth >= 1000;
+              return _buildDesktopLayout(context, ref, safeIndex, isExtended);
+            } else {
+              return _buildMobileLayout(context, ref, safeIndex);
+            }
+          },
+        ),
+      ),
     );
   }
 
