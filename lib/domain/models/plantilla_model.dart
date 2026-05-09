@@ -2,13 +2,16 @@
 // lib/domain/models/plantilla_model.dart
 // ============================================================================
 // Modelo inmutable para una Plantilla de prenda (módulo Diseño de Prendas).
-// Esta es una vista DEMO — el modelo está pensado para ser drop-in cuando
+// Esta es una vista del modelo está pensado para ser drop-in cuando
 // exista la tabla `plantilla_prenda` en Supabase.
 // - PlantillaModel: campos finales + const constructor
 // - TipoPrenda: enum con label en español + parser tolerante (cae a `otros`)
 // - fromJson / toJson con keys snake_case (alineado con InventarioItemModel
 //   y ClienteModel del proyecto)
 // ============================================================================
+
+import 'material_plantilla_model.dart';
+import 'medida_punto_model.dart';
 
 // ─── ENUM TIPO DE PRENDA ────────────────────────────────────────────────────
 
@@ -57,8 +60,79 @@ enum TipoPrenda {
   }
 }
 
+// ─── ENUM TALLA PRENDA ──────────────────────────────────────────────────────
+
+// DECISIÓN: 8 tallas hardcodeadas en el enum (S, M, L, XL, XXL, 2, 4, 6).
+// RAZÓN: cubren los rangos típicos textil (adulto + escolar) según el PDF
+// de Den (Vista 2 Paso 2). Suficientes para el demo y producción inicial.
+// CAMBIAR: si necesitan más tallas (XS, XXXL, talles numéricos extendidos
+// 8/10/12), agregar values al enum y actualizar el helper fromString.
+//
+// Nota: t2/t4/t6 con prefijo "t" porque Dart no permite enum values empezando
+// con número. El label muestra "2", "4", "6" (sin la t).
+enum TallaPrenda {
+  s,
+  m,
+  l,
+  xl,
+  xxl,
+  t2,
+  t4,
+  t6;
+
+  String get label {
+    switch (this) {
+      case TallaPrenda.s:
+        return 'S';
+      case TallaPrenda.m:
+        return 'M';
+      case TallaPrenda.l:
+        return 'L';
+      case TallaPrenda.xl:
+        return 'XL';
+      case TallaPrenda.xxl:
+        return 'XXL';
+      case TallaPrenda.t2:
+        return '2';
+      case TallaPrenda.t4:
+        return '4';
+      case TallaPrenda.t6:
+        return '6';
+    }
+  }
+
+  /// Parsea la representación serializada al enum. Tolera valores
+  /// desconocidos retornando null para que el caller decida (puede
+  /// descartar la talla o caer a un default).
+  static TallaPrenda? fromString(String? raw) {
+    switch (raw) {
+      case 's':
+        return TallaPrenda.s;
+      case 'm':
+        return TallaPrenda.m;
+      case 'l':
+        return TallaPrenda.l;
+      case 'xl':
+        return TallaPrenda.xl;
+      case 'xxl':
+        return TallaPrenda.xxl;
+      case 't2':
+        return TallaPrenda.t2;
+      case 't4':
+        return TallaPrenda.t4;
+      case 't6':
+        return TallaPrenda.t6;
+      default:
+        return null;
+    }
+  }
+}
+
 // ─── MODELO ─────────────────────────────────────────────────────────────────
 
+// DECISIÓN: medidas, materiales y tallasSeleccionadas son listas, no Maps.
+// RAZÓN: el orden importa para la UI (orden en que el usuario las agregó).
+// CAMBIAR: si se necesita acceso por id, usar helpers `firstWhere` en runtime.
 class PlantillaModel {
   const PlantillaModel({
     required this.id,
@@ -67,6 +141,10 @@ class PlantillaModel {
     required this.version,
     required this.createdAt,
     this.activa = true,
+    this.especificaciones = '',
+    this.tallasSeleccionadas = const [],
+    this.medidas = const [],
+    this.materiales = const [],
   });
 
   final String id;
@@ -75,6 +153,12 @@ class PlantillaModel {
   final String version; // ej: "v1.0", "v2.1" — el backend define el formato
   final bool activa;
   final DateTime createdAt;
+
+  // Datos del form multi-paso
+  final String especificaciones; // texto multilínea (Paso 1)
+  final List<TallaPrenda> tallasSeleccionadas; // Paso 2
+  final List<MedidaPunto> medidas; // Paso 2
+  final List<MaterialPlantilla> materiales; // Paso 3
 
   // ─── COPYWITH ─────────────────────────────────────────────────────────────
 
@@ -85,6 +169,10 @@ class PlantillaModel {
     String? version,
     bool? activa,
     DateTime? createdAt,
+    String? especificaciones,
+    List<TallaPrenda>? tallasSeleccionadas,
+    List<MedidaPunto>? medidas,
+    List<MaterialPlantilla>? materiales,
   }) {
     return PlantillaModel(
       id: id ?? this.id,
@@ -93,12 +181,35 @@ class PlantillaModel {
       version: version ?? this.version,
       activa: activa ?? this.activa,
       createdAt: createdAt ?? this.createdAt,
+      especificaciones: especificaciones ?? this.especificaciones,
+      tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
+      medidas: medidas ?? this.medidas,
+      materiales: materiales ?? this.materiales,
     );
   }
 
   // ─── SERIALIZACIÓN ────────────────────────────────────────────────────────
 
   factory PlantillaModel.fromJson(Map<String, dynamic> json) {
+    final rawTallas = (json['tallas_seleccionadas'] as List?) ?? const [];
+    final tallas = <TallaPrenda>[];
+    for (final t in rawTallas) {
+      final parsed = TallaPrenda.fromString(t?.toString());
+      if (parsed != null) tallas.add(parsed);
+    }
+
+    final rawMedidas = (json['medidas'] as List?) ?? const [];
+    final medidas = rawMedidas
+        .whereType<Map<String, dynamic>>()
+        .map(MedidaPunto.fromJson)
+        .toList();
+
+    final rawMateriales = (json['materiales'] as List?) ?? const [];
+    final materiales = rawMateriales
+        .whereType<Map<String, dynamic>>()
+        .map(MaterialPlantilla.fromJson)
+        .toList();
+
     return PlantillaModel(
       id: json['id'].toString(),
       nombre: (json['nombre'] ?? '') as String,
@@ -108,6 +219,10 @@ class PlantillaModel {
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
+      especificaciones: (json['especificaciones'] ?? '') as String,
+      tallasSeleccionadas: tallas,
+      medidas: medidas,
+      materiales: materiales,
     );
   }
 
@@ -119,6 +234,10 @@ class PlantillaModel {
       'version': version,
       'activa': activa,
       'created_at': createdAt.toIso8601String(),
+      'especificaciones': especificaciones,
+      'tallas_seleccionadas': tallasSeleccionadas.map((t) => t.name).toList(),
+      'medidas': medidas.map((m) => m.toJson()).toList(),
+      'materiales': materiales.map((m) => m.toJson()).toList(),
     };
   }
 }

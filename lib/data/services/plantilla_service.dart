@@ -7,10 +7,15 @@
 // un flag `_useMockData` que conmuta entre lista local y query a Supabase.
 //
 // - obtenerPlantillas(): devuelve _mockPlantillas (8 plantillas variadas)
-// - _mockPlantillas: seed mutable para que la UI pueda agregarlas en el
-//   futuro sin reescribir el seed
+// - toggleActiva / nombreYaExiste: helpers para Vista 1
+// - crearPlantilla / actualizarPlantilla: usados por el form multi-paso
+// - obtenerMedidasSugeridas: lista hardcoded de medidas estándar por tipo,
+//   usada en Paso 2 cuando el usuario selecciona tallas y aún no creó
+//   manualmente filas de medidas.
 // ============================================================================
 
+import '../../domain/models/material_plantilla_model.dart';
+import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
 class PlantillaService {
@@ -64,11 +69,158 @@ class PlantillaService {
     // TODO Backend Mel: SELECT COUNT(*) FROM plantilla WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?)) AND id != ?
     throw UnimplementedError('Backend pendiente');
   }
+
+  // ─── CREAR PLANTILLA ──────────────────────────────────────────────────────
+
+  /// Crea una plantilla nueva con version inicial 'v1.0'. El id local es el
+  /// timestamp actual; cuando exista backend, será generado por Postgres
+  /// (sequence o uuid).
+  Future<PlantillaModel> crearPlantilla({
+    required String nombre,
+    required TipoPrenda tipoPrenda,
+    required String especificaciones,
+    required List<TallaPrenda> tallasSeleccionadas,
+    required List<MedidaPunto> medidas,
+    required List<MaterialPlantilla> materiales,
+  }) async {
+    final nueva = PlantillaModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      nombre: nombre,
+      tipoPrenda: tipoPrenda,
+      version: 'v1.0',
+      activa: true,
+      createdAt: DateTime.now(),
+      especificaciones: especificaciones,
+      tallasSeleccionadas: tallasSeleccionadas,
+      medidas: medidas,
+      materiales: materiales,
+    );
+    if (_useMockData) {
+      _mockPlantillas.add(nueva);
+      return nueva;
+    }
+    // TODO Backend Mel: INSERT INTO plantilla_prenda (...) VALUES (...).
+    // Además, esta operación debe insertar las filas hijas en
+    // `plantilla_medida` y `plantilla_material` (una fila por cada
+    // MedidaPunto y MaterialPlantilla). Sugerido como transaction o RPC
+    // para garantizar consistencia entre la plantilla y sus dependencias.
+    throw UnimplementedError('Backend pendiente');
+  }
+
+  // ─── ACTUALIZAR PLANTILLA ─────────────────────────────────────────────────
+
+  /// Reemplaza la plantilla con `id` por una versión actualizada con los
+  /// nuevos datos. La `version` se bumpea automáticamente; `createdAt` se
+  /// preserva del original.
+  Future<PlantillaModel> actualizarPlantilla({
+    required String id,
+    required String nombre,
+    required TipoPrenda tipoPrenda,
+    required String especificaciones,
+    required List<TallaPrenda> tallasSeleccionadas,
+    required List<MedidaPunto> medidas,
+    required List<MaterialPlantilla> materiales,
+  }) async {
+    if (_useMockData) {
+      final idx = _mockPlantillas.indexWhere((p) => p.id == id);
+      if (idx == -1) {
+        throw StateError('Plantilla no encontrada: $id');
+      }
+      final original = _mockPlantillas[idx];
+      final actualizada = original.copyWith(
+        nombre: nombre,
+        tipoPrenda: tipoPrenda,
+        version: _bumpVersion(original.version),
+        especificaciones: especificaciones,
+        tallasSeleccionadas: tallasSeleccionadas,
+        medidas: medidas,
+        materiales: materiales,
+      );
+      _mockPlantillas[idx] = actualizada;
+      return actualizada;
+    }
+    // TODO Backend Mel: UPDATE plantilla_prenda SET nombre = ?, tipo_prenda = ?,
+    // version = ?, especificaciones = ? WHERE id = ?
+    // y refrescar las tablas hijas (plantilla_medida, plantilla_material) —
+    // sugerido como transaction o RPC para garantizar consistencia. La forma
+    // más simple es DELETE + INSERT de las filas hijas dentro de la misma
+    // transacción.
+    throw UnimplementedError('Backend pendiente');
+  }
+
+  // ─── BUMP DE VERSIÓN ──────────────────────────────────────────────────────
+
+  // DECISIÓN: bump del número minor (vX.Y → vX.Y+1).
+  // RAZÓN: cambios mantienen compatibilidad mientras la prenda no cambia.
+  // CAMBIAR: para cambios mayores (cambio de tipo prenda, reestructuración),
+  // bumpear el major (vX → vX+1.0). Por ahora todos los cambios son minor.
+  // CAMBIAR: el backend debería generar la versión, no el cliente, para
+  // evitar conflicts en escenarios concurrentes.
+  String _bumpVersion(String actual) {
+    final match = RegExp(r'^v(\d+)\.(\d+)$').firstMatch(actual);
+    if (match == null) return 'v1.0';
+    final major = int.parse(match.group(1)!);
+    final minor = int.parse(match.group(2)!);
+    return 'v$major.${minor + 1}';
+  }
+
+  // ─── MEDIDAS SUGERIDAS POR TIPO DE PRENDA ─────────────────────────────────
+
+  // DECISIÓN: sugerencias de medidas hardcodeadas por tipo de prenda.
+  // RAZÓN: simplifica la UX — al seleccionar tallas, ya hay una tabla
+  // sugerida en lugar de partir de cero.
+  // CAMBIAR: cuando exista catálogo de medidas estándar en backend
+  // (tabla `medida_estandar` con FK a tipo_prenda), reemplazar este mock
+  // por una query.
+  // TODO Backend Mel: SELECT nombre FROM medida_estandar WHERE tipo_prenda = ?
+  Future<List<MedidaPunto>> obtenerMedidasSugeridas(TipoPrenda tipo) async {
+    final nombres = _sugerenciasPorTipo[tipo] ?? const ['Medida 1', 'Medida 2'];
+    final baseId = DateTime.now().millisecondsSinceEpoch;
+    return [
+      for (var i = 0; i < nombres.length; i++)
+        MedidaPunto(
+          id: '${baseId + i}',
+          nombre: nombres[i],
+          valoresPorTalla: const {},
+        ),
+    ];
+  }
 }
+
+// ─── SUGERENCIAS POR TIPO ─ tabla mock que va a desaparecer cuando exista ──
+// la tabla `medida_estandar` en el backend.
+const Map<TipoPrenda, List<String>> _sugerenciasPorTipo = {
+  TipoPrenda.camisas: [
+    'Ancho de pecho',
+    'Largo total',
+    'Largo manga',
+    'Ancho hombro',
+  ],
+  TipoPrenda.pantalones: [
+    'Cintura',
+    'Cadera',
+    'Largo entrepierna',
+    'Ancho rodilla',
+    'Ruedo',
+  ],
+  TipoPrenda.polleras: ['Cintura', 'Cadera', 'Largo total'],
+  TipoPrenda.vestidos: ['Pecho', 'Cintura', 'Cadera', 'Largo total'],
+  TipoPrenda.chombas: ['Ancho de pecho', 'Largo total', 'Largo manga'],
+  TipoPrenda.otros: ['Medida 1', 'Medida 2'],
+};
 
 // ─── MOCK SEED ──────────────────────────────────────────────────────────────
 // Fechas fijas en 2025 para que el listado se vea estable en demos. No usar
 // DateTime.now() acá porque rompería un eventual `const`.
+//
+// Las plantillas '1' y '3' tienen el set completo de datos del form
+// (especificaciones / tallas / medidas / materiales) — sirven para probar
+// el modo "editar". Las otras 6 quedan con campos default vacíos para
+// probar que el form maneja bien plantillas con datos parciales.
+//
+// Las referencias a `idInsumo` apuntan al seed del módulo Inventario
+// (cuando exista en este branch). Hoy son IDs string '1', '4', '9', '10', '3'
+// que matchean la convención del PDF.
 
 final List<PlantillaModel> _mockSeed = [
   PlantillaModel(
@@ -78,6 +230,67 @@ final List<PlantillaModel> _mockSeed = [
     version: 'v2.1',
     activa: true,
     createdAt: DateTime(2025, 3, 12),
+    especificaciones:
+        'Camisa de vestir manga larga. Cuello clásico, puño doble. '
+        'Confección estándar para uso formal o semiformal.',
+    tallasSeleccionadas: [
+      TallaPrenda.s,
+      TallaPrenda.m,
+      TallaPrenda.l,
+      TallaPrenda.xl,
+      TallaPrenda.xxl,
+    ],
+    medidas: [
+      MedidaPunto(
+        id: 'med-1-1',
+        nombre: 'Ancho de pecho',
+        valoresPorTalla: {
+          TallaPrenda.s: 50,
+          TallaPrenda.m: 52,
+          TallaPrenda.l: 54,
+          TallaPrenda.xl: 56,
+          TallaPrenda.xxl: 58,
+        },
+      ),
+      MedidaPunto(
+        id: 'med-1-2',
+        nombre: 'Largo total',
+        valoresPorTalla: {
+          TallaPrenda.s: 70,
+          TallaPrenda.m: 72,
+          TallaPrenda.l: 74,
+          TallaPrenda.xl: 76,
+          TallaPrenda.xxl: 78,
+        },
+      ),
+      MedidaPunto(
+        id: 'med-1-3',
+        nombre: 'Largo manga',
+        valoresPorTalla: {
+          TallaPrenda.s: 60,
+          TallaPrenda.m: 62,
+          TallaPrenda.l: 64,
+          TallaPrenda.xl: 66,
+          TallaPrenda.xxl: 68,
+        },
+      ),
+      MedidaPunto(
+        id: 'med-1-4',
+        nombre: 'Ancho hombro',
+        valoresPorTalla: {
+          TallaPrenda.s: 42,
+          TallaPrenda.m: 44,
+          TallaPrenda.l: 46,
+          TallaPrenda.xl: 48,
+          TallaPrenda.xxl: 50,
+        },
+      ),
+    ],
+    materiales: [
+      MaterialPlantilla(id: 'mat-1-1', idInsumo: '1', cantidad: 1.5),
+      MaterialPlantilla(id: 'mat-1-2', idInsumo: '9', cantidad: 0.1),
+      MaterialPlantilla(id: 'mat-1-3', idInsumo: '4', cantidad: 8),
+    ],
   ),
   PlantillaModel(
     id: '2',
@@ -94,6 +307,43 @@ final List<PlantillaModel> _mockSeed = [
     version: 'v3.0',
     activa: true,
     createdAt: DateTime(2024, 11, 22),
+    especificaciones:
+        'Pantalón cargo de trabajo. Bolsillos laterales con tapa. '
+        'Tela resistente.',
+    tallasSeleccionadas: [TallaPrenda.m, TallaPrenda.l, TallaPrenda.xl],
+    medidas: [
+      MedidaPunto(
+        id: 'med-3-1',
+        nombre: 'Cintura',
+        valoresPorTalla: {
+          TallaPrenda.m: 40,
+          TallaPrenda.l: 44,
+          TallaPrenda.xl: 48,
+        },
+      ),
+      MedidaPunto(
+        id: 'med-3-2',
+        nombre: 'Largo entrepierna',
+        valoresPorTalla: {
+          TallaPrenda.m: 80,
+          TallaPrenda.l: 82,
+          TallaPrenda.xl: 84,
+        },
+      ),
+      MedidaPunto(
+        id: 'med-3-3',
+        nombre: 'Ruedo',
+        valoresPorTalla: {
+          TallaPrenda.m: 22,
+          TallaPrenda.l: 23,
+          TallaPrenda.xl: 24,
+        },
+      ),
+    ],
+    materiales: [
+      MaterialPlantilla(id: 'mat-3-1', idInsumo: '10', cantidad: 2.0),
+      MaterialPlantilla(id: 'mat-3-2', idInsumo: '3', cantidad: 0.15),
+    ],
   ),
   PlantillaModel(
     id: '4',

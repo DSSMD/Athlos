@@ -12,6 +12,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/plantilla_service.dart';
+import '../../domain/models/material_plantilla_model.dart';
+import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
 // ─── SERVICE PROVIDER ───────────────────────────────────────────────────────
@@ -73,6 +75,72 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     return items.any(
       (p) => p.id != excludeId && p.nombre.toLowerCase().trim() == target,
     );
+  }
+
+  // ─── CREAR PLANTILLA (FORM MULTI-PASO) ────────────────────────────────────
+
+  /// Crea una plantilla y la agrega al state local (optimistic update). Si
+  /// el service falla, rethrowea para que el form muestre el error y el
+  /// state queda intacto.
+  Future<PlantillaModel> crearPlantilla({
+    required String nombre,
+    required TipoPrenda tipoPrenda,
+    required String especificaciones,
+    required List<TallaPrenda> tallasSeleccionadas,
+    required List<MedidaPunto> medidas,
+    required List<MaterialPlantilla> materiales,
+  }) async {
+    final service = ref.read(plantillaServiceProvider);
+    try {
+      final nueva = await service.crearPlantilla(
+        nombre: nombre,
+        tipoPrenda: tipoPrenda,
+        especificaciones: especificaciones,
+        tallasSeleccionadas: tallasSeleccionadas,
+        medidas: medidas,
+        materiales: materiales,
+      );
+      final actuales = state.value ?? const <PlantillaModel>[];
+      state = AsyncValue.data([...actuales, nueva]);
+      return nueva;
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  // ─── ACTUALIZAR PLANTILLA (FORM MULTI-PASO) ───────────────────────────────
+
+  /// Reemplaza la plantilla con `id` por la versión actualizada. La version
+  /// la bumpea el service. Optimistic update sobre el state local.
+  Future<PlantillaModel> actualizarPlantilla({
+    required String id,
+    required String nombre,
+    required TipoPrenda tipoPrenda,
+    required String especificaciones,
+    required List<TallaPrenda> tallasSeleccionadas,
+    required List<MedidaPunto> medidas,
+    required List<MaterialPlantilla> materiales,
+  }) async {
+    final service = ref.read(plantillaServiceProvider);
+    try {
+      final actualizada = await service.actualizarPlantilla(
+        id: id,
+        nombre: nombre,
+        tipoPrenda: tipoPrenda,
+        especificaciones: especificaciones,
+        tallasSeleccionadas: tallasSeleccionadas,
+        medidas: medidas,
+        materiales: materiales,
+      );
+      final actuales = state.value ?? const <PlantillaModel>[];
+      state = AsyncValue.data([
+        for (final p in actuales)
+          if (p.id == id) actualizada else p,
+      ]);
+      return actualizada;
+    } catch (_) {
+      rethrow;
+    }
   }
 }
 
