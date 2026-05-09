@@ -46,10 +46,11 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required UserRole rol,
     int? idArea,
     double? tarifaPagoBase,
+    // TODO (Permisos): Recibir required List<String> permisos, y pasarlos al Service.
   }) async {
     final service = ref.read(usuarioServiceProvider);
 
-    final estadoAnterior = state; 
+    final estadoAnterior = state;
 
     state = const AsyncValue.loading();
 
@@ -64,14 +65,13 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         idArea: idArea,
         tarifaPagoBase: tarifaPagoBase,
       );
-      
+
       state = await AsyncValue.guard(() async {
         return _fetchUsuarios();
       });
-
     } catch (e) {
-      state = estadoAnterior; 
-      rethrow; 
+      state = estadoAnterior;
+      rethrow;
     }
   }
 
@@ -87,6 +87,7 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required bool activo,
     int? idArea,
     double? tarifaPagoBase,
+    // TODO (Permisos): Recibir required List<String> permisos, y pasarlos al Service.
   }) async {
     final service = ref.read(usuarioServiceProvider);
 
@@ -126,3 +127,17 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     });
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROVEEDOR DE CATÁLOGO DE ÁREAS
+// ══════════════════════════════════════════════════════════════════════════
+final areasProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final supabase = Supabase.instance.client;
+  
+  final response = await supabase
+      .from('area_produccion')
+      .select('id_area, nombre_area')
+      .order('id_area', ascending: true);
+
+  return List<Map<String, dynamic>>.from(response);
+});

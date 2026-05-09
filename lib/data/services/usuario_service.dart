@@ -66,6 +66,7 @@ class UsuarioService {
           'id_rol': _roleToInt(rol),
           'id_area': idArea,
           'tarifa_pago_base': tarifaPagoBase, 
+          // TODO (Permisos): Incluir la lista de permisos en la solicitud
         },
       );
 
@@ -130,6 +131,9 @@ class UsuarioService {
           });
         }
       }
+
+      // TODO (Permisos): Guardar la lista de permisos en Supabase.
+      // Ejemplo: await _supabase.from('profiles').update({'permisos': permisos}).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar usuario: $e');
     }

@@ -85,8 +85,8 @@ class UserCard extends StatelessWidget {
 
               // Permisos (si tiene)
               // Aquí usamos el getter permissions del modelo para mostrar los permisos correspondientes
-              if (user.permissions.isNotEmpty)
-                _PermissionsWrap(permissions: user.permissions),
+              if (user.role.defaultPermissions.isNotEmpty)
+                _PermissionsWrap(permissions: user.role.defaultPermissions),
               const SizedBox(height: AppSpacing.md),
 
               // Footer: estado + último acceso

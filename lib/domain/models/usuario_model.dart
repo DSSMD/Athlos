@@ -14,6 +14,9 @@ class UsuarioModel {
   final UserStatus status;
   final DateTime? lastAccess;
 
+  // TODO (Permisos): Agregar campo "final List<String> permisosPersonales;" 
+  // para leer los permisos guardados en la base de datos (requerirá nueva columna en Supabase).
+
   // ══════════════════════════════════════════════════════════════════════════
   // CAMPOS: DATOS DE TRABAJADOR (Recursos Humanos)
   // ══════════════════════════════════════════════════════════════════════════
@@ -42,20 +45,6 @@ class UsuarioModel {
   // 💡 Getter útil para saber rápidamente si este usuario es de producción/trabajador
   bool get isTrabajador => idTrabajador != null;
 
-  // Getter que genera la lista hardcodeada según el rol actual
-  List<String> get permissions {
-    switch (role) {
-      case UserRole.administrador:
-        return ['Usuarios', 'Inventario', 'Ventas', 'Producción', 'Reportes'];
-      case UserRole.produccion:
-        return ['Producción', 'Inventario'];
-      case UserRole.cajas:
-        return ['Caja', 'Ventas', 'Clientes'];
-      case UserRole.invitado:
-        return ['Consulta', 'Dashboard'];
-    }
-  }
-
   factory UsuarioModel.fromJson(Map<String, dynamic> json) {
     final rolNombre = json['roles']?['nombre_rol']?.toString() ?? '';
     final bool isActivo = json['activo'] ?? true;
@@ -76,7 +65,6 @@ class UsuarioModel {
     DateTime? tFecha;
 
     final trabajadoresData = json['trabajadores'];
-    // Verificamos si trajo datos de trabajador y si es una lista con al menos un elemento
     if (trabajadoresData != null && trabajadoresData is List && trabajadoresData.isNotEmpty) {
       final trabajador = trabajadoresData.first; // Tomamos el registro asociado
       
@@ -88,13 +76,14 @@ class UsuarioModel {
           ? DateTime.tryParse(trabajador['fecha_contratacion'].toString()) 
           : null;
 
-      // Extraemos el área (si se hizo el join correcto)
+      aId = trabajador['id_area'] != null 
+          ? int.tryParse(trabajador['id_area'].toString()) 
+          : null;
+
+      // Solo extraemos el nombre de la relación
       final areaData = trabajador['area_produccion'];
       if (areaData != null) {
-        aId = areaData['id_area'];
         aNombre = areaData['nombre_area']?.toString();
-      } else {
-        aId = trabajador['id_area']; // Fallback por si solo viene el ID
       }
     }
 
@@ -133,3 +122,28 @@ class UsuarioModel {
     }
   }
 }
+
+extension UserRolePermissions on UserRole {
+    List<String> get defaultPermissions {
+      switch (this) {
+        case UserRole.administrador:
+          return [
+            'Usuarios',
+            'Inventario',
+            'Ventas',
+            'Producción',
+            'Reportes',
+            'Caja',
+            'Clientes',
+            'Consulta',
+            'Dashboard'
+          ]; // Todos los permisos posibles
+        case UserRole.produccion:
+          return ['Producción', 'Inventario'];
+        case UserRole.cajas:
+          return ['Caja', 'Ventas', 'Clientes'];
+        case UserRole.invitado:
+          return ['Consulta', 'Dashboard'];
+      }
+    }
+  }
