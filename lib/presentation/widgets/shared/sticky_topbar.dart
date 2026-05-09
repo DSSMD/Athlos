@@ -22,9 +22,9 @@ class StickyTopbar extends StatelessWidget {
     required this.searchHint,
     required this.searchController,
     required this.onSearchChanged,
-    required this.newButtonLabelMobile,
-    required this.newButtonLabelDesktop,
-    required this.onNewPressed,
+    this.newButtonLabelMobile,
+    this.newButtonLabelDesktop,
+    this.onNewPressed,
   });
 
   final bool isMobile;
@@ -33,13 +33,9 @@ class StickyTopbar extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
 
-  /// Label corto para mobile (ej: "Nuevo")
-  final String newButtonLabelMobile;
-
-  /// Label completo para desktop (ej: "Nuevo usuario")
-  final String newButtonLabelDesktop;
-
-  final VoidCallback onNewPressed;
+  final String? newButtonLabelMobile;
+  final String? newButtonLabelDesktop;
+  final VoidCallback? onNewPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -63,11 +59,12 @@ class StickyTopbar extends StatelessWidget {
         Row(
           children: [
             Expanded(child: Text(title, style: AppTypography.h1)),
-            ElevatedButton.icon(
-              onPressed: onNewPressed,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(newButtonLabelMobile),
-            ),
+            if (onNewPressed != null && newButtonLabelMobile != null)
+              ElevatedButton.icon(
+                onPressed: onNewPressed,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(newButtonLabelMobile!),
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -94,11 +91,12 @@ class StickyTopbar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.md),
-        ElevatedButton.icon(
-          onPressed: onNewPressed,
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(newButtonLabelDesktop),
-        ),
+        if (onNewPressed != null && newButtonLabelDesktop != null)
+          ElevatedButton.icon(
+            onPressed: onNewPressed,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(newButtonLabelDesktop!),
+          ),
       ],
     );
   }
