@@ -122,7 +122,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
     'Caja',
     'Clientes',
     'Consulta',
-    'Dashboard'
+    'Dashboard',
   ];
 
   bool _isSaving = false;
@@ -140,7 +140,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
       nombre = parts.isNotEmpty ? parts.first : '';
       apellido = parts.length > 1 ? parts.sublist(1).join(' ') : '';
 
-// 💡 CORRECCIÓN: Usamos la nueva extensión de UserRole
+      // 💡 CORRECCIÓN: Usamos la nueva extensión de UserRole
       _permisos.addAll(u.role.defaultPermissions);
 
       if (u.isTrabajador) {
@@ -228,7 +228,6 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
           rol: _rol!,
           idArea: finalAreaId,
           tarifaPagoBase: finalTarifa,
-          // TODO (Permisos): Enviar la lista de permisos seleccionados: permisos: _permisos.toList(),
         );
       }
 
@@ -295,7 +294,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
   // TODO: Agregar lógica para actualizar permisos dinámicamente si el rol cambia (opcional pero mejora UX)
   void _onRoleChanged(UserRole? newRole) {
     if (newRole == null) return;
-    
+
     setState(() {
       _rol = newRole;
       _permisos.clear();
@@ -509,14 +508,31 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                             style: TextStyle(color: Colors.red.shade700),
                           ),
                           data: (areas) {
-                            final bool areaExists = areas.any(
+                            // 1. FILTRADO: Filtramos la lista según el rol seleccionado
+                            final areasFiltradas = areas.where((area) {
+                              if (_rol == UserRole.produccion) {
+                                // IDs 1, 2, 3 son de Producción
+                                return area['id_area'] == 1 ||
+                                    area['id_area'] == 2 ||
+                                    area['id_area'] == 3;
+                              } else if (_rol == UserRole.cajas) {
+                                // ID 4 es de Ventas/Cajas
+                                return area['id_area'] == 4;
+                              }
+                              return false;
+                            }).toList();
+
+                            // 2. RECUPERACIÓN SEGURA: Verificamos si el ID
+                            // existe dentro de la lista YA FILTRADA
+                            final bool areaExists = areasFiltradas.any(
                               (a) => a['id_area'] == _selectedAreaId,
                             );
+
                             final int? safeAreaId = areaExists
                                 ? _selectedAreaId
                                 : null;
+
                             return DropdownButtonFormField<int>(
-                              // ignore: deprecated_member_use
                               value:
                                   safeAreaId, // <-- Usamos la variable segura
                               decoration: InputDecoration(
@@ -534,7 +550,8 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                                   borderSide: BorderSide.none,
                                 ),
                               ),
-                              items: areas.map((area) {
+                              // 3. RENDERIZADO: Pintamos solo las áreas filtradas
+                              items: areasFiltradas.map((area) {
                                 return DropdownMenuItem<int>(
                                   value: area['id_area'] as int,
                                   child: Text(area['nombre_area'] as String),
