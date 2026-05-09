@@ -42,6 +42,38 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(_fetch);
   }
+
+  // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
+
+  /// Conmuta el flag `activa` de la plantilla y aplica un optimistic update
+  /// sobre el state local — no recarga la lista entera. Si el service falla,
+  /// rethrowea para que la UI muestre el error y el state queda intacto.
+  Future<void> toggleActiva(String id) async {
+    final service = ref.read(plantillaServiceProvider);
+    try {
+      final actualizada = await service.toggleActiva(id);
+      final actuales = state.value ?? const <PlantillaModel>[];
+      state = AsyncValue.data([
+        for (final p in actuales)
+          if (p.id == id) actualizada else p,
+      ]);
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  // ─── VALIDACIÓN SÍNCRONA DE NOMBRE ÚNICO ──────────────────────────────────
+
+  /// Validación local sobre el state cargado — pensada para el form.
+  /// `excludeId` permite ignorar la plantilla en edición. No protege contra
+  /// concurrencia: el backend debe tener el constraint final.
+  bool nombreYaExiste(String nombre, {String? excludeId}) {
+    final items = state.value ?? const <PlantillaModel>[];
+    final target = nombre.toLowerCase().trim();
+    return items.any(
+      (p) => p.id != excludeId && p.nombre.toLowerCase().trim() == target,
+    );
+  }
 }
 
 // ─── FILTROS ────────────────────────────────────────────────────────────────

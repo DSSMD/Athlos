@@ -1,15 +1,17 @@
 // ============================================================================
 // lib/presentation/pages/admin/plantillas_page.dart
 // ============================================================================
-// Pantalla DEMO del módulo Diseño de Prendas — Vista 1 (listado de plantillas).
+// Pantalla del módulo Diseño de Prendas — Vista 1 (listado de plantillas).
 // - Header: StickyTopbar con buscador + botón "Nueva plantilla"
 // - 4 KPIs: Total, Activas, Inactivas, Tipos distintos
 // - FilterChips: Todas / Activas / Inactivas
 // - Desktop: tabla con columnas Nombre / Tipo / Versión / Estado / Acciones
 // - Mobile: cards apiladas con la misma información
 // - Paginación: DesktopPagination (desktop) / LoadMoreButton (mobile)
-// - Acciones (Editar, Desactivar, + Nueva): TODAS son demo → SnackBars o
-//   abren el placeholder. No hay backend.
+// - Acciones:
+//     * "+ Nueva plantilla" / "Editar" → abren PlantillaFormPlaceholder en
+//       modo crear/editar (placeholder hasta que exista el form multi-paso).
+//     * "Desactivar/Activar" → confirm dialog + toggle real vía provider.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -80,26 +82,75 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
     }).toList();
   }
 
-  // ─── ACCIONES (todas demo) ─────────────────────────────────────────────────
+  // ─── ACCIONES ──────────────────────────────────────────────────────────────
 
+  // TODO(plantillas-modulo): cambiar por PlantillaFormPage cuando exista el
+  // form multi-paso (Bloque 3).
   void _abrirNueva() {
-    showPlantillaFormPlaceholder(context);
+    showPlantillaFormPlaceholder(context, mode: 'crear');
   }
 
+  // TODO(plantillas-modulo): cambiar por PlantillaFormPage(initialPlantilla: ...)
+  // cuando exista el form multi-paso (Bloque 3).
   void _onEditar(PlantillaModel p) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('TODO(plantillas-demo): editar plantilla'),
-        duration: Duration(seconds: 2),
-      ),
+    showPlantillaFormPlaceholder(
+      context,
+      mode: 'editar',
+      initialPlantilla: p,
     );
   }
 
-  void _onToggleActiva(PlantillaModel p) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('TODO(plantillas-demo): toggle activa/inactiva'),
-        duration: Duration(seconds: 2),
+  Future<void> _onToggleActiva(PlantillaModel p) async {
+    final confirm = await _confirmarToggle(context, p);
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    try {
+      await ref.read(plantillaProvider.notifier).toggleActiva(p.id);
+      if (!mounted) return;
+      final mensaje = p.activa
+          ? 'Plantilla "${p.nombre}" desactivada'
+          : 'Plantilla "${p.nombre}" activada';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), duration: const Duration(seconds: 2)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Diálogo de confirmación con texto contextual al estado actual.
+  Future<bool?> _confirmarToggle(BuildContext context, PlantillaModel p) {
+    final mensaje = p.activa
+        ? '¿Desactivar plantilla "${p.nombre}"? '
+              'No aparecerá en uso pero seguirá registrada.'
+        : '¿Activar plantilla "${p.nombre}"? '
+              'Volverá a estar disponible para uso.';
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: Text(p.activa ? 'Desactivar plantilla' : 'Activar plantilla'),
+        content: Text(mensaje),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirmar'),
+          ),
+        ],
       ),
     );
   }

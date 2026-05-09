@@ -26,8 +26,42 @@ class PlantillaService {
     if (_useMockData) {
       return List.unmodifiable(_mockPlantillas);
     }
-    // TODO(plantillas-demo): query a Supabase tabla `plantilla_prenda` con
+    // TODO(plantillas-modulo): query a Supabase tabla `plantilla_prenda` con
     // join a `tipo_prenda`. Ajustar columnas/relaciones cuando backend exista.
+    throw UnimplementedError('Backend pendiente');
+  }
+
+  // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
+
+  /// Conmuta el flag `activa` de la plantilla y devuelve la nueva versión.
+  /// En modo mock muta la lista interna; en modo real debe ser un UPDATE.
+  Future<PlantillaModel> toggleActiva(String id) async {
+    if (_useMockData) {
+      final idx = _mockPlantillas.indexWhere((p) => p.id == id);
+      if (idx == -1) {
+        throw StateError('Plantilla no encontrada: $id');
+      }
+      final actual = _mockPlantillas[idx];
+      final nueva = actual.copyWith(activa: !actual.activa);
+      _mockPlantillas[idx] = nueva;
+      return nueva;
+    }
+    // TODO Backend Mel: UPDATE plantilla SET activa = !activa WHERE id = ?
+    throw UnimplementedError('Backend pendiente');
+  }
+
+  // ─── VALIDACIÓN DE NOMBRE ÚNICO ───────────────────────────────────────────
+
+  /// True si ya existe otra plantilla con ese `nombre` (case-insensitive,
+  /// trimmed). `excludeId` permite ignorar la plantilla en edición.
+  Future<bool> nombreYaExiste(String nombre, {String? excludeId}) async {
+    final target = nombre.toLowerCase().trim();
+    if (_useMockData) {
+      return _mockPlantillas.any(
+        (p) => p.id != excludeId && p.nombre.toLowerCase().trim() == target,
+      );
+    }
+    // TODO Backend Mel: SELECT COUNT(*) FROM plantilla WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?)) AND id != ?
     throw UnimplementedError('Backend pendiente');
   }
 }

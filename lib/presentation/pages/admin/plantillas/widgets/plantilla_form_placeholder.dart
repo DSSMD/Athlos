@@ -1,16 +1,29 @@
 // ============================================================================
 // lib/presentation/pages/admin/plantillas/widgets/plantilla_form_placeholder.dart
 // ============================================================================
-// Modal placeholder para "Nueva plantilla". Es una vista DEMO: muestra un
-// mensaje de "en construcción" para que el PO vea el flujo del botón sin que
-// haya formulario funcional todavía.
+// Modal placeholder de "Nueva / Editar plantilla". Es una vista DEMO: muestra
+// un mensaje de "en construcción" con el título adaptado al modo, mientras
+// no exista el form multi-paso real. Sirve para que el PO vea el flujo del
+// botón sin bloquear la pantalla principal.
 // - Mobile: full-screen route (MaterialPageRoute con fullscreenDialog: true)
 // - Desktop: Dialog centrado con maxWidth 460
-// - showPlantillaFormPlaceholder(context): helper público para abrirlo
+// - showPlantillaFormPlaceholder(...): helper público con `mode` e
+//   `initialPlantilla` (el modo 'editar' requiere initialPlantilla != null).
+// ============================================================================
+//
+// ============================================================================
+// TODO(plantillas-modulo): este placeholder debe reemplazarse por el form
+// multi-paso real (PlantillaFormPage) que tendrá 4 pasos:
+// - Paso 1: Información general (nombre, tipo prenda, especificaciones)
+// - Paso 2: Cuadro de medidas (selector tallas + tabla dinámica)
+// - Paso 3: Receta de materiales (selector de insumos)
+// - Paso 4: Resumen y guardado
+// En modo 'editar' debe precargar los datos de initialPlantilla.
 // ============================================================================
 
 import 'package:flutter/material.dart';
 
+import '../../../../../domain/models/plantilla_model.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
@@ -20,15 +33,41 @@ import '../../../../theme/app_typography.dart';
 /// Abre el placeholder. En mobile usa una route fullscreen, en desktop un
 /// Dialog centrado. Se considera mobile si el ancho < 600 (consistente con
 /// el resto de las modales del proyecto).
-Future<void> showPlantillaFormPlaceholder(BuildContext context) {
+///
+/// [mode] puede ser `'crear'` (default) o `'editar'`. En modo `'editar'`
+/// hay que pasar [initialPlantilla] o lanza AssertionError.
+Future<void> showPlantillaFormPlaceholder(
+  BuildContext context, {
+  String mode = 'crear',
+  PlantillaModel? initialPlantilla,
+}) {
+  assert(
+    mode == 'crear' || mode == 'editar',
+    'mode debe ser "crear" o "editar"',
+  );
+  assert(
+    !(mode == 'crear' && initialPlantilla != null),
+    'En modo "crear" no debe pasarse initialPlantilla',
+  );
+  assert(
+    !(mode == 'editar' && initialPlantilla == null),
+    'En modo "editar" debe pasarse initialPlantilla',
+  );
+
   final isMobile = MediaQuery.of(context).size.width < 600;
   if (isMobile) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => const Scaffold(
+        builder: (_) => Scaffold(
           backgroundColor: AppColors.background,
-          body: SafeArea(child: _PlaceholderBody(showAppBarBack: true)),
+          body: SafeArea(
+            child: _PlaceholderBody(
+              showAppBarBack: true,
+              mode: mode,
+              initialPlantilla: initialPlantilla,
+            ),
+          ),
         ),
       ),
     );
@@ -42,7 +81,11 @@ Future<void> showPlantillaFormPlaceholder(BuildContext context) {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
-        child: const _PlaceholderBody(showAppBarBack: false),
+        child: _PlaceholderBody(
+          showAppBarBack: false,
+          mode: mode,
+          initialPlantilla: initialPlantilla,
+        ),
       ),
     ),
   );
@@ -51,11 +94,24 @@ Future<void> showPlantillaFormPlaceholder(BuildContext context) {
 // ─── BODY ───────────────────────────────────────────────────────────────────
 
 class _PlaceholderBody extends StatelessWidget {
-  const _PlaceholderBody({required this.showAppBarBack});
+  const _PlaceholderBody({
+    required this.showAppBarBack,
+    required this.mode,
+    required this.initialPlantilla,
+  });
 
   /// En mobile mostramos un botón de cerrar arriba; en desktop el Dialog
   /// se cierra solo con el botón "Cerrar" del final.
   final bool showAppBarBack;
+  final String mode;
+  final PlantillaModel? initialPlantilla;
+
+  String get _titulo {
+    if (mode == 'editar' && initialPlantilla != null) {
+      return 'Editar Plantilla: ${initialPlantilla!.nombre}';
+    }
+    return 'Nueva Plantilla';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,11 +145,7 @@ class _PlaceholderBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          Text(
-            'Formulario de Plantilla',
-            style: AppTypography.h2,
-            textAlign: TextAlign.center,
-          ),
+          Text(_titulo, style: AppTypography.h2, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.sm),
           Text(
             '🚧 En construcción',

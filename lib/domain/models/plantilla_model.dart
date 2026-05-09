@@ -76,6 +76,26 @@ class PlantillaModel {
   final bool activa;
   final DateTime createdAt;
 
+  // ─── COPYWITH ─────────────────────────────────────────────────────────────
+
+  PlantillaModel copyWith({
+    String? id,
+    String? nombre,
+    TipoPrenda? tipoPrenda,
+    String? version,
+    bool? activa,
+    DateTime? createdAt,
+  }) {
+    return PlantillaModel(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      tipoPrenda: tipoPrenda ?? this.tipoPrenda,
+      version: version ?? this.version,
+      activa: activa ?? this.activa,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   // ─── SERIALIZACIÓN ────────────────────────────────────────────────────────
 
   factory PlantillaModel.fromJson(Map<String, dynamic> json) {
