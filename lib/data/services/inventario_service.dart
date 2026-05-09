@@ -85,6 +85,19 @@ class InventarioService {
     }
   }
 
+  Future<void> actualizarEstadoActivo(String idInsumo, bool nuevoEstado) async {
+    try {
+      await _client
+          .from('insumo')
+          .update({
+            'activo': nuevoEstado,
+          }) // 👈 Actualizamos solo la columna activo
+          .eq('id_insumo', idInsumo); // 👈 Filtramos por el ID del insumo
+    } catch (e) {
+      throw Exception('Error al cambiar estado del insumo: $e');
+    }
+  }
+
   Future<InventarioItemModel> crearInsumo({
     required String codigo,
     required String nombre,

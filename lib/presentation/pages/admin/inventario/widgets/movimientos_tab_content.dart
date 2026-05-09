@@ -64,8 +64,9 @@ class _MovimientosBodyState extends ConsumerState<_MovimientosBody> {
         ref.watch(movimientoProvider).value ?? const <MovimientoModel>[];
 
     final totalItems = filtrados.length;
-    final totalPages =
-        totalItems == 0 ? 1 : (totalItems / _itemsPerPage).ceil();
+    final totalPages = totalItems == 0
+        ? 1
+        : (totalItems / _itemsPerPage).ceil();
     if (_currentPage > totalPages) _currentPage = 1;
     final paginated = filtrados
         .skip((_currentPage - 1) * _itemsPerPage)
@@ -79,7 +80,7 @@ class _MovimientosBodyState extends ConsumerState<_MovimientosBody> {
         children: [
           _Kpis(isMobile: isMobile, kpis: kpis),
           const SizedBox(height: AppSpacing.xl),
-          _AreasTabsRow(allMovimientos: allMovs, onChanged: _resetPage),
+          /*_AreasTabsRow(allMovimientos: allMovs, onChanged: _resetPage),*/
           const SizedBox(height: AppSpacing.lg),
           _TiposChipsRow(allMovimientos: allMovs, onChanged: _resetPage),
           const SizedBox(height: AppSpacing.lg),
@@ -128,7 +129,7 @@ class _Kpis extends StatelessWidget {
         description: 'Asignadas a producción',
         valueColor: AppColors.error,
       ),
-      KpiCard(
+      /*KpiCard(
         value: '${kpis.automaticosMes}',
         label: 'Desc. Automáticos',
         description: 'Por producción',
@@ -139,7 +140,7 @@ class _Kpis extends StatelessWidget {
         label: 'Ajustes Manuales',
         description: 'Correcciones',
         valueColor: AppColors.warning,
-      ),
+      ),*/
     ];
 
     if (isMobile) {
@@ -183,7 +184,7 @@ class _Kpis extends StatelessWidget {
 
 // ─── TABS POR ÁREA ────────────────────────────────────────────────────────────
 
-class _AreasTabsRow extends ConsumerWidget {
+/*class _AreasTabsRow extends ConsumerWidget {
   const _AreasTabsRow({required this.allMovimientos, required this.onChanged});
 
   final List<MovimientoModel> allMovimientos;
@@ -236,7 +237,7 @@ class _AreasTabsRow extends ConsumerWidget {
     );
   }
 }
-
+*/
 class _AreaTab extends StatelessWidget {
   const _AreaTab({
     required this.label,
@@ -335,8 +336,9 @@ class _TiposChipsRow extends ConsumerWidget {
     final activo = ref.watch(movimientoFiltrosProvider).tipo;
     final notifier = ref.read(movimientoFiltrosProvider.notifier);
 
-    int countTipo(TipoMovimiento? t) =>
-        t == null ? allMovimientos.length : allMovimientos.where((m) => m.tipo == t).length;
+    int countTipo(TipoMovimiento? t) => t == null
+        ? allMovimientos.length
+        : allMovimientos.where((m) => m.tipo == t).length;
 
     return Scrollbar(
       thumbVisibility: true,
@@ -424,9 +426,7 @@ class _TipoChip extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: bg,
-            border: Border.all(
-              color: active ? activeColor : AppColors.border,
-            ),
+            border: Border.all(color: active ? activeColor : AppColors.border),
             borderRadius: BorderRadius.circular(AppRadius.full),
           ),
           child: Text(
@@ -458,11 +458,7 @@ class _EmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.swap_horiz,
-            size: 48,
-            color: AppColors.textMuted,
-          ),
+          const Icon(Icons.swap_horiz, size: 48, color: AppColors.textMuted),
           const SizedBox(height: AppSpacing.md),
           Text('No se encontraron movimientos', style: AppTypography.h3),
           const SizedBox(height: AppSpacing.sm),
@@ -518,11 +514,15 @@ class _DesktopTable extends StatelessWidget {
               children: const [
                 _HeaderCell('FECHA / HORA', flex: _kColFecha),
                 SizedBox(width: _kColGap),
-                _HeaderCell('ÁREA', flex: _kColArea, align: TextAlign.center),
-                SizedBox(width: _kColGap),
+                /*_HeaderCell('ÁREA', flex: _kColArea, align: TextAlign.center),
+                SizedBox(width: _kColGap),*/
                 _HeaderCell('TIPO', flex: _kColTipo, align: TextAlign.center),
                 SizedBox(width: _kColGap),
-                _HeaderCell('INSUMO', flex: _kColInsumo, align: TextAlign.center),
+                _HeaderCell(
+                  'INSUMO',
+                  flex: _kColInsumo,
+                  align: TextAlign.center,
+                ),
                 SizedBox(width: _kColGap),
                 _HeaderCell(
                   'CANTIDAD',
@@ -530,7 +530,7 @@ class _DesktopTable extends StatelessWidget {
                   align: TextAlign.center,
                 ),
                 SizedBox(width: _kColGap),
-                _HeaderCell(
+                /*_HeaderCell(
                   'STOCK\nANTES',
                   flex: _kColStockAntes,
                   align: TextAlign.center,
@@ -540,11 +540,19 @@ class _DesktopTable extends StatelessWidget {
                   'STOCK\nDESPUÉS',
                   flex: _kColStockDespues,
                   align: TextAlign.center,
+                ),*/
+                SizedBox(width: _kColGap),
+                _HeaderCell(
+                  'REFERENCIA',
+                  flex: _kColReferencia,
+                  align: TextAlign.center,
                 ),
                 SizedBox(width: _kColGap),
-               _HeaderCell('REFERENCIA', flex: _kColReferencia, align: TextAlign.center),
-                SizedBox(width: _kColGap),
-               _HeaderCell('RESPONSABLE', flex: _kColResponsable, align: TextAlign.center),
+                _HeaderCell(
+                  'RESPONSABLE',
+                  flex: _kColResponsable,
+                  align: TextAlign.center,
+                ),
               ],
             ),
           ),
@@ -560,7 +568,11 @@ class _DesktopTable extends StatelessWidget {
 }
 
 class _HeaderCell extends StatelessWidget {
-  const _HeaderCell(this.label, {required this.flex, this.align = TextAlign.left});
+  const _HeaderCell(
+    this.label, {
+    required this.flex,
+    this.align = TextAlign.left,
+  });
 
   final String label;
   final int flex;
@@ -598,8 +610,8 @@ class _DesktopRow extends StatelessWidget {
     final stockColor = item.stockDespues < item.stockAntes
         ? AppColors.error
         : (item.stockDespues > item.stockAntes
-            ? AppColors.success
-            : AppColors.textPrimary);
+              ? AppColors.success
+              : AppColors.textPrimary);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -619,13 +631,13 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: _kColGap),
-          Expanded(
+          /*Expanded(
             flex: _kColArea,
             child: Align(
               alignment: Alignment.center,
               child: _AreaBadge(area: item.area),
             ),
-          ),
+          ),*/
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColTipo,
@@ -639,9 +651,7 @@ class _DesktopRow extends StatelessWidget {
             flex: _kColInsumo,
             child: Text(
               insumo?.nombre ?? '—',
-              style: AppTypography.small.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTypography.small.copyWith(fontWeight: FontWeight.w500),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -661,7 +671,7 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: _kColGap),
-          Expanded(
+          /*Expanded(
             flex: _kColStockAntes,
             child: Text(
               '${_formatNumber(item.stockAntes)} $unidad',
@@ -684,7 +694,7 @@ class _DesktopRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          ),
+          ),*/
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColReferencia,
@@ -776,10 +786,7 @@ class _MobileCard extends StatelessWidget {
             children: [
               _AreaBadge(area: item.area),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                _formatFechaHora(item.fecha),
-                style: AppTypography.caption,
-              ),
+              Text(_formatFechaHora(item.fecha), style: AppTypography.caption),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),

@@ -56,6 +56,7 @@ class InventarioItemModel {
     required this.stockMinimo,
     required this.unidad,
     required this.costoUnitario,
+    required this.activo,
     this.dimensionable = false,
     this.atributosTecnicosJson,
   });
@@ -70,6 +71,7 @@ class InventarioItemModel {
   final double costoUnitario;
   final bool dimensionable;
   final String? atributosTecnicosJson;
+  final bool activo;
 
   double get valorTotal => stockActual * costoUnitario;
 
@@ -130,6 +132,7 @@ class InventarioItemModel {
       atributosTecnicosJson: json['atributos_tecnicos'] != null
           ? jsonEncode(json['atributos_tecnicos'])
           : null,
+      activo: (json['activo'] as bool?) ?? true,
     );
   }
 

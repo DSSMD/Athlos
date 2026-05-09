@@ -66,7 +66,6 @@ class MovimientoService {
     required double cantidad,
     required String motivo,
     required String usuario,
-    required AreaMovimiento area,
     required double stockAntes,
   }) async {
     try {

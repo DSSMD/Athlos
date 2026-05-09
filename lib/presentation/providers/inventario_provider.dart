@@ -32,6 +32,17 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     state = await AsyncValue.guard(_fetch);
   }
 
+  Future<void> cambiarEstadoInsumo(String id, bool nuevoEstado) async {
+    final service = ref.read(inventarioServiceProvider);
+
+    // 1. Guardamos en la base de datos
+    await service.actualizarEstadoActivo(id, nuevoEstado);
+
+    // 2. Refrescamos la lista local para que el Switch se mueva visualmente
+    // Esto obliga a Flutter a volver a descargar los datos reales
+    ref.invalidateSelf();
+  }
+
   /// MOCK — crea un insumo a través del service y lo agrega al state local.
   /// Cuando exista backend, el service hará el INSERT y ya no será mock.
   Future<InventarioItemModel> crearInsumo({
@@ -101,9 +112,10 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
         stockMinimo: item.stockMinimo,
         unidad: item.unidad,
         costoUnitario: item.costoUnitario,
+        activo: true,
       );
     }).toList();
-    state = AsyncValue.data(updated);
+    state = AsyncValue.data(List<InventarioItemModel>.from(updated));
   }
 }
 

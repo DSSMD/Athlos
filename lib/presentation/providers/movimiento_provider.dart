@@ -44,7 +44,6 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
     required double cantidad,
     required String motivo,
     required String usuario,
-    required AreaMovimiento area,
   }) async {
     // Obtener stock actual del insumo ANTES del movimiento.
 
@@ -60,7 +59,6 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
       cantidad: cantidad,
       motivo: motivo,
       usuario: usuario,
-      area: area,
       stockAntes: stockAntes,
     );
 

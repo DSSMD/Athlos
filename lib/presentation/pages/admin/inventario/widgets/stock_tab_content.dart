@@ -691,19 +691,40 @@ class _DesktopRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _todoActivar(context),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    'Activar',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.primary500,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+
+                // Switch de activar/desactivar sin texto para ahorrar espacio. El tooltip indica el estado.
+                Consumer(
+                  builder: (context, ref, child) {
+                    // Le quitamos el Row y el Text para que no pelee por espacio con el Historial.
+                    // Usamos Tooltip para que al pasar el mouse por encima diga el estado.
+                    return Tooltip(
+                      message: item.activo ? 'Activo' : 'Inactivo',
+                      child: Switch(
+                        value: item.activo,
+                        onChanged: (bool nuevoValor) async {
+                          // 1. Lógica del backend
+                          await ref
+                              .read(inventarioProvider.notifier)
+                              .cambiarEstadoInsumo(item.id, nuevoValor);
+
+                          // 2. Mensaje de feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                nuevoValor
+                                    ? 'Insumo activado'
+                                    : 'Insumo desactivado',
+                              ),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: nuevoValor
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -861,10 +882,41 @@ class _MobileItemCard extends StatelessWidget {
                     icon: const Icon(Icons.history, size: 16),
                     label: const Text('Historial'),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _todoActivar(context),
-                    icon: const Icon(Icons.check_circle_outline, size: 16),
-                    label: const Text('Activar'),
+
+                  // Switch de activar/desactivar sin texto para ahorrar espacio. El tooltip indica el estado.
+                  Consumer(
+                    builder: (context, ref, child) {
+                      // Le quitamos el Row y el Text para que no pelee por espacio con el Historial.
+                      // Usamos Tooltip para que al pasar el mouse por encima diga el estado.
+                      return Tooltip(
+                        message: item.activo ? 'Activo' : 'Inactivo',
+                        child: Switch(
+                          value: item.activo,
+
+                          onChanged: (bool nuevoValor) async {
+                            // 1. Lógica del backend
+                            await ref
+                                .read(inventarioProvider.notifier)
+                                .cambiarEstadoInsumo(item.id, nuevoValor);
+
+                            // 2. Mensaje de feedback
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  nuevoValor
+                                      ? 'Insumo activado'
+                                      : 'Insumo desactivado',
+                                ),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: nuevoValor
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -170,7 +170,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
-            _label('Área *'),
+            /*_label('Área *'),
             DropdownButtonFormField<AreaMovimiento>(
               initialValue: _area,
               isExpanded: true,
@@ -180,7 +180,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               onChanged: _saving ? null : (v) => setState(() => _area = v),
               validator: (v) => v == null ? 'Seleccioná un área' : null,
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.lg),*/
             _label('Tipo de movimiento'),
             // El usuario solo crea movimientos manuales (ingreso/salida).
             // TODO Den/futuro backend: los movimientos `auto` se generan
@@ -334,7 +334,6 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
             cantidad: cantidad,
             motivo: _motivoCtrl.text.trim(),
             usuario: usuario,
-            area: _area!,
           );
 
       if (!mounted) return;
