@@ -62,11 +62,10 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
       stockAntes: stockAntes,
     );
 
-    // Refrescar lista local de movimientos.
-    final actuales = state.value ?? const <MovimientoModel>[];
-    state = AsyncValue.data([...actuales, movimiento]);
+    // 👇 1. FORZAR RECARGA DEL KÁRDEX (Borramos el state manual)
+    ref.invalidateSelf();
 
-    // Ajustar stock del insumo según lo que calculó el service.
+    // 👇 2. FORZAR RECARGA DEL STOCK DE INSUMOS (Ya lo tenías, ¡está perfecto!)
     ref.invalidate(inventarioProvider);
 
     return movimiento;

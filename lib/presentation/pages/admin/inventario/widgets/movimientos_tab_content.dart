@@ -129,7 +129,7 @@ class _Kpis extends StatelessWidget {
         description: 'Asignadas a producción',
         valueColor: AppColors.error,
       ),
-      /*KpiCard(
+      KpiCard(
         value: '${kpis.automaticosMes}',
         label: 'Desc. Automáticos',
         description: 'Por producción',
@@ -140,7 +140,7 @@ class _Kpis extends StatelessWidget {
         label: 'Ajustes Manuales',
         description: 'Correcciones',
         valueColor: AppColors.warning,
-      ),*/
+      ),
     ];
 
     if (isMobile) {
@@ -514,8 +514,8 @@ class _DesktopTable extends StatelessWidget {
               children: const [
                 _HeaderCell('FECHA / HORA', flex: _kColFecha),
                 SizedBox(width: _kColGap),
-                /*_HeaderCell('ÁREA', flex: _kColArea, align: TextAlign.center),
-                SizedBox(width: _kColGap),*/
+                _HeaderCell('ÁREA', flex: _kColArea, align: TextAlign.center),
+                SizedBox(width: _kColGap),
                 _HeaderCell('TIPO', flex: _kColTipo, align: TextAlign.center),
                 SizedBox(width: _kColGap),
                 _HeaderCell(
@@ -530,7 +530,7 @@ class _DesktopTable extends StatelessWidget {
                   align: TextAlign.center,
                 ),
                 SizedBox(width: _kColGap),
-                /*_HeaderCell(
+                _HeaderCell(
                   'STOCK\nANTES',
                   flex: _kColStockAntes,
                   align: TextAlign.center,
@@ -540,7 +540,7 @@ class _DesktopTable extends StatelessWidget {
                   'STOCK\nDESPUÉS',
                   flex: _kColStockDespues,
                   align: TextAlign.center,
-                ),*/
+                ),
                 SizedBox(width: _kColGap),
                 _HeaderCell(
                   'REFERENCIA',
@@ -631,13 +631,13 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: _kColGap),
-          /*Expanded(
+          Expanded(
             flex: _kColArea,
             child: Align(
               alignment: Alignment.center,
               child: _AreaBadge(area: item.area),
             ),
-          ),*/
+          ),
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColTipo,
@@ -671,7 +671,7 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: _kColGap),
-          /*Expanded(
+          Expanded(
             flex: _kColStockAntes,
             child: Text(
               '${_formatNumber(item.stockAntes)} $unidad',
@@ -694,7 +694,7 @@ class _DesktopRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          ),*/
+          ),
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColReferencia,
