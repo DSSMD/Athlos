@@ -1,6 +1,10 @@
 // ============================================================================
 // lib/presentation/pages/admin/plantillas/widgets/plantilla_form_placeholder.dart
 // ============================================================================
+// DEPRECATED — reemplazado por PlantillaFormPage en Bloque 3. Se mantiene
+// temporalmente como fallback. Eliminar cuando todos los bloques estén
+// estables (Bloque 4 cerrado y form multi-paso probado en producción).
+//
 // Modal placeholder de "Nueva / Editar plantilla". Es una vista DEMO: muestra
 // un mensaje de "en construcción" con el título adaptado al modo, mientras
 // no exista el form multi-paso real. Sirve para que el PO vea el flujo del

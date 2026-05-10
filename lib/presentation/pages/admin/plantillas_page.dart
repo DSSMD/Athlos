@@ -29,7 +29,7 @@ import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 import '../../widgets/users/kpi_card.dart';
 
-import 'plantillas/widgets/plantilla_form_placeholder.dart';
+import 'plantillas/widgets/plantilla_form_page.dart';
 
 class PlantillasPage extends ConsumerStatefulWidget {
   const PlantillasPage({super.key});
@@ -84,20 +84,12 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
 
   // ─── ACCIONES ──────────────────────────────────────────────────────────────
 
-  // TODO(plantillas-modulo): cambiar por PlantillaFormPage cuando exista el
-  // form multi-paso (Bloque 3).
   void _abrirNueva() {
-    showPlantillaFormPlaceholder(context, mode: 'crear');
+    showPlantillaFormPage(context, mode: 'crear');
   }
 
-  // TODO(plantillas-modulo): cambiar por PlantillaFormPage(initialPlantilla: ...)
-  // cuando exista el form multi-paso (Bloque 3).
   void _onEditar(PlantillaModel p) {
-    showPlantillaFormPlaceholder(
-      context,
-      mode: 'editar',
-      initialPlantilla: p,
-    );
+    showPlantillaFormPage(context, mode: 'editar', initialPlantilla: p);
   }
 
   Future<void> _onToggleActiva(PlantillaModel p) async {
