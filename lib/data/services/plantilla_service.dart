@@ -13,7 +13,7 @@
 //   usada en Paso 2 cuando el usuario selecciona tallas y aún no creó
 //   manualmente filas de medidas.
 // ============================================================================
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/material_plantilla_model.dart';
 import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
@@ -28,12 +28,18 @@ class PlantillaService {
   final List<PlantillaModel> _mockPlantillas = [..._mockSeed];
 
   Future<List<PlantillaModel>> obtenerPlantillas() async {
-    if (_useMockData) {
-      return List.unmodifiable(_mockPlantillas);
+    try {
+      // 👇 Usamos Supabase.instance.client en lugar de solo "supabase"
+      final response = await Supabase.instance.client
+          .from('plantilla_prenda')
+          .select()
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response;
+      return data.map((json) => PlantillaModel.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Error al cargar plantillas: $e');
     }
-    // TODO(plantillas-modulo): query a Supabase tabla `plantilla_prenda` con
-    // join a `tipo_prenda`. Ajustar columnas/relaciones cuando backend exista.
-    throw UnimplementedError('Backend pendiente');
   }
 
   // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
@@ -41,6 +47,32 @@ class PlantillaService {
   /// Conmuta el flag `activa` de la plantilla y devuelve la nueva versión.
   /// En modo mock muta la lista interna; en modo real debe ser un UPDATE.
   Future<PlantillaModel> toggleActiva(String id) async {
+    try {
+      // 1. Primero leemos la plantilla en la BD para saber su estado actual
+      // (OJO: Asegúrate de que el nombre de tu Primary Key sea 'id_plantilla')
+      final current = await Supabase.instance.client
+          .from('plantilla_prenda')
+          .select('activo') // La columna en SQL se llama 'activo'
+          .eq('id_plantilla', id)
+          .single();
+
+      final bool estadoActual = current['activo'] ?? true;
+
+      // 2. Hacemos el UPDATE mandándole lo contrario (!estadoActual)
+      final response = await Supabase.instance.client
+          .from('plantilla_prenda')
+          .update({'activo': !estadoActual})
+          .eq('id_plantilla', id)
+          .select() // Pedimos que nos devuelva la fila actualizada
+          .single();
+
+      // 3. Devolvemos el modelo actualizado para que Riverpod refresque la pantalla
+      return PlantillaModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al cambiar el estado de la plantilla: $e');
+    }
+  }
+  /*(Future<PlantillaModel> toggleActiva(String id) async {
     if (_useMockData) {
       final idx = _mockPlantillas.indexWhere((p) => p.id == id);
       if (idx == -1) {
@@ -53,7 +85,7 @@ class PlantillaService {
     }
     // TODO Backend Mel: UPDATE plantilla SET activa = !activa WHERE id = ?
     throw UnimplementedError('Backend pendiente');
-  }
+  }*/
 
   // ─── VALIDACIÓN DE NOMBRE ÚNICO ───────────────────────────────────────────
 

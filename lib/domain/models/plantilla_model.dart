@@ -211,11 +211,19 @@ class PlantillaModel {
         .toList();
 
     return PlantillaModel(
-      id: json['id'].toString(),
+      // 👇 MAPEO REAL CON LA TABLA SQL
+      id: (json['id_plantilla'] ?? '').toString(), // SQL: id_plantilla
       nombre: (json['nombre'] ?? '') as String,
-      tipoPrenda: TipoPrenda.fromString(json['tipo_prenda'] as String?),
-      version: (json['version'] ?? '') as String,
-      activa: (json['activa'] as bool?) ?? true,
+
+      // Si en SQL guardas el nombre, usamos fromString.
+      // Si guardas el ID numérico, habrá que ajustar el Enum.
+      tipoPrenda: TipoPrenda.fromString(json['id_tipo_prenda']?.toString()),
+
+      // Convertimos el INT de SQL a el String que quiere el Front
+      version: 'v${json['version'] ?? 1}.0',
+
+      activa: (json['activo'] as bool?) ?? true, // SQL: activo
+
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
@@ -228,13 +236,13 @@ class PlantillaModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'id_plantilla': id, // SQL Name
       'nombre': nombre,
-      'tipo_prenda': tipoPrenda.name,
-      'version': version,
-      'activa': activa,
-      'created_at': createdAt.toIso8601String(),
+      'id_tipo_prenda': 1, // Aquí deberías mandar el ID real según el Enum
+      'version': 1, // Mandamos un entero a SQL
+      'activo': activa, // SQL Name
       'especificaciones': especificaciones,
+      // Estos campos SQL los ignorará si no existen las columnas, no hay problema
       'tallas_seleccionadas': tallasSeleccionadas.map((t) => t.name).toList(),
       'medidas': medidas.map((m) => m.toJson()).toList(),
       'materiales': materiales.map((m) => m.toJson()).toList(),
