@@ -64,7 +64,9 @@ class PlantillaFormPaso2Medidas extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             const _Bullet('Seleccionar tallas (S, M, L, XL, XXL, 2, 4, 6)'),
-            const _Bullet('Definir medidas con valores por talla en centímetros'),
+            const _Bullet(
+              'Definir medidas con valores por talla en centímetros',
+            ),
             const _Bullet(
               'Agregar/eliminar puntos de medida según tipo de prenda',
             ),

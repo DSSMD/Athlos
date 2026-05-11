@@ -59,7 +59,9 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
       if (!silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Añade al menos un producto para calcular materiales.'),
+            content: Text(
+              'Añade al menos un producto para calcular materiales.',
+            ),
           ),
         );
       }

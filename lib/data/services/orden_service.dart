@@ -177,8 +177,7 @@ class OrdenService {
           'id_tipo_prenda': producto.idTipoPrenda,
           'id_talla': producto.idTalla,
           'cantidad': producto.cantidad,
-          'precio_unitario':
-              producto.precioUnitario,
+          'precio_unitario': producto.precioUnitario,
         });
       }
 
@@ -227,7 +226,9 @@ class OrdenService {
         final int idTipoPrenda = item['id_tipo_prenda'];
         final int cantidad = item['cantidad'];
 
-        double costoMateriales = await _obtenerCostoMaterialesPorTipo(idTipoPrenda);
+        double costoMateriales = await _obtenerCostoMaterialesPorTipo(
+          idTipoPrenda,
+        );
 
         double manoDeObra = 25.0;
         double margenUtilidad = 1.4;

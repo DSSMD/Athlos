@@ -30,7 +30,9 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
         // Aquí ocurre la magia del Fade In
         child: AnimatedOpacity(
           opacity: _opacity,
-          duration: const Duration(milliseconds: 1500), // 1.5 segundos de duración
+          duration: const Duration(
+            milliseconds: 1500,
+          ), // 1.5 segundos de duración
           curve: Curves.easeInOut,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -47,9 +49,7 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
                 ),
               ),
               const SizedBox(height: 48),
-              const CircularProgressIndicator(
-                color: Color(0xFFFF0000),
-              ),
+              const CircularProgressIndicator(color: Color(0xFFFF0000)),
             ],
           ),
         ),

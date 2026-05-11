@@ -167,28 +167,32 @@ class OrdenMaterialesCard extends StatelessWidget {
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _listaMobile(List<OrdenMaterialRequerido> materiales) {
     return Column(
-      children: materiales.map((m) => Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(m.material, style: AppTypography.smallBold),
-                _statusBadge(m.estado),
-              ],
+      children: materiales
+          .map(
+            (m) => Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(m.material, style: AppTypography.smallBold),
+                      _statusBadge(m.estado),
+                    ],
+                  ),
+                  const Divider(),
+                  _rowMobile('Requerido', '${m.requerido} ${m.unidad}'),
+                  _rowMobile('Stock actual', '${m.stockActual} ${m.unidad}'),
+                ],
+              ),
             ),
-            const Divider(),
-            _rowMobile('Requerido', '${m.requerido} ${m.unidad}'),
-            _rowMobile('Stock actual', '${m.stockActual} ${m.unidad}'),
-          ],
-        ),
-      )).toList(),
+          )
+          .toList(),
     );
   }
 
@@ -217,12 +221,18 @@ class OrdenMaterialesCard extends StatelessWidget {
 
   Widget _headerCell(String label) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-    child: Text(label, style: AppTypography.caption.copyWith(fontWeight: FontWeight.bold)),
+    child: Text(
+      label,
+      style: AppTypography.caption.copyWith(fontWeight: FontWeight.bold),
+    ),
   );
 
   Widget _dataCell(String val, {bool isBold = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-    child: Text(val, style: isBold ? AppTypography.smallBold : AppTypography.small),
+    child: Text(
+      val,
+      style: isBold ? AppTypography.smallBold : AppTypography.small,
+    ),
   );
 
   Widget _statusCell(String estado) => Padding(
@@ -235,7 +245,9 @@ class OrdenMaterialesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isOk ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+        color: isOk
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -270,7 +282,11 @@ class _EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: [
-            Icon(Icons.calculate_outlined, size: 48, color: AppColors.textMuted.withOpacity(0.5)),
+            Icon(
+              Icons.calculate_outlined,
+              size: 48,
+              color: AppColors.textMuted.withOpacity(0.5),
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(
               'Añade productos arriba y pulsa "Recalcular" para ver los materiales necesarios.',

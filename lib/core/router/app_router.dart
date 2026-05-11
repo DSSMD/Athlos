@@ -30,7 +30,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // Arrancamos en loading para evaluar la sesión tranquilamente
     initialLocation: '/loading',
 
-   redirect: (context, state) {
+    redirect: (context, state) {
       final initAsync = ref.watch(appInitProvider);
       final authAsync = ref.read(authStateProvider);
       final path = state.uri.path;
@@ -91,13 +91,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // RUTA DE CARGA TRANSITORIA
       GoRoute(
-       path: '/loading',
+        path: '/loading',
         builder: (context, state) => const SplashScreenPage(),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
       // ────────── ROL 1: ADMINISTRADOR (10 Páginas) ──────────
       GoRoute(

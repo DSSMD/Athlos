@@ -161,8 +161,8 @@ class OrdenModel {
   }
 }
 
-  /// Método copyWith útil para cuando queramos cambiar solo el estado de la orden en la UI
-  /*OrdenModel copyWith({
+/// Método copyWith útil para cuando queramos cambiar solo el estado de la orden en la UI
+/*OrdenModel copyWith({
     String? numOrden,
     String? clienteNombre,
     DateTime? fechaOrden,
@@ -188,4 +188,3 @@ class OrdenModel {
       idEstadoPago: idEstadoPago ?? this.idEstadoPago,
     );
   }*/
-  

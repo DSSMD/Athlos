@@ -288,7 +288,9 @@ class _Stepper extends StatelessWidget {
         for (var i = 0; i < 4; i++) ...[
           _StepCircle(index: i, pasoActual: pasoActual, label: _labels[i]),
           if (i < 3)
-            Expanded(child: _Connector(pasoActual: pasoActual, indexAfter: i)),
+            Expanded(
+              child: _Connector(pasoActual: pasoActual, indexAfter: i),
+            ),
         ],
       ],
     );
@@ -433,10 +435,7 @@ class _Footer extends StatelessWidget {
           else
             // TODO(plantillas-modulo): habilitar y conectar a
             // crearPlantilla / actualizarPlantilla en Bloque 4.
-            const FilledButton(
-              onPressed: null,
-              child: Text('Guardar'),
-            ),
+            const FilledButton(onPressed: null, child: Text('Guardar')),
         ],
       ),
     );
