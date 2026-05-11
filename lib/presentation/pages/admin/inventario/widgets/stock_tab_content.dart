@@ -1142,27 +1142,21 @@ String _formatPorcentaje(double n) {
 }
 
 String _formatMoney(double n) {
-  // Simple formato: \$1.234 (sin decimales si entero)
-  final entero = n.truncate();
-  final s = entero.toString();
+  // Formato: $1.234,56 (separador miles "." y siempre 2 decimales).
+  final fixed = n.toStringAsFixed(2);
+  final parts = fixed.split('.');
+  final enteroStr = parts[0];
+  final decimales = parts[1];
+  final negativo = enteroStr.startsWith('-');
+  final digits = negativo ? enteroStr.substring(1) : enteroStr;
   final buf = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-    buf.write(s[i]);
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
+    buf.write(digits[i]);
   }
-  return '\$$buf';
+  return '${negativo ? '-' : ''}\$$buf,$decimales';
 }
 
 void _abrirHistorial(BuildContext context, InventarioItemModel item) {
   showKardexHistorialModal(context, item);
-}
-
-void _todoActivar(BuildContext context) {
-  // TODO: implementar lógica Backend (toggle activo/inactivo del insumo).
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Activar — pendiente lógica backend'),
-      duration: Duration(seconds: 2),
-    ),
-  );
 }

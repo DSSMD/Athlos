@@ -80,8 +80,6 @@ class _MovimientosBodyState extends ConsumerState<_MovimientosBody> {
         children: [
           _Kpis(isMobile: isMobile, kpis: kpis),
           const SizedBox(height: AppSpacing.xl),
-          /*_AreasTabsRow(allMovimientos: allMovs, onChanged: _resetPage),*/
-          const SizedBox(height: AppSpacing.lg),
           _TiposChipsRow(allMovimientos: allMovs, onChanged: _resetPage),
           const SizedBox(height: AppSpacing.lg),
           if (paginated.isEmpty)
@@ -112,8 +110,6 @@ class _Kpis extends StatelessWidget {
   final bool isMobile;
   final MovimientoKpis kpis;
 
-  static const Color _purple = Color(0xFF7C3AED);
-
   @override
   Widget build(BuildContext context) {
     final cards = [
@@ -129,45 +125,18 @@ class _Kpis extends StatelessWidget {
         description: 'Asignadas a producción',
         valueColor: AppColors.error,
       ),
-      KpiCard(
-        value: '${kpis.automaticosMes}',
-        label: 'Desc. Automáticos',
-        description: 'Por producción',
-        valueColor: _purple,
-      ),
-      KpiCard(
-        value: '${kpis.ajustesMes}',
-        label: 'Ajustes Manuales',
-        description: 'Correcciones',
-        valueColor: AppColors.warning,
-      ),
     ];
 
     if (isMobile) {
-      return Column(
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: cards[1]),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[2]),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: cards[3]),
-              ],
-            ),
-          ),
-        ],
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: cards[1]),
+          ],
+        ),
       );
     }
 
@@ -178,147 +147,6 @@ class _Kpis extends StatelessWidget {
           if (i < cards.length - 1) const SizedBox(width: AppSpacing.lg),
         ],
       ],
-    );
-  }
-}
-
-// ─── TABS POR ÁREA ────────────────────────────────────────────────────────────
-
-/*class _AreasTabsRow extends ConsumerWidget {
-  const _AreasTabsRow({required this.allMovimientos, required this.onChanged});
-
-  final List<MovimientoModel> allMovimientos;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activa = ref.watch(movimientoFiltrosProvider).area;
-    final notifier = ref.read(movimientoFiltrosProvider.notifier);
-
-    int countArea(AreaMovimiento? a) =>
-        a == null ? allMovimientos.length : allMovimientos.where((m) => m.area == a).length;
-
-    return Scrollbar(
-      thumbVisibility: true,
-      trackVisibility: true,
-      thickness: 4,
-      radius: const Radius.circular(2),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Row(
-          children: [
-            _AreaTab(
-              label: 'Todas las áreas',
-              dotColor: AppColors.neutral950,
-              count: countArea(null),
-              active: activa == null,
-              onTap: () {
-                notifier.setArea(null);
-                onChanged();
-              },
-            ),
-            for (final a in AreaMovimiento.values) ...[
-              const SizedBox(width: AppSpacing.sm),
-              _AreaTab(
-                label: a.label,
-                dotColor: _areaColor(a),
-                count: countArea(a),
-                active: activa == a,
-                onTap: () {
-                  notifier.setArea(activa == a ? null : a);
-                  onChanged();
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-*/
-class _AreaTab extends StatelessWidget {
-  const _AreaTab({
-    required this.label,
-    required this.dotColor,
-    required this.count,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color dotColor;
-  final int count;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = active ? AppColors.neutral950 : AppColors.background;
-    final fg = active ? AppColors.brandWhite : AppColors.textPrimary;
-    final badgeBg = active ? AppColors.brandWhite : AppColors.neutral100;
-    final badgeFg = active ? AppColors.neutral950 : AppColors.textSecondary;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: bg,
-            border: Border.all(
-              color: active ? AppColors.neutral950 : AppColors.border,
-            ),
-            borderRadius: BorderRadius.circular(AppRadius.full),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: AppTypography.small.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: 1,
-                ),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Text(
-                  '$count',
-                  style: AppTypography.caption.copyWith(
-                    color: badgeFg,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -476,12 +304,10 @@ class _EmptyState extends StatelessWidget {
 // ─── DESKTOP TABLE ────────────────────────────────────────────────────────────
 
 const _kColFecha = 14;
-const _kColArea = 12;
 const _kColTipo = 12;
 const _kColInsumo = 18;
 const _kColCantidad = 10;
 const _kColStockAntes = 11;
-const _kColStockDespues = 11;
 const _kColReferencia = 12;
 const _kColResponsable = 12;
 const _kColGap = AppSpacing.sm;
@@ -514,8 +340,6 @@ class _DesktopTable extends StatelessWidget {
               children: const [
                 _HeaderCell('FECHA / HORA', flex: _kColFecha),
                 SizedBox(width: _kColGap),
-                _HeaderCell('ÁREA', flex: _kColArea, align: TextAlign.center),
-                SizedBox(width: _kColGap),
                 _HeaderCell('TIPO', flex: _kColTipo, align: TextAlign.center),
                 SizedBox(width: _kColGap),
                 _HeaderCell(
@@ -533,12 +357,6 @@ class _DesktopTable extends StatelessWidget {
                 _HeaderCell(
                   'STOCK\nANTES',
                   flex: _kColStockAntes,
-                  align: TextAlign.center,
-                ),
-                SizedBox(width: _kColGap),
-                _HeaderCell(
-                  'STOCK\nDESPUÉS',
-                  flex: _kColStockDespues,
                   align: TextAlign.center,
                 ),
                 SizedBox(width: _kColGap),
@@ -607,11 +425,6 @@ class _DesktopRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final insumo = _lookupInsumo(inventario, item.idInsumo);
     final unidad = insumo?.unidad ?? '';
-    final stockColor = item.stockDespues < item.stockAntes
-        ? AppColors.error
-        : (item.stockDespues > item.stockAntes
-              ? AppColors.success
-              : AppColors.textPrimary);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -628,14 +441,6 @@ class _DesktopRow extends StatelessWidget {
               style: AppTypography.small,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: _kColGap),
-          Expanded(
-            flex: _kColArea,
-            child: Align(
-              alignment: Alignment.center,
-              child: _AreaBadge(area: item.area),
             ),
           ),
           const SizedBox(width: _kColGap),
@@ -677,20 +482,6 @@ class _DesktopRow extends StatelessWidget {
               '${_formatNumber(item.stockAntes)} $unidad',
               textAlign: TextAlign.center,
               style: AppTypography.small,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: _kColGap),
-          Expanded(
-            flex: _kColStockDespues,
-            child: Text(
-              '${_formatNumber(item.stockDespues)} $unidad',
-              textAlign: TextAlign.center,
-              style: AppTypography.small.copyWith(
-                color: stockColor,
-                fontWeight: FontWeight.w600,
-              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -782,13 +573,7 @@ class _MobileCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              _AreaBadge(area: item.area),
-              const SizedBox(width: AppSpacing.sm),
-              Text(_formatFechaHora(item.fecha), style: AppTypography.caption),
-            ],
-          ),
+          Text(_formatFechaHora(item.fecha), style: AppTypography.caption),
           const SizedBox(height: AppSpacing.sm),
           Text(
             insumo?.nombre ?? '—',
@@ -819,31 +604,11 @@ class _MobileCard extends StatelessWidget {
               color: AppColors.neutral50,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Row(
-              children: [
-                Text(
-                  'Stock: ${_formatNumber(item.stockAntes)} $unidad',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                const Icon(
-                  Icons.arrow_forward,
-                  size: 12,
-                  color: AppColors.textMuted,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  '${_formatNumber(item.stockDespues)} $unidad',
-                  style: AppTypography.caption.copyWith(
-                    color: item.stockDespues < item.stockAntes
-                        ? AppColors.error
-                        : AppColors.success,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Stock antes: ${_formatNumber(item.stockAntes)} $unidad',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textMuted,
+              ),
             ),
           ),
         ],
@@ -853,35 +618,6 @@ class _MobileCard extends StatelessWidget {
 }
 
 // ─── BADGES ───────────────────────────────────────────────────────────────────
-
-class _AreaBadge extends StatelessWidget {
-  const _AreaBadge({required this.area});
-  final AreaMovimiento area;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _areaColor(area);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        area.label,
-        style: AppTypography.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
 
 class _TipoBadge extends StatelessWidget {
   const _TipoBadge({required this.tipo});
@@ -1039,19 +775,6 @@ InventarioItemModel? _lookupInsumo(
 ) {
   final idx = inventario.indexWhere((i) => i.id == idInsumo);
   return idx == -1 ? null : inventario[idx];
-}
-
-Color _areaColor(AreaMovimiento a) {
-  switch (a) {
-    case AreaMovimiento.sublimado:
-      return const Color(0xFFEF4444);
-    case AreaMovimiento.bordado:
-      return const Color(0xFF3B82F6);
-    case AreaMovimiento.corte:
-      return const Color(0xFFA16207);
-    case AreaMovimiento.general:
-      return const Color(0xFF64748B);
-  }
 }
 
 Color _tipoColor(TipoMovimiento t) {
