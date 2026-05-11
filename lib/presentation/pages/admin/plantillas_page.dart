@@ -9,15 +9,21 @@
 // - Mobile: cards apiladas con la misma información
 // - Paginación: DesktopPagination (desktop) / LoadMoreButton (mobile)
 // - Acciones:
-//     * "+ Nueva plantilla" / "Editar" → abren PlantillaFormPlaceholder en
-//       modo crear/editar (placeholder hasta que exista el form multi-paso).
+//     * "+ Nueva plantilla" / "Editar" → abren PlantillaFormPage en modo
+//       crear/editar (form multi-paso real).
 //     * "Desactivar/Activar" → confirm dialog + toggle real vía provider.
+//
+// Catálogos: la columna "Tipo prenda" resuelve `nombreTipoPrenda` contra el
+// catálogo cargado vía `tiposPrendaProvider`. Si el tipo fue eliminado de la
+// BD, muestra "Tipo no disponible" (helper del modelo).
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/models/plantilla_model.dart';
+import '../../../domain/models/tipo_prenda_model.dart';
+import '../../providers/catalogos_provider.dart';
 import '../../providers/plantilla_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -57,11 +63,12 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
 
   // ─── BUSQUEDA + FILTRO ─────────────────────────────────────────────────────
 
-  /// Aplica el filter chip + la búsqueda local sobre la lista que ya viene
-  /// filtrada por el provider (que aplica `tipo` y `soloActivas` si los hay).
-  /// Para esta vista DEMO, los chips Activas/Inactivas se aplican acá; el
-  /// provider permanece como fuente de verdad cruda.
-  List<PlantillaModel> _aplicarBusquedaYFiltro(List<PlantillaModel> all) {
+  /// Aplica filter chip + búsqueda local. La búsqueda matchea por nombre de
+  /// plantilla o por nombre del tipo (resuelto via catálogo).
+  List<PlantillaModel> _aplicarBusquedaYFiltro(
+    List<PlantillaModel> all,
+    List<TipoPrendaModel> tiposPrenda,
+  ) {
     var resultado = all;
 
     switch (_selectedFilter) {
@@ -77,8 +84,9 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
     final query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) return resultado;
     return resultado.where((p) {
+      final nombreTipo = p.nombreTipoPrenda(tiposPrenda).toLowerCase();
       return p.nombre.toLowerCase().contains(query) ||
-          p.tipoPrenda.label.toLowerCase().contains(query);
+          nombreTipo.contains(query);
     }).toList();
   }
 
@@ -155,19 +163,35 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
         final plantillasAsync = ref.watch(plantillaProvider);
+        final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
 
-        return plantillasAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) =>
-              Center(child: Text('Error al cargar plantillas: $error')),
-          data: (all) {
-            final filtered = _aplicarBusquedaYFiltro(all);
-            return _buildListado(
-              isMobile: isMobile,
-              filtered: filtered,
-              all: all,
-            );
-          },
+        // Estado combinado: necesitamos AMBOS cargados para renderizar la
+        // tabla con el nombre del tipo. Si alguno está loading → loading.
+        // Si alguno tiene error → mostramos error con detalle.
+        if (plantillasAsync.isLoading || tiposPrendaAsync.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (plantillasAsync.hasError) {
+          return Center(
+            child: Text('Error al cargar plantillas: ${plantillasAsync.error}'),
+          );
+        }
+        if (tiposPrendaAsync.hasError) {
+          return Center(
+            child: Text(
+              'Error al cargar tipos de prenda: ${tiposPrendaAsync.error}',
+            ),
+          );
+        }
+
+        final all = plantillasAsync.value ?? const <PlantillaModel>[];
+        final tiposPrenda = tiposPrendaAsync.value ?? const <TipoPrendaModel>[];
+        final filtered = _aplicarBusquedaYFiltro(all, tiposPrenda);
+        return _buildListado(
+          isMobile: isMobile,
+          filtered: filtered,
+          all: all,
+          tiposPrenda: tiposPrenda,
         );
       },
     );
@@ -179,9 +203,12 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
     required bool isMobile,
     required List<PlantillaModel> filtered,
     required List<PlantillaModel> all,
+    required List<TipoPrendaModel> tiposPrenda,
   }) {
     final totalItems = filtered.length;
-    final totalPages = totalItems == 0 ? 1 : (totalItems / _itemsPerPage).ceil();
+    final totalPages = totalItems == 0
+        ? 1
+        : (totalItems / _itemsPerPage).ceil();
     if (_currentPage > totalPages) _currentPage = 1;
 
     final paginated = isMobile
@@ -225,21 +252,26 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (paginated.isEmpty)
-                  const EmptyState(
+                  EmptyState(
                     icon: Icons.search_off,
-                    title: 'No se encontraron plantillas',
-                    subtitle:
-                        'Probá con otro filtro o crea una plantilla nueva.',
+                    title: all.isEmpty
+                        ? 'No hay plantillas registradas'
+                        : 'No se encontraron plantillas',
+                    subtitle: all.isEmpty
+                        ? 'Crea la primera con "Nueva plantilla".'
+                        : 'Probá con otro filtro o crea una plantilla nueva.',
                   )
                 else if (isMobile)
                   _MobileList(
                     plantillas: paginated,
+                    tiposPrenda: tiposPrenda,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
                   )
                 else
                   _DesktopTable(
                     plantillas: paginated,
+                    tiposPrenda: tiposPrenda,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
                   ),
@@ -354,11 +386,13 @@ class _KpiRow extends ConsumerWidget {
 class _DesktopTable extends StatelessWidget {
   const _DesktopTable({
     required this.plantillas,
+    required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final List<PlantillaModel> plantillas;
+  final List<TipoPrendaModel> tiposPrenda;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
 
@@ -394,6 +428,7 @@ class _DesktopTable extends StatelessWidget {
           for (var i = 0; i < plantillas.length; i++) ...[
             _DesktopRow(
               plantilla: plantillas[i],
+              tiposPrenda: tiposPrenda,
               onEditar: () => onEditar(plantillas[i]),
               onToggleActiva: () => onToggleActiva(plantillas[i]),
             ),
@@ -437,11 +472,13 @@ class _HeaderCol extends StatelessWidget {
 class _DesktopRow extends StatelessWidget {
   const _DesktopRow({
     required this.plantilla,
+    required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final PlantillaModel plantilla;
+  final List<TipoPrendaModel> tiposPrenda;
   final VoidCallback onEditar;
   final VoidCallback onToggleActiva;
 
@@ -464,19 +501,19 @@ class _DesktopRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // Tipo (badge)
+          // Tipo (badge resuelto desde catálogo)
           Expanded(
             flex: 2,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: _TipoBadge(tipo: plantilla.tipoPrenda),
+              child: _TipoBadge(label: plantilla.nombreTipoPrenda(tiposPrenda)),
             ),
           ),
-          // Versión (monospace)
+          // Versión (monospace, "vN")
           Expanded(
             flex: 1,
             child: Text(
-              plantilla.version,
+              plantilla.versionLabel,
               style: AppTypography.small.copyWith(
                 fontFamily: 'monospace',
                 color: AppColors.textSecondary,
@@ -484,10 +521,7 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           // Estado (dot + texto)
-          Expanded(
-            flex: 2,
-            child: _EstadoIndicator(activa: plantilla.activa),
-          ),
+          Expanded(flex: 2, child: _EstadoIndicator(activa: plantilla.activa)),
           // Acciones
           Expanded(
             flex: 2,
@@ -528,11 +562,13 @@ class _DesktopRow extends StatelessWidget {
 class _MobileList extends StatelessWidget {
   const _MobileList({
     required this.plantillas,
+    required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final List<PlantillaModel> plantillas;
+  final List<TipoPrendaModel> tiposPrenda;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
 
@@ -543,11 +579,11 @@ class _MobileList extends StatelessWidget {
         for (var i = 0; i < plantillas.length; i++) ...[
           _MobileCard(
             plantilla: plantillas[i],
+            tiposPrenda: tiposPrenda,
             onEditar: () => onEditar(plantillas[i]),
             onToggleActiva: () => onToggleActiva(plantillas[i]),
           ),
-          if (i < plantillas.length - 1)
-            const SizedBox(height: AppSpacing.md),
+          if (i < plantillas.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
     );
@@ -557,11 +593,13 @@ class _MobileList extends StatelessWidget {
 class _MobileCard extends StatelessWidget {
   const _MobileCard({
     required this.plantilla,
+    required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final PlantillaModel plantilla;
+  final List<TipoPrendaModel> tiposPrenda;
   final VoidCallback onEditar;
   final VoidCallback onToggleActiva;
 
@@ -591,7 +629,7 @@ class _MobileCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                plantilla.version,
+                plantilla.versionLabel,
                 style: AppTypography.small.copyWith(
                   fontFamily: 'monospace',
                   color: AppColors.textSecondary,
@@ -602,7 +640,7 @@ class _MobileCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              _TipoBadge(tipo: plantilla.tipoPrenda),
+              _TipoBadge(label: plantilla.nombreTipoPrenda(tiposPrenda)),
               const SizedBox(width: AppSpacing.md),
               _EstadoIndicator(activa: plantilla.activa),
             ],
@@ -646,14 +684,18 @@ class _MobileCard extends StatelessWidget {
 // BADGES / INDICATORS
 // ════════════════════════════════════════════════════════════════════════════
 
+// DECISIÓN: badge de tipo con un solo color (info). RAZÓN: los tipos de
+// prenda son volátiles (catálogo dinámico). No tiene sentido mapear color
+// por enum value que ya no existe. CAMBIAR: si el equipo quiere colores
+// por tipo, agregar columna `color_hex` a tipo_prenda y leerla del catálogo.
 class _TipoBadge extends StatelessWidget {
-  const _TipoBadge({required this.tipo});
+  const _TipoBadge({required this.label});
 
-  final TipoPrenda tipo;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final color = _tipoColor(tipo);
+    const color = AppColors.info;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -664,7 +706,7 @@ class _TipoBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
-        tipo.label,
+        label,
         style: AppTypography.caption.copyWith(
           color: color,
           fontWeight: FontWeight.w600,
@@ -701,26 +743,5 @@ class _EstadoIndicator extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-
-Color _tipoColor(TipoPrenda t) {
-  // Paleta hardcoded local — son colores de identificación visual de tipo,
-  // no tokens de marca. Si Den los aprueba, mover a app_colors.dart.
-  switch (t) {
-    case TipoPrenda.camisas:
-      return const Color(0xFF2563EB); // azul
-    case TipoPrenda.pantalones:
-      return const Color(0xFF7C3AED); // violeta
-    case TipoPrenda.polleras:
-      return const Color(0xFFDB2777); // rosa
-    case TipoPrenda.vestidos:
-      return const Color(0xFFDB2777); // rosa (similar a polleras por ahora)
-    case TipoPrenda.chombas:
-      return const Color(0xFF059669); // verde
-    case TipoPrenda.otros:
-      return const Color(0xFF64748B); // gris
   }
 }

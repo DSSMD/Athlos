@@ -1,23 +1,17 @@
 // ============================================================================
-// lib/domain/models/tipo_prenda_model.dart
+// lib/domain/models/talla_model.dart
 // ============================================================================
-// Catálogo dinámico de tipos de prenda. Viene de la tabla `tipo_prenda` en
-// Supabase. NO hardcodear valores — siempre se consulta a la BD.
-// Si el equipo agrega/elimina tipos en SQL, el frontend se actualiza
-// automáticamente al recargar la app (provider con autoDispose: false).
+// Catálogo dinámico de tallas. Viene de la tabla `tallas` en Supabase.
+// NO hardcodear valores — siempre se consulta a la BD.
 //
 // Mapeo SQL:
-// - id_tipo_prenda (serial PK)  → id
-// - nombre_prenda  (varchar)    → nombre
+// - id_talla       (serial PK)  → id
+// - nombre_talla   (varchar)    → nombre  (ej: "S", "M", "L", "XL", "2", "4")
 // - descripcion    (text, null) → descripcion
 // ============================================================================
 
-class TipoPrendaModel {
-  const TipoPrendaModel({
-    required this.id,
-    required this.nombre,
-    this.descripcion,
-  });
+class TallaModel {
+  const TallaModel({required this.id, required this.nombre, this.descripcion});
 
   final int id;
   final String nombre;
@@ -25,8 +19,8 @@ class TipoPrendaModel {
 
   // ─── COPYWITH ─────────────────────────────────────────────────────────────
 
-  TipoPrendaModel copyWith({int? id, String? nombre, String? descripcion}) {
-    return TipoPrendaModel(
+  TallaModel copyWith({int? id, String? nombre, String? descripcion}) {
+    return TallaModel(
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
@@ -35,32 +29,32 @@ class TipoPrendaModel {
 
   // ─── SERIALIZACIÓN ────────────────────────────────────────────────────────
 
-  factory TipoPrendaModel.fromJson(Map<String, dynamic> json) {
-    final rawId = json['id_tipo_prenda'];
-    return TipoPrendaModel(
+  factory TallaModel.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id_talla'];
+    return TallaModel(
       id: rawId is int ? rawId : int.tryParse(rawId.toString()) ?? 0,
-      nombre: (json['nombre_prenda'] ?? '') as String,
+      nombre: (json['nombre_talla'] ?? '') as String,
       descripcion: json['descripcion'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id_tipo_prenda': id,
-      'nombre_prenda': nombre,
+      'id_talla': id,
+      'nombre_talla': nombre,
       if (descripcion != null) 'descripcion': descripcion,
     };
   }
 
-  // ─── EQUALITY (importante para DropdownMenuItem.value) ────────────────────
+  // ─── EQUALITY (importante para chips multi-select) ────────────────────────
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || (other is TipoPrendaModel && other.id == id);
+      identical(this, other) || (other is TallaModel && other.id == id);
 
   @override
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'TipoPrendaModel(id: $id, nombre: $nombre)';
+  String toString() => 'TallaModel(id: $id, nombre: $nombre)';
 }

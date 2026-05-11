@@ -8,6 +8,10 @@
 // - State persiste en plantillaFormStateProvider — al volver al Paso 1
 //   desde otro paso, los datos se mantienen.
 //
+// Tipo de prenda: dropdown dinámico contra `tiposPrendaProvider`. Si el
+// catálogo aún está cargando, se muestra un loading inline; si falla, un
+// mensaje de error.
+//
 // DECISIÓN: el form padre controla la validación llamando al hijo. RAZÓN:
 // el padre coordina la navegación, el hijo valida sus propios campos.
 // CAMBIAR: si los pasos crecen mucho, considerar mover validación al notifier.
@@ -16,7 +20,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/plantilla_model.dart';
+import '../../../../providers/catalogos_provider.dart';
 import '../../../../providers/plantilla_form_provider.dart';
 import '../../../../providers/plantilla_provider.dart';
 import '../../../../theme/app_colors.dart';
@@ -82,6 +86,7 @@ class _PlantillaFormPaso1InfoState
   Widget build(BuildContext context) {
     final state = ref.watch(plantillaFormStateProvider);
     final notifier = ref.read(plantillaFormStateProvider.notifier);
+    final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
 
     return Form(
       key: widget.formKey,
@@ -103,21 +108,43 @@ class _PlantillaFormPaso1InfoState
             ),
             const SizedBox(height: AppSpacing.md),
             _label('Tipo de prenda *'),
-            DropdownButtonFormField<TipoPrenda>(
-              initialValue: state.tipoPrenda,
-              isExpanded: true,
-              items: TipoPrenda.values
-                  .map(
-                    (t) => DropdownMenuItem<TipoPrenda>(
-                      value: t,
-                      child: Text(t.label),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) notifier.setTipoPrenda(v);
+            tiposPrendaAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Text(
+                'Error al cargar tipos: $e',
+                style: AppTypography.small.copyWith(color: AppColors.error),
+              ),
+              data: (tipos) {
+                // Sanitizo el value: si el idTipoPrenda del state no está en
+                // el catálogo actual (por ejemplo, fue eliminado de la BD),
+                // paso null para evitar el assert de Dropdown.
+                final valorActual = tipos.any((t) => t.id == state.idTipoPrenda)
+                    ? state.idTipoPrenda
+                    : null;
+                return DropdownButtonFormField<int>(
+                  initialValue: valorActual,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Seleccioná un tipo',
+                  ),
+                  items: tipos
+                      .map(
+                        (t) => DropdownMenuItem<int>(
+                          value: t.id,
+                          child: Text(t.nombre),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) notifier.setIdTipoPrenda(v);
+                  },
+                  validator: (v) =>
+                      v == null ? 'Seleccioná un tipo de prenda' : null,
+                );
               },
-              validator: (v) => v == null ? 'Seleccioná un tipo' : null,
             ),
             const SizedBox(height: AppSpacing.md),
             _label('Especificaciones (opcional)'),

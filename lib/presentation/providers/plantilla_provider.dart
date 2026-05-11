@@ -1,11 +1,12 @@
 // ============================================================================
 // lib/presentation/providers/plantilla_provider.dart
 // ============================================================================
-// Providers de Riverpod 3 para el módulo Plantillas (DEMO).
+// Providers de Riverpod 3 para el módulo Plantillas — fuente de datos real
+// (Supabase) vía PlantillaService.
 // - plantillaServiceProvider: instancia del service
 // - plantillaProvider: AsyncNotifier con la lista cruda
-// - plantillaFiltrosProvider: estado de filtros (query / tipo / soloActivas)
-// - plantillaFiltradoProvider: lista derivada (mock + filtros aplicados)
+// - plantillaFiltrosProvider: estado de filtros (query / idTipoPrenda / soloActivas)
+// - plantillaFiltradoProvider: lista derivada (state + filtros aplicados)
 // - plantillaKpisProvider: KPIs derivados (total, activas, inactivas, tipos)
 // ============================================================================
 
@@ -84,9 +85,9 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
   /// state queda intacto.
   Future<PlantillaModel> crearPlantilla({
     required String nombre,
-    required TipoPrenda tipoPrenda,
+    required int idTipoPrenda,
     required String especificaciones,
-    required List<TallaPrenda> tallasSeleccionadas,
+    required List<int> tallasSeleccionadas,
     required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -94,7 +95,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     try {
       final nueva = await service.crearPlantilla(
         nombre: nombre,
-        tipoPrenda: tipoPrenda,
+        idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
         tallasSeleccionadas: tallasSeleccionadas,
         medidas: medidas,
@@ -115,9 +116,9 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
   Future<PlantillaModel> actualizarPlantilla({
     required String id,
     required String nombre,
-    required TipoPrenda tipoPrenda,
+    required int idTipoPrenda,
     required String especificaciones,
-    required List<TallaPrenda> tallasSeleccionadas,
+    required List<int> tallasSeleccionadas,
     required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -126,7 +127,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
       final actualizada = await service.actualizarPlantilla(
         id: id,
         nombre: nombre,
-        tipoPrenda: tipoPrenda,
+        idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
         tallasSeleccionadas: tallasSeleccionadas,
         medidas: medidas,
@@ -149,23 +150,23 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
 class PlantillaFiltros {
   const PlantillaFiltros({
     this.query = '',
-    this.tipo,
+    this.idTipoPrenda,
     this.soloActivas = false,
   });
 
   final String query;
-  final TipoPrenda? tipo;
+  final int? idTipoPrenda;
   final bool soloActivas;
 
   PlantillaFiltros copyWith({
     String? query,
-    TipoPrenda? tipo,
+    int? idTipoPrenda,
     bool? soloActivas,
     bool clearTipo = false,
   }) {
     return PlantillaFiltros(
       query: query ?? this.query,
-      tipo: clearTipo ? null : (tipo ?? this.tipo),
+      idTipoPrenda: clearTipo ? null : (idTipoPrenda ?? this.idTipoPrenda),
       soloActivas: soloActivas ?? this.soloActivas,
     );
   }
@@ -179,8 +180,8 @@ class PlantillaFiltrosNotifier extends Notifier<PlantillaFiltros> {
     state = state.copyWith(query: q);
   }
 
-  void setTipo(TipoPrenda? t) {
-    state = state.copyWith(tipo: t, clearTipo: t == null);
+  void setIdTipoPrenda(int? id) {
+    state = state.copyWith(idTipoPrenda: id, clearTipo: id == null);
   }
 
   void toggleSoloActivas() {
@@ -205,7 +206,10 @@ final plantillaFiltradoProvider = Provider<List<PlantillaModel>>((ref) {
   final items = asyncList.value ?? const <PlantillaModel>[];
 
   return items.where((p) {
-    if (filtros.tipo != null && p.tipoPrenda != filtros.tipo) return false;
+    if (filtros.idTipoPrenda != null &&
+        p.idTipoPrenda != filtros.idTipoPrenda) {
+      return false;
+    }
     if (filtros.soloActivas && !p.activa) return false;
     final q = filtros.query.toLowerCase().trim();
     if (q.isEmpty) return true;
@@ -234,7 +238,7 @@ final plantillaKpisProvider = Provider<PlantillaKpis>((ref) {
   final items = asyncList.value ?? const <PlantillaModel>[];
 
   final activas = items.where((p) => p.activa).length;
-  final tipos = items.map((p) => p.tipoPrenda).toSet().length;
+  final tipos = items.map((p) => p.idTipoPrenda).toSet().length;
 
   return PlantillaKpis(
     total: items.length,

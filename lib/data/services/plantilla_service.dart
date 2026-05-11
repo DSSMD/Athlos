@@ -1,420 +1,317 @@
 // ============================================================================
 // lib/data/services/plantilla_service.dart
 // ============================================================================
-// MOCK — eliminar / reemplazar con Supabase cuando exista la tabla
-// `plantilla_prenda`. La lista vive en memoria del proceso, se pierde al
-// reiniciar la app. Mantiene el mismo patrón que `inventario_service.dart`:
-// un flag `_useMockData` que conmuta entre lista local y query a Supabase.
+// Servicio del módulo Plantillas — integración directa con Supabase.
 //
-// - obtenerPlantillas(): devuelve _mockPlantillas (8 plantillas variadas)
-// - toggleActiva / nombreYaExiste: helpers para Vista 1
-// - crearPlantilla / actualizarPlantilla: usados por el form multi-paso
-// - obtenerMedidasSugeridas: lista hardcoded de medidas estándar por tipo,
-//   usada en Paso 2 cuando el usuario selecciona tallas y aún no creó
-//   manualmente filas de medidas.
+// Tablas que toca:
+// - plantilla_prenda (tabla principal)
+// - medida_ficha    (medidas asociadas, FK CASCADE)
+// - receta_material (materiales asociados, FK CASCADE)
+//
+// IMPORTANTE: las operaciones de crear/actualizar NO son transaccionales a
+// nivel cliente. Si una operación múltiple falla a medias, puede quedar
+// data huérfana. Para mejorar:
+// TODO Backend Mel: crear funciones RPC en PostgreSQL para crear/actualizar
+// plantilla con sus hijas en una sola transacción atómica.
+//
+// IMPORTANTE: existe trigger en receta_material que bloquea inserts con
+// insumos inactivos. El service traduce ese error a un mensaje amigable.
 // ============================================================================
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../domain/models/material_plantilla_model.dart';
 import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
 class PlantillaService {
-  PlantillaService();
+  final SupabaseClient _client = Supabase.instance.client;
 
-  // Mientras backend no exponga la tabla `plantilla_prenda`, devolvemos mocks.
-  static const bool _useMockData = true;
+  // ─── OBTENER PLANTILLAS ────────────────────────────────────────────────────
 
-  // MOCK — lista mutable en memoria. Cuando exista backend, eliminar.
-  final List<PlantillaModel> _mockPlantillas = [..._mockSeed];
-
+  /// Listado plano (sin medidas ni materiales) — usado por la Vista 1.
   Future<List<PlantillaModel>> obtenerPlantillas() async {
     try {
-      // 👇 Usamos Supabase.instance.client en lugar de solo "supabase"
-      final response = await Supabase.instance.client
+      final response = await _client
           .from('plantilla_prenda')
           .select()
           .order('created_at', ascending: false);
-
-      final List<dynamic> data = response;
-      return data.map((json) => PlantillaModel.fromJson(json)).toList();
+      return (response as List)
+          .map((j) => PlantillaModel.fromJson(j as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       throw Exception('Error al cargar plantillas: $e');
     }
   }
 
-  // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
-
-  /// Conmuta el flag `activa` de la plantilla y devuelve la nueva versión.
-  /// En modo mock muta la lista interna; en modo real debe ser un UPDATE.
-  Future<PlantillaModel> toggleActiva(String id) async {
+  /// Carga plantilla con sus medidas y materiales (para abrir el form en
+  /// modo editar). Ejecuta 3 queries en paralelo.
+  Future<PlantillaModel> obtenerPlantillaCompleta(String idPlantilla) async {
     try {
-      // 1. Primero leemos la plantilla en la BD para saber su estado actual
-      // (OJO: Asegúrate de que el nombre de tu Primary Key sea 'id_plantilla')
-      final current = await Supabase.instance.client
-          .from('plantilla_prenda')
-          .select('activo') // La columna en SQL se llama 'activo'
-          .eq('id_plantilla', id)
-          .single();
+      // Future.wait con dynamic porque los builders de Supabase devuelven
+      // tipos heterogéneos (Map / List) que la inferencia no puede unificar.
+      final results = await Future.wait<dynamic>([
+        _client
+            .from('plantilla_prenda')
+            .select()
+            .eq('id_plantilla', idPlantilla)
+            .single(),
+        _client.from('medida_ficha').select().eq('id_plantilla', idPlantilla),
+        _client
+            .from('receta_material')
+            .select()
+            .eq('id_plantilla', idPlantilla),
+      ]);
 
-      final bool estadoActual = current['activo'] ?? true;
+      final plantillaRaw = results[0] as Map<String, dynamic>;
+      final medidasRaw = results[1] as List;
+      final materialesRaw = results[2] as List;
 
-      // 2. Hacemos el UPDATE mandándole lo contrario (!estadoActual)
-      final response = await Supabase.instance.client
-          .from('plantilla_prenda')
-          .update({'activo': !estadoActual})
-          .eq('id_plantilla', id)
-          .select() // Pedimos que nos devuelva la fila actualizada
-          .single();
+      // Agrupar medidas por nombre_medida → una MedidaPunto por nombre.
+      final Map<String, List<Map<String, dynamic>>> filasPorNombre = {};
+      for (final fila in medidasRaw) {
+        final map = fila as Map<String, dynamic>;
+        final nombre = (map['nombre_medida'] ?? '') as String;
+        filasPorNombre.putIfAbsent(nombre, () => []).add(map);
+      }
+      final medidas = filasPorNombre.entries
+          .map(
+            (e) => MedidaPunto.fromFilasSQL(
+              idPlantilla: idPlantilla,
+              nombreMedida: e.key,
+              filas: e.value,
+            ),
+          )
+          .toList();
 
-      // 3. Devolvemos el modelo actualizado para que Riverpod refresque la pantalla
-      return PlantillaModel.fromJson(response);
+      // Inferir tallas seleccionadas desde el conjunto de tallas usadas en
+      // medidas. Si no hay medidas, queda vacío (el form lo dejará al
+      // usuario seleccionarlas en Paso 2).
+      final Set<int> tallasSet = {};
+      for (final m in medidas) {
+        tallasSet.addAll(m.valoresPorTalla.keys);
+      }
+      final tallas = tallasSet.toList()..sort();
+
+      final materiales = materialesRaw
+          .map((j) => MaterialPlantilla.fromJson(j as Map<String, dynamic>))
+          .toList();
+
+      return PlantillaModel.fromJson(plantillaRaw).copyWith(
+        tallasSeleccionadas: tallas,
+        medidas: medidas,
+        materiales: materiales,
+      );
     } catch (e) {
-      throw Exception('Error al cambiar el estado de la plantilla: $e');
+      throw Exception('Error al cargar plantilla completa: $e');
     }
   }
-  /*(Future<PlantillaModel> toggleActiva(String id) async {
-    if (_useMockData) {
-      final idx = _mockPlantillas.indexWhere((p) => p.id == id);
-      if (idx == -1) {
-        throw StateError('Plantilla no encontrada: $id');
-      }
-      final actual = _mockPlantillas[idx];
-      final nueva = actual.copyWith(activa: !actual.activa);
-      _mockPlantillas[idx] = nueva;
-      return nueva;
-    }
-    // TODO Backend Mel: UPDATE plantilla SET activa = !activa WHERE id = ?
-    throw UnimplementedError('Backend pendiente');
-  }*/
 
   // ─── VALIDACIÓN DE NOMBRE ÚNICO ───────────────────────────────────────────
 
   /// True si ya existe otra plantilla con ese `nombre` (case-insensitive,
   /// trimmed). `excludeId` permite ignorar la plantilla en edición.
+  /// En caso de error de red, retorna `false` para no bloquear el guardado
+  /// — el constraint final lo enforcea la BD si se agrega.
   Future<bool> nombreYaExiste(String nombre, {String? excludeId}) async {
-    final target = nombre.toLowerCase().trim();
-    if (_useMockData) {
-      return _mockPlantillas.any(
-        (p) => p.id != excludeId && p.nombre.toLowerCase().trim() == target,
-      );
+    try {
+      final normalizado = nombre.trim().toLowerCase();
+      final response = await _client
+          .from('plantilla_prenda')
+          .select('id_plantilla, nombre');
+      final List items = response as List;
+      return items.any((p) {
+        final m = p as Map<String, dynamic>;
+        final mismoNombre =
+            (m['nombre'] as String).trim().toLowerCase() == normalizado;
+        final esElMismo =
+            excludeId != null && m['id_plantilla'].toString() == excludeId;
+        return mismoNombre && !esElMismo;
+      });
+    } catch (_) {
+      // TODO(plantillas-modulo): considerar logging del error.
+      return false;
     }
-    // TODO Backend Mel: SELECT COUNT(*) FROM plantilla WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?)) AND id != ?
-    throw UnimplementedError('Backend pendiente');
   }
 
   // ─── CREAR PLANTILLA ──────────────────────────────────────────────────────
 
-  /// Crea una plantilla nueva con version inicial 'v1.0'. El id local es el
-  /// timestamp actual; cuando exista backend, será generado por Postgres
-  /// (sequence o uuid).
+  /// Inserta plantilla + hijas en 3 pasos secuenciales. Si falla un paso,
+  /// los anteriores quedan persistidos. Ver TODO Backend Mel del header.
   Future<PlantillaModel> crearPlantilla({
     required String nombre,
-    required TipoPrenda tipoPrenda,
+    required int idTipoPrenda,
     required String especificaciones,
-    required List<TallaPrenda> tallasSeleccionadas,
+    required List<int> tallasSeleccionadas,
     required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
-    final nueva = PlantillaModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      nombre: nombre,
-      tipoPrenda: tipoPrenda,
-      version: 'v1.0',
-      activa: true,
-      createdAt: DateTime.now(),
-      especificaciones: especificaciones,
-      tallasSeleccionadas: tallasSeleccionadas,
-      medidas: medidas,
-      materiales: materiales,
-    );
-    if (_useMockData) {
-      _mockPlantillas.add(nueva);
-      return nueva;
-    }
-    // TODO Backend Mel: INSERT INTO plantilla_prenda (...) VALUES (...).
-    // Además, esta operación debe insertar las filas hijas en
-    // `plantilla_medida` y `plantilla_material` (una fila por cada
-    // MedidaPunto y MaterialPlantilla). Sugerido como transaction o RPC
-    // para garantizar consistencia entre la plantilla y sus dependencias.
-    throw UnimplementedError('Backend pendiente');
-  }
+    try {
+      // Paso 1: INSERT plantilla_prenda. La version arranca en 1 (default
+      // de la BD), id_plantilla y created_at los genera Postgres.
+      final insertResponse = await _client
+          .from('plantilla_prenda')
+          .insert({
+            'nombre': nombre,
+            'id_tipo_prenda': idTipoPrenda,
+            'especificaciones': especificaciones,
+            'activo': true,
+          })
+          .select()
+          .single();
 
-  // ─── ACTUALIZAR PLANTILLA ─────────────────────────────────────────────────
+      final idPlantilla = insertResponse['id_plantilla'].toString();
 
-  /// Reemplaza la plantilla con `id` por una versión actualizada con los
-  /// nuevos datos. La `version` se bumpea automáticamente; `createdAt` se
-  /// preserva del original.
-  Future<PlantillaModel> actualizarPlantilla({
-    required String id,
-    required String nombre,
-    required TipoPrenda tipoPrenda,
-    required String especificaciones,
-    required List<TallaPrenda> tallasSeleccionadas,
-    required List<MedidaPunto> medidas,
-    required List<MaterialPlantilla> materiales,
-  }) async {
-    if (_useMockData) {
-      final idx = _mockPlantillas.indexWhere((p) => p.id == id);
-      if (idx == -1) {
-        throw StateError('Plantilla no encontrada: $id');
+      // Paso 2: INSERT medida_ficha — una fila por (talla × medida).
+      final filasMedidas = <Map<String, dynamic>>[
+        for (final medida in medidas) ...medida.aFilasSQL(idPlantilla),
+      ];
+      if (filasMedidas.isNotEmpty) {
+        await _client.from('medida_ficha').insert(filasMedidas);
       }
-      final original = _mockPlantillas[idx];
-      final actualizada = original.copyWith(
-        nombre: nombre,
-        tipoPrenda: tipoPrenda,
-        version: _bumpVersion(original.version),
-        especificaciones: especificaciones,
+
+      // Paso 3: INSERT receta_material.
+      final filasMateriales = [
+        for (final m in materiales)
+          {
+            'id_plantilla': idPlantilla,
+            'id_insumo': m.idInsumo,
+            'cantidad_requerida': m.cantidad,
+          },
+      ];
+      if (filasMateriales.isNotEmpty) {
+        await _client.from('receta_material').insert(filasMateriales);
+      }
+
+      return PlantillaModel.fromJson(insertResponse).copyWith(
         tallasSeleccionadas: tallasSeleccionadas,
         medidas: medidas,
         materiales: materiales,
       );
-      _mockPlantillas[idx] = actualizada;
-      return actualizada;
+    } catch (e) {
+      throw _traducirError(e);
     }
-    // TODO Backend Mel: UPDATE plantilla_prenda SET nombre = ?, tipo_prenda = ?,
-    // version = ?, especificaciones = ? WHERE id = ?
-    // y refrescar las tablas hijas (plantilla_medida, plantilla_material) —
-    // sugerido como transaction o RPC para garantizar consistencia. La forma
-    // más simple es DELETE + INSERT de las filas hijas dentro de la misma
-    // transacción.
-    throw UnimplementedError('Backend pendiente');
   }
 
-  // ─── BUMP DE VERSIÓN ──────────────────────────────────────────────────────
+  // ─── ACTUALIZAR PLANTILLA ─────────────────────────────────────────────────
 
-  // DECISIÓN: bump del número minor (vX.Y → vX.Y+1).
-  // RAZÓN: cambios mantienen compatibilidad mientras la prenda no cambia.
-  // CAMBIAR: para cambios mayores (cambio de tipo prenda, reestructuración),
-  // bumpear el major (vX → vX+1.0). Por ahora todos los cambios son minor.
-  // CAMBIAR: el backend debería generar la versión, no el cliente, para
-  // evitar conflicts en escenarios concurrentes.
-  String _bumpVersion(String actual) {
-    final match = RegExp(r'^v(\d+)\.(\d+)$').firstMatch(actual);
-    if (match == null) return 'v1.0';
-    final major = int.parse(match.group(1)!);
-    final minor = int.parse(match.group(2)!);
-    return 'v$major.${minor + 1}';
+  /// Estrategia: UPDATE plantilla_prenda (incrementando version) + DELETE
+  /// total de las filas hijas + INSERT nuevas. No es transaccional —
+  /// ver TODO Backend Mel del header.
+  Future<PlantillaModel> actualizarPlantilla({
+    required String id,
+    required String nombre,
+    required int idTipoPrenda,
+    required String especificaciones,
+    required List<int> tallasSeleccionadas,
+    required List<MedidaPunto> medidas,
+    required List<MaterialPlantilla> materiales,
+  }) async {
+    try {
+      // Paso 1: leer version actual para incrementar.
+      final actual = await _client
+          .from('plantilla_prenda')
+          .select('version')
+          .eq('id_plantilla', id)
+          .single();
+      final versionActual = actual['version'] is int
+          ? actual['version'] as int
+          : int.tryParse(actual['version']?.toString() ?? '') ?? 1;
+      final nuevaVersion = versionActual + 1;
+
+      // Paso 2: UPDATE plantilla_prenda.
+      final updateResponse = await _client
+          .from('plantilla_prenda')
+          .update({
+            'nombre': nombre,
+            'id_tipo_prenda': idTipoPrenda,
+            'especificaciones': especificaciones,
+            'version': nuevaVersion,
+          })
+          .eq('id_plantilla', id)
+          .select()
+          .single();
+
+      // Paso 3: DELETE + INSERT en medida_ficha.
+      await _client.from('medida_ficha').delete().eq('id_plantilla', id);
+      final filasMedidas = <Map<String, dynamic>>[
+        for (final medida in medidas) ...medida.aFilasSQL(id),
+      ];
+      if (filasMedidas.isNotEmpty) {
+        await _client.from('medida_ficha').insert(filasMedidas);
+      }
+
+      // Paso 4: DELETE + INSERT en receta_material.
+      await _client.from('receta_material').delete().eq('id_plantilla', id);
+      final filasMateriales = [
+        for (final m in materiales)
+          {
+            'id_plantilla': id,
+            'id_insumo': m.idInsumo,
+            'cantidad_requerida': m.cantidad,
+          },
+      ];
+      if (filasMateriales.isNotEmpty) {
+        await _client.from('receta_material').insert(filasMateriales);
+      }
+
+      return PlantillaModel.fromJson(updateResponse).copyWith(
+        tallasSeleccionadas: tallasSeleccionadas,
+        medidas: medidas,
+        materiales: materiales,
+      );
+    } catch (e) {
+      throw _traducirError(e);
+    }
   }
 
-  // ─── MEDIDAS SUGERIDAS POR TIPO DE PRENDA ─────────────────────────────────
+  // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
 
-  // DECISIÓN: sugerencias de medidas hardcodeadas por tipo de prenda.
-  // RAZÓN: simplifica la UX — al seleccionar tallas, ya hay una tabla
-  // sugerida en lugar de partir de cero.
-  // CAMBIAR: cuando exista catálogo de medidas estándar en backend
-  // (tabla `medida_estandar` con FK a tipo_prenda), reemplazar este mock
-  // por una query.
-  // TODO Backend Mel: SELECT nombre FROM medida_estandar WHERE tipo_prenda = ?
-  Future<List<MedidaPunto>> obtenerMedidasSugeridas(TipoPrenda tipo) async {
-    final nombres = _sugerenciasPorTipo[tipo] ?? const ['Medida 1', 'Medida 2'];
-    final baseId = DateTime.now().millisecondsSinceEpoch;
-    return [
-      for (var i = 0; i < nombres.length; i++)
-        MedidaPunto(
-          id: '${baseId + i}',
-          nombre: nombres[i],
-          valoresPorTalla: const {},
-        ),
-    ];
+  Future<PlantillaModel> toggleActiva(String id) async {
+    try {
+      final current = await _client
+          .from('plantilla_prenda')
+          .select('activo')
+          .eq('id_plantilla', id)
+          .single();
+      final estadoActual = current['activo'] as bool? ?? true;
+
+      final response = await _client
+          .from('plantilla_prenda')
+          .update({'activo': !estadoActual})
+          .eq('id_plantilla', id)
+          .select()
+          .single();
+      return PlantillaModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al cambiar estado de plantilla: $e');
+    }
+  }
+
+  // ─── SUGERENCIAS DE MEDIDAS (LOCAL) ───────────────────────────────────────
+
+  // DECISIÓN: las sugerencias de medidas iniciales son una lista vacía.
+  // RAZÓN: los tipos de prenda son volátiles (cambian en BD). No podemos
+  // hardcodear sugerencias asociadas a IDs específicos porque se romperían.
+  // El usuario agrega manualmente los puntos de medida que necesita.
+  // CAMBIAR: cuando exista tabla `medida_estandar` con FK a tipo_prenda,
+  // reemplazar este método por una query a esa tabla.
+  // TODO Backend Mel: crear tabla
+  //   medida_estandar(id_tipo_prenda int FK, nombre_medida text)
+  // si quieren sugerencias automáticas por tipo de prenda.
+  Future<List<MedidaPunto>> obtenerMedidasSugeridas(int idTipoPrenda) async {
+    return const [];
+  }
+
+  // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
+
+  /// Traduce errores comunes de Supabase a mensajes amigables para el
+  /// usuario. Por ahora solo cubre el caso del trigger de insumo inactivo.
+  Exception _traducirError(Object error) {
+    final msg = error.toString().toLowerCase();
+    if (msg.contains('insumo') && msg.contains('activ')) {
+      return Exception('No se puede usar un insumo inactivo en la receta.');
+    }
+    return Exception('Error al guardar plantilla: $error');
   }
 }
-
-// ─── SUGERENCIAS POR TIPO ─ tabla mock que va a desaparecer cuando exista ──
-// la tabla `medida_estandar` en el backend.
-const Map<TipoPrenda, List<String>> _sugerenciasPorTipo = {
-  TipoPrenda.camisas: [
-    'Ancho de pecho',
-    'Largo total',
-    'Largo manga',
-    'Ancho hombro',
-  ],
-  TipoPrenda.pantalones: [
-    'Cintura',
-    'Cadera',
-    'Largo entrepierna',
-    'Ancho rodilla',
-    'Ruedo',
-  ],
-  TipoPrenda.polleras: ['Cintura', 'Cadera', 'Largo total'],
-  TipoPrenda.vestidos: ['Pecho', 'Cintura', 'Cadera', 'Largo total'],
-  TipoPrenda.chombas: ['Ancho de pecho', 'Largo total', 'Largo manga'],
-  TipoPrenda.otros: ['Medida 1', 'Medida 2'],
-};
-
-// ─── MOCK SEED ──────────────────────────────────────────────────────────────
-// Fechas fijas en 2025 para que el listado se vea estable en demos. No usar
-// DateTime.now() acá porque rompería un eventual `const`.
-//
-// Las plantillas '1' y '3' tienen el set completo de datos del form
-// (especificaciones / tallas / medidas / materiales) — sirven para probar
-// el modo "editar". Las otras 6 quedan con campos default vacíos para
-// probar que el form maneja bien plantillas con datos parciales.
-//
-// Las referencias a `idInsumo` apuntan al seed del módulo Inventario
-// (cuando exista en este branch). Hoy son IDs string '1', '4', '9', '10', '3'
-// que matchean la convención del PDF.
-
-final List<PlantillaModel> _mockSeed = [
-  PlantillaModel(
-    id: '1',
-    nombre: 'Camisa Manga Larga Clásica',
-    tipoPrenda: TipoPrenda.camisas,
-    version: 'v2.1',
-    activa: true,
-    createdAt: DateTime(2025, 3, 12),
-    especificaciones:
-        'Camisa de vestir manga larga. Cuello clásico, puño doble. '
-        'Confección estándar para uso formal o semiformal.',
-    tallasSeleccionadas: [
-      TallaPrenda.s,
-      TallaPrenda.m,
-      TallaPrenda.l,
-      TallaPrenda.xl,
-      TallaPrenda.xxl,
-    ],
-    medidas: [
-      MedidaPunto(
-        id: 'med-1-1',
-        nombre: 'Ancho de pecho',
-        valoresPorTalla: {
-          TallaPrenda.s: 50,
-          TallaPrenda.m: 52,
-          TallaPrenda.l: 54,
-          TallaPrenda.xl: 56,
-          TallaPrenda.xxl: 58,
-        },
-      ),
-      MedidaPunto(
-        id: 'med-1-2',
-        nombre: 'Largo total',
-        valoresPorTalla: {
-          TallaPrenda.s: 70,
-          TallaPrenda.m: 72,
-          TallaPrenda.l: 74,
-          TallaPrenda.xl: 76,
-          TallaPrenda.xxl: 78,
-        },
-      ),
-      MedidaPunto(
-        id: 'med-1-3',
-        nombre: 'Largo manga',
-        valoresPorTalla: {
-          TallaPrenda.s: 60,
-          TallaPrenda.m: 62,
-          TallaPrenda.l: 64,
-          TallaPrenda.xl: 66,
-          TallaPrenda.xxl: 68,
-        },
-      ),
-      MedidaPunto(
-        id: 'med-1-4',
-        nombre: 'Ancho hombro',
-        valoresPorTalla: {
-          TallaPrenda.s: 42,
-          TallaPrenda.m: 44,
-          TallaPrenda.l: 46,
-          TallaPrenda.xl: 48,
-          TallaPrenda.xxl: 50,
-        },
-      ),
-    ],
-    materiales: [
-      MaterialPlantilla(id: 'mat-1-1', idInsumo: '1', cantidad: 1.5),
-      MaterialPlantilla(id: 'mat-1-2', idInsumo: '9', cantidad: 0.1),
-      MaterialPlantilla(id: 'mat-1-3', idInsumo: '4', cantidad: 8),
-    ],
-  ),
-  PlantillaModel(
-    id: '2',
-    nombre: 'Camisa Manga Corta Sport',
-    tipoPrenda: TipoPrenda.camisas,
-    version: 'v1.0',
-    activa: true,
-    createdAt: DateTime(2025, 5, 4),
-  ),
-  PlantillaModel(
-    id: '3',
-    nombre: 'Pantalón Cargo Trabajo',
-    tipoPrenda: TipoPrenda.pantalones,
-    version: 'v3.0',
-    activa: true,
-    createdAt: DateTime(2024, 11, 22),
-    especificaciones:
-        'Pantalón cargo de trabajo. Bolsillos laterales con tapa. '
-        'Tela resistente.',
-    tallasSeleccionadas: [TallaPrenda.m, TallaPrenda.l, TallaPrenda.xl],
-    medidas: [
-      MedidaPunto(
-        id: 'med-3-1',
-        nombre: 'Cintura',
-        valoresPorTalla: {
-          TallaPrenda.m: 40,
-          TallaPrenda.l: 44,
-          TallaPrenda.xl: 48,
-        },
-      ),
-      MedidaPunto(
-        id: 'med-3-2',
-        nombre: 'Largo entrepierna',
-        valoresPorTalla: {
-          TallaPrenda.m: 80,
-          TallaPrenda.l: 82,
-          TallaPrenda.xl: 84,
-        },
-      ),
-      MedidaPunto(
-        id: 'med-3-3',
-        nombre: 'Ruedo',
-        valoresPorTalla: {
-          TallaPrenda.m: 22,
-          TallaPrenda.l: 23,
-          TallaPrenda.xl: 24,
-        },
-      ),
-    ],
-    materiales: [
-      MaterialPlantilla(id: 'mat-3-1', idInsumo: '10', cantidad: 2.0),
-      MaterialPlantilla(id: 'mat-3-2', idInsumo: '3', cantidad: 0.15),
-    ],
-  ),
-  PlantillaModel(
-    id: '4',
-    nombre: 'Pantalón Sastre Formal',
-    tipoPrenda: TipoPrenda.pantalones,
-    version: 'v1.5',
-    activa: true,
-    createdAt: DateTime(2025, 1, 30),
-  ),
-  PlantillaModel(
-    id: '5',
-    nombre: 'Pollera Plisada Escolar',
-    tipoPrenda: TipoPrenda.polleras,
-    version: 'v2.0',
-    activa: true,
-    createdAt: DateTime(2025, 2, 18),
-  ),
-  PlantillaModel(
-    id: '6',
-    nombre: 'Vestido Casual Verano',
-    tipoPrenda: TipoPrenda.vestidos,
-    version: 'v1.0',
-    activa: false,
-    createdAt: DateTime(2024, 9, 8),
-  ),
-  PlantillaModel(
-    id: '7',
-    nombre: 'Chomba Polo Empresa',
-    tipoPrenda: TipoPrenda.chombas,
-    version: 'v4.2',
-    activa: true,
-    createdAt: DateTime(2025, 4, 1),
-  ),
-  PlantillaModel(
-    id: '8',
-    nombre: 'Buzo Capucha Genérico',
-    tipoPrenda: TipoPrenda.otros,
-    version: 'v1.0',
-    activa: false,
-    createdAt: DateTime(2024, 7, 14),
-  ),
-];

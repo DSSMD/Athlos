@@ -4,8 +4,12 @@
 // State + Notifier scoped al modal del form multi-paso de Plantillas.
 // - PlantillaFormState: snapshot inmutable con todos los campos del form
 //   más metadatos (paso actual, modo crear/editar, id original)
-// - PlantillaFormNotifier (AutoDispose): expone setters por campo + helpers
+// - PlantillaFormNotifier (autoDispose): expone setters por campo + helpers
 //   de navegación entre pasos.
+//
+// Catálogos dinámicos: el form trabaja con IDs (idTipoPrenda: int,
+// tallasSeleccionadas: List<int>). Los nombres se resuelven contra
+// `tiposPrendaProvider` y `tallasProvider` en la UI.
 //
 // DECISIÓN: autoDispose para que el state se limpie al cerrar el modal.
 // RAZÓN: si el usuario cancela y vuelve a abrir, debe arrancar limpio.
@@ -24,7 +28,7 @@ import '../../domain/models/plantilla_model.dart';
 class PlantillaFormState {
   const PlantillaFormState({
     this.nombre = '',
-    this.tipoPrenda,
+    this.idTipoPrenda,
     this.especificaciones = '',
     this.tallasSeleccionadas = const [],
     this.medidas = const [],
@@ -35,9 +39,9 @@ class PlantillaFormState {
   });
 
   final String nombre;
-  final TipoPrenda? tipoPrenda;
+  final int? idTipoPrenda; // null hasta que el usuario lo elija
   final String especificaciones;
-  final List<TallaPrenda> tallasSeleccionadas;
+  final List<int> tallasSeleccionadas;
   final List<MedidaPunto> medidas;
   final List<MaterialPlantilla> materiales;
 
@@ -48,14 +52,14 @@ class PlantillaFormState {
   final String mode;
 
   /// Id de la plantilla original cuando mode == 'editar'. Se usa para
-  /// excluirla de la validación de nombre duplicado.
+  /// excluirla de la validación de nombre duplicado y para el UPDATE.
   final String? plantillaOriginalId;
 
   PlantillaFormState copyWith({
     String? nombre,
-    TipoPrenda? tipoPrenda,
+    int? idTipoPrenda,
     String? especificaciones,
-    List<TallaPrenda>? tallasSeleccionadas,
+    List<int>? tallasSeleccionadas,
     List<MedidaPunto>? medidas,
     List<MaterialPlantilla>? materiales,
     int? pasoActual,
@@ -64,7 +68,7 @@ class PlantillaFormState {
   }) {
     return PlantillaFormState(
       nombre: nombre ?? this.nombre,
-      tipoPrenda: tipoPrenda ?? this.tipoPrenda,
+      idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
       especificaciones: especificaciones ?? this.especificaciones,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
       medidas: medidas ?? this.medidas,
@@ -93,7 +97,7 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
       mode: 'editar',
       plantillaOriginalId: p.id,
       nombre: p.nombre,
-      tipoPrenda: p.tipoPrenda,
+      idTipoPrenda: p.idTipoPrenda,
       especificaciones: p.especificaciones,
       tallasSeleccionadas: p.tallasSeleccionadas,
       medidas: p.medidas,
@@ -105,14 +109,12 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
 
   void setNombre(String v) => state = state.copyWith(nombre: v);
 
-  // copyWith no acepta `null` para tipoPrenda (queda como ?? this.tipoPrenda),
-  // pero el form solo cambia el tipo a un valor válido — nunca a null.
-  void setTipoPrenda(TipoPrenda v) => state = state.copyWith(tipoPrenda: v);
+  void setIdTipoPrenda(int? id) => state = state.copyWith(idTipoPrenda: id);
 
   void setEspecificaciones(String v) =>
       state = state.copyWith(especificaciones: v);
 
-  void setTallasSeleccionadas(List<TallaPrenda> tallas) =>
+  void setTallasSeleccionadas(List<int> tallas) =>
       state = state.copyWith(tallasSeleccionadas: tallas);
 
   void setMedidas(List<MedidaPunto> medidas) =>
@@ -148,7 +150,6 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
 // ─── PROVIDER ───────────────────────────────────────────────────────────────
 
 final plantillaFormStateProvider =
-    NotifierProvider.autoDispose<
-      PlantillaFormNotifier,
-      PlantillaFormState
-    >(PlantillaFormNotifier.new);
+    NotifierProvider.autoDispose<PlantillaFormNotifier, PlantillaFormState>(
+      PlantillaFormNotifier.new,
+    );
