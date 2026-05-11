@@ -77,6 +77,9 @@ class MyApp extends ConsumerWidget {
         scaffoldMessengerKey: rootScaffoldMessengerKey,
         // Conectamos el motor de go_router a nuestra aplicación
         routerConfig: router,
+        // Fuerza a la app a ser siempre oscura, lo que oscurece la barra nativa
+        themeMode: ThemeMode.dark,
+
         // SCRUM-75: locales soportados (necesario para table_calendar 'es_ES').
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -85,6 +88,18 @@ class MyApp extends ConsumerWidget {
         ],
         supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
         locale: const Locale('es', 'ES'),
+        //--- CONFIGURACIÓN DEL TEMA OSCURO ---
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark, // Indica al sistema que el brillo es oscuro
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            brightness: Brightness.dark,
+          ),
+          fontFamily: 'Montserrat',
+          // Usamos tu negro corporativo para el fondo de las páginas
+          scaffoldBackgroundColor: const Color(0xFF0A0A0A), 
+        ),
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),

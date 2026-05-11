@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/navigation_provider.dart';
 import '../widgets/auth_profile_menu.dart';
 import 'athlos_sidebar.dart';
+
 //import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
