@@ -3,7 +3,8 @@
 // ============================================================================
 // Servicio dedicado a catálogos compartidos.
 // - tipos de prenda (tabla tipo_prenda)
-// - tallas (tabla tallas)
+// - tallas         (tabla tallas)
+// - insumos        (tabla insumo, join a unidad_medida)
 //
 // Los providers que consumen este servicio cachean el resultado para
 // toda la sesión, evitando llamadas repetidas a la BD.
@@ -11,6 +12,7 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../domain/models/insumo_model.dart';
 import '../../domain/models/talla_model.dart';
 import '../../domain/models/tipo_prenda_model.dart';
 
@@ -46,6 +48,27 @@ class CatalogoService {
           .toList();
     } catch (e) {
       throw Exception('Error al cargar tallas: $e');
+    }
+  }
+
+  // ─── INSUMOS ──────────────────────────────────────────────────────────────
+
+  // DECISIÓN: filtrar `soloActivos=true` por default.
+  // RAZÓN: el trigger SQL de receta_material bloquea inserts con insumos
+  // inactivos. No tiene sentido ofrecerlos en el dropdown del Paso 3.
+  // CAMBIAR: pasar `soloActivos: false` desde admin si quieren ver todos.
+  Future<List<InsumoModel>> obtenerInsumos({bool soloActivos = true}) async {
+    try {
+      final base = _supabase
+          .from('insumo')
+          .select('id_insumo, nombre, activo, unidad_medida(abreviatura)');
+      final filtered = soloActivos ? base.eq('activo', true) : base;
+      final response = await filtered.order('nombre');
+      return (response as List)
+          .map((j) => InsumoModel.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al cargar insumos: $e');
     }
   }
 }

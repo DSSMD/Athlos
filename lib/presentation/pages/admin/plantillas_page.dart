@@ -55,6 +55,12 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
   // Filter chips: 0=Todas, 1=Activas, 2=Inactivas
   int _selectedFilter = 0;
 
+  // Guard contra doble-click rápido en el lápiz Editar. Mientras una
+  // edición está en curso (cargando plantilla completa + modal abierto),
+  // los botones se deshabilitan visualmente para evitar abrir varios
+  // modales superpuestos.
+  bool _abriendoEditor = false;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -96,8 +102,38 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
     showPlantillaFormPage(context, mode: 'crear');
   }
 
-  void _onEditar(PlantillaModel p) {
-    showPlantillaFormPage(context, mode: 'editar', initialPlantilla: p);
+  /// Carga la plantilla completa (medidas + materiales desde tablas hijas)
+  /// y abre el form en modo editar. La plantilla de la lista solo tiene los
+  /// campos planos de `plantilla_prenda` — sin esa carga, el form abriría
+  /// con medidas y materiales vacíos aunque la BD los tenga.
+  ///
+  /// Guardado por `_abriendoEditor`: si el usuario hace doble-click rápido
+  /// en el lápiz, la segunda invocación retorna inmediato sin disparar otra
+  /// carga ni abrir otro modal.
+  Future<void> _onEditar(PlantillaModel p) async {
+    if (_abriendoEditor) return;
+    setState(() => _abriendoEditor = true);
+    try {
+      final completa = await ref
+          .read(plantillaProvider.notifier)
+          .obtenerPlantillaCompleta(p.id);
+      if (!mounted) return;
+      await showPlantillaFormPage(
+        context,
+        mode: 'editar',
+        initialPlantilla: completa,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar plantilla: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _abriendoEditor = false);
+    }
   }
 
   Future<void> _onToggleActiva(PlantillaModel p) async {
@@ -267,6 +303,7 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
                     tiposPrenda: tiposPrenda,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
+                    accionesDeshabilitadas: _abriendoEditor,
                   )
                 else
                   _DesktopTable(
@@ -274,6 +311,7 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
                     tiposPrenda: tiposPrenda,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
+                    accionesDeshabilitadas: _abriendoEditor,
                   ),
                 const SizedBox(height: AppSpacing.xl),
                 if (isMobile)
@@ -389,12 +427,14 @@ class _DesktopTable extends StatelessWidget {
     required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
+    required this.accionesDeshabilitadas,
   });
 
   final List<PlantillaModel> plantillas;
   final List<TipoPrendaModel> tiposPrenda;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
+  final bool accionesDeshabilitadas;
 
   @override
   Widget build(BuildContext context) {
@@ -429,8 +469,12 @@ class _DesktopTable extends StatelessWidget {
             _DesktopRow(
               plantilla: plantillas[i],
               tiposPrenda: tiposPrenda,
-              onEditar: () => onEditar(plantillas[i]),
-              onToggleActiva: () => onToggleActiva(plantillas[i]),
+              onEditar: accionesDeshabilitadas
+                  ? null
+                  : () => onEditar(plantillas[i]),
+              onToggleActiva: accionesDeshabilitadas
+                  ? null
+                  : () => onToggleActiva(plantillas[i]),
             ),
             if (i < plantillas.length - 1)
               const Divider(height: 1, color: AppColors.border),
@@ -479,8 +523,8 @@ class _DesktopRow extends StatelessWidget {
 
   final PlantillaModel plantilla;
   final List<TipoPrendaModel> tiposPrenda;
-  final VoidCallback onEditar;
-  final VoidCallback onToggleActiva;
+  final VoidCallback? onEditar;
+  final VoidCallback? onToggleActiva;
 
   @override
   Widget build(BuildContext context) {
@@ -565,12 +609,14 @@ class _MobileList extends StatelessWidget {
     required this.tiposPrenda,
     required this.onEditar,
     required this.onToggleActiva,
+    required this.accionesDeshabilitadas,
   });
 
   final List<PlantillaModel> plantillas;
   final List<TipoPrendaModel> tiposPrenda;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
+  final bool accionesDeshabilitadas;
 
   @override
   Widget build(BuildContext context) {
@@ -580,8 +626,12 @@ class _MobileList extends StatelessWidget {
           _MobileCard(
             plantilla: plantillas[i],
             tiposPrenda: tiposPrenda,
-            onEditar: () => onEditar(plantillas[i]),
-            onToggleActiva: () => onToggleActiva(plantillas[i]),
+            onEditar: accionesDeshabilitadas
+                ? null
+                : () => onEditar(plantillas[i]),
+            onToggleActiva: accionesDeshabilitadas
+                ? null
+                : () => onToggleActiva(plantillas[i]),
           ),
           if (i < plantillas.length - 1) const SizedBox(height: AppSpacing.md),
         ],
@@ -600,8 +650,8 @@ class _MobileCard extends StatelessWidget {
 
   final PlantillaModel plantilla;
   final List<TipoPrendaModel> tiposPrenda;
-  final VoidCallback onEditar;
-  final VoidCallback onToggleActiva;
+  final VoidCallback? onEditar;
+  final VoidCallback? onToggleActiva;
 
   @override
   Widget build(BuildContext context) {

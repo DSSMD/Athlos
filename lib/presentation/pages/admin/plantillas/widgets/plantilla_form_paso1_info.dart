@@ -88,6 +88,20 @@ class _PlantillaFormPaso1InfoState
     final notifier = ref.read(plantillaFormStateProvider.notifier);
     final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
 
+    // Sincroniza controllers cuando el state cambia desde afuera (ej.
+    // inicialización por postFrameCallback en modo editar). Compara
+    // antes de setear para no perder la posición del cursor mientras
+    // el usuario tipea (los cambios que vienen DEL usuario ya están
+    // en el controller, igualan al state nuevo, y no se re-setean).
+    ref.listen<PlantillaFormState>(plantillaFormStateProvider, (prev, next) {
+      if (_nombreCtrl.text != next.nombre) {
+        _nombreCtrl.text = next.nombre;
+      }
+      if (_especificacionesCtrl.text != next.especificaciones) {
+        _especificacionesCtrl.text = next.especificaciones;
+      }
+    });
+
     return Form(
       key: widget.formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -124,7 +138,16 @@ class _PlantillaFormPaso1InfoState
                 final valorActual = tipos.any((t) => t.id == state.idTipoPrenda)
                     ? state.idTipoPrenda
                     : null;
+                // Key del FormField cambia cuando state.mode/originalId
+                // varía (transición crear→editar o cambio de plantilla).
+                // Esto fuerza remount del FormField para que tome el nuevo
+                // initialValue — necesario porque FormField solo lee
+                // initialValue en su propio initState.
+                final dropdownKey = ValueKey(
+                  'tipo-${state.mode}-${state.plantillaOriginalId ?? "new"}',
+                );
                 return DropdownButtonFormField<int>(
+                  key: dropdownKey,
                   initialValue: valorActual,
                   isExpanded: true,
                   decoration: const InputDecoration(

@@ -46,6 +46,14 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     state = await AsyncValue.guard(_fetch);
   }
 
+  // ─── CARGA COMPLETA (para abrir el form en modo editar) ───────────────────
+
+  /// Trae la plantilla con sus tablas hijas (medidas + materiales). Es un
+  /// proxy puro al service — no toca el state del listado.
+  Future<PlantillaModel> obtenerPlantillaCompleta(String id) {
+    return ref.read(plantillaServiceProvider).obtenerPlantillaCompleta(id);
+  }
+
   // ─── TOGGLE ACTIVA / INACTIVA ─────────────────────────────────────────────
 
   /// Conmuta el flag `activa` de la plantilla y aplica un optimistic update

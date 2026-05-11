@@ -114,14 +114,128 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
   void setEspecificaciones(String v) =>
       state = state.copyWith(especificaciones: v);
 
-  void setTallasSeleccionadas(List<int> tallas) =>
-      state = state.copyWith(tallasSeleccionadas: tallas);
+  /// Reemplaza la lista de tallas seleccionadas. Si alguna talla se quita,
+  /// limpia su valor del Map `valoresPorTalla` de cada MedidaPunto — así
+  /// no quedan valores fantasmas asociados a una talla deseleccionada.
+  /// Los valores de las tallas que SIGUEN seleccionadas se preservan.
+  void setTallasSeleccionadas(List<int> nuevasTallas) {
+    final removidas = state.tallasSeleccionadas
+        .where((id) => !nuevasTallas.contains(id))
+        .toSet();
+
+    final medidasLimpiadas = removidas.isEmpty
+        ? state.medidas
+        : state.medidas.map((m) {
+            final nuevoMap = {
+              for (final e in m.valoresPorTalla.entries)
+                if (!removidas.contains(e.key)) e.key: e.value,
+            };
+            return m.copyWith(valoresPorTalla: nuevoMap);
+          }).toList();
+
+    state = state.copyWith(
+      tallasSeleccionadas: nuevasTallas,
+      medidas: medidasLimpiadas,
+    );
+  }
 
   void setMedidas(List<MedidaPunto> medidas) =>
       state = state.copyWith(medidas: medidas);
 
   void setMateriales(List<MaterialPlantilla> materiales) =>
       state = state.copyWith(materiales: materiales);
+
+  // ─── SETTERS DE MEDIDAS (Paso 2) ──────────────────────────────────────────
+
+  /// Genera un id temporal único usando microsegundos. Solo vive en el form;
+  /// cuando se guarda en SQL, la BD genera el uuid real (medida_ficha.id_medida).
+  String _nuevoIdTemp(String prefijo) =>
+      '$prefijo-${DateTime.now().microsecondsSinceEpoch}';
+
+  /// Agrega una MedidaPunto vacía al final de la lista.
+  void agregarMedida() {
+    final nueva = MedidaPunto(
+      id: _nuevoIdTemp('medida'),
+      nombre: '',
+      valoresPorTalla: const {},
+    );
+    state = state.copyWith(medidas: [...state.medidas, nueva]);
+  }
+
+  void removerMedida(String idTemp) {
+    state = state.copyWith(
+      medidas: state.medidas.where((m) => m.id != idTemp).toList(),
+    );
+  }
+
+  void setNombreMedida(String idTemp, String nuevoNombre) {
+    state = state.copyWith(
+      medidas: [
+        for (final m in state.medidas)
+          if (m.id == idTemp) m.copyWith(nombre: nuevoNombre) else m,
+      ],
+    );
+  }
+
+  /// Setea el valor de una talla en una medida. `null` o `0` elimina la
+  /// entrada del Map (en vez de dejar el 0.0 como valor real).
+  void setValorMedida(String idTemp, int idTalla, double? valor) {
+    state = state.copyWith(
+      medidas: [
+        for (final m in state.medidas)
+          if (m.id == idTemp)
+            m.copyWith(
+              valoresPorTalla: () {
+                final nuevoMap = Map<int, double>.from(m.valoresPorTalla);
+                if (valor == null || valor == 0) {
+                  nuevoMap.remove(idTalla);
+                } else {
+                  nuevoMap[idTalla] = valor;
+                }
+                return nuevoMap;
+              }(),
+            )
+          else
+            m,
+      ],
+    );
+  }
+
+  // ─── SETTERS DE MATERIALES (Paso 3) ───────────────────────────────────────
+
+  /// Agrega un MaterialPlantilla vacío al final de la lista.
+  void agregarMaterial() {
+    final nuevo = MaterialPlantilla(
+      id: _nuevoIdTemp('mat'),
+      idInsumo: '',
+      cantidad: 0,
+    );
+    state = state.copyWith(materiales: [...state.materiales, nuevo]);
+  }
+
+  void removerMaterial(String idTemp) {
+    state = state.copyWith(
+      materiales: state.materiales.where((m) => m.id != idTemp).toList(),
+    );
+  }
+
+  void setMaterialInsumo(String idTemp, String idInsumo) {
+    state = state.copyWith(
+      materiales: [
+        for (final m in state.materiales)
+          if (m.id == idTemp) m.copyWith(idInsumo: idInsumo) else m,
+      ],
+    );
+  }
+
+  void setMaterialCantidad(String idTemp, double cantidad) {
+    state = state.copyWith(
+      materiales: [
+        for (final m in state.materiales)
+          if (m.id == idTemp) m.copyWith(cantidad: cantidad) else m,
+      ],
+    );
+  }
 
   // ─── NAVEGACIÓN ENTRE PASOS ───────────────────────────────────────────────
 
@@ -144,6 +258,31 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
     if (state.pasoActual > 0) {
       state = state.copyWith(pasoActual: state.pasoActual - 1);
     }
+  }
+
+  // ─── DETECCIÓN DE CAMBIOS (para confirmación al cerrar) ───────────────────
+
+  /// True si el usuario cargó algo que se perdería al cerrar el modal.
+  /// - En modo `'crear'`: cualquier campo no vacío.
+  /// - En modo `'editar'`: asume cambios siempre (conservador). Una
+  ///   comparación profunda contra `initialPlantilla` sería más precisa
+  ///   pero requiere acceso al modelo original — preferimos pedir
+  ///   confirmación de más a perder datos por accidente.
+  ///
+  /// TODO(plantillas-modulo): si se quiere ser más preciso en modo
+  /// editar, recibir el initialPlantilla en el notifier y comparar
+  /// nombre/idTipoPrenda/especificaciones/tallas/medidas/materiales.
+  bool tieneCambios() {
+    final s = state;
+    if (s.mode == 'crear') {
+      return s.nombre.trim().isNotEmpty ||
+          s.idTipoPrenda != null ||
+          s.especificaciones.trim().isNotEmpty ||
+          s.tallasSeleccionadas.isNotEmpty ||
+          s.medidas.isNotEmpty ||
+          s.materiales.isNotEmpty;
+    }
+    return true;
   }
 }
 

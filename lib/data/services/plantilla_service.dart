@@ -17,6 +17,31 @@
 // IMPORTANTE: existe trigger en receta_material que bloquea inserts con
 // insumos inactivos. El service traduce ese error a un mensaje amigable.
 // ============================================================================
+//
+// ============================================================================
+// TODO Backend Mel: política de edición parcial
+// ============================================================================
+// El PDF de Den especifica que en modo editar "se podrá editar pero no todo".
+// Decisión arquitectónica pendiente:
+//
+// 1. ¿Qué campos son INMUTABLES una vez creada la plantilla?
+//    - Candidatos: id_tipo_prenda (cambiar el tipo cambia el sentido de
+//      las medidas y materiales asociados).
+//    - Posibles: tallasSeleccionadas (deselect en versión nueva podría
+//      dejar órdenes históricas huérfanas).
+//
+// 2. ¿Qué campos son EDITABLES en cualquier versión?
+//    - Probables: nombre, especificaciones, activo.
+//
+// 3. Implementación sugerida:
+//    a) Validar a nivel BD con un trigger en plantilla_prenda que
+//       bloquee UPDATEs de columnas inmutables.
+//    b) O bien validar a nivel app en actualizarPlantilla() acá.
+//
+// Mientras tanto: el front muestra un banner informativo en el Paso 4 al
+// crear, pero NO bloquea la edición de ningún campo en modo editar
+// (todos pueden cambiarse hoy).
+// ============================================================================
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 

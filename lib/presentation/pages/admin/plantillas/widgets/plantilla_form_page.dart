@@ -26,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/plantilla_model.dart';
 import '../../../../providers/plantilla_form_provider.dart';
+import '../../../../providers/plantilla_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
@@ -41,18 +42,18 @@ import 'plantilla_form_paso4_resumen.dart';
 /// - [mode] = `'crear'` | `'editar'`. Default `'crear'`.
 /// - [initialPlantilla] requerido si `mode == 'editar'`.
 ///
-/// DECISIÓN: la inicialización del state ocurre ACÁ, en el helper, ANTES
-/// de mostrar el modal — usando `ProviderScope.containerOf(context).read`.
-/// RAZÓN: Riverpod 3 prohibe modificar providers durante el build del árbol
-/// de widgets, así que no se puede hacer en initState (se rompía con
-/// "Tried to modify a provider while the widget tree was building").
-/// La opción de `addPostFrameCallback` tampoco sirve acá porque
-/// PlantillaFormPaso1Info crea sus TextEditingController en su propio
-/// initState leyendo el state — si el state aún no está inicializado en
-/// ese momento, los controllers nacen vacíos y no se re-sincronizan.
-/// CAMBIAR: si en el futuro el form deja de depender de controllers
-/// inicializados desde state (ej. campos no controlados), se puede volver
-/// a la opción más idiomática con notifier en initState + postFrameCallback.
+/// DECISIÓN: la inicialización del state se hace en el `initState` del
+/// scaffold con `addPostFrameCallback`, NO acá antes de abrir el modal.
+/// RAZÓN: el provider es `autoDispose`. Si inicializamos acá con
+/// `container.read(notifier)`, no hay listeners y entre el read y el
+/// primer `ref.watch` del modal el provider se dispone vía microtask,
+/// perdiendo el state inicializado (bug A.1 del Bloque 6). Inicializar
+/// con `addPostFrameCallback` espera al primer frame, momento en que
+/// el modal ya está montado y escuchando, asegurando que el state
+/// inicializado persiste. Los hijos que ya hicieron initState con state
+/// vacío se sincronizan vía `ref.listen` (ver paso1_info.dart).
+/// CAMBIAR: si en el futuro Riverpod 3 cambia el timing del autoDispose,
+/// se puede volver a la versión sincrónica en el helper.
 Future<void> showPlantillaFormPage(
   BuildContext context, {
   String mode = 'crear',
@@ -70,19 +71,6 @@ Future<void> showPlantillaFormPage(
     !(mode == 'editar' && initialPlantilla == null),
     'En modo "editar" debe pasarse initialPlantilla',
   );
-
-  // Inicializar el state ANTES de abrir el modal. Importante: el
-  // provider es autoDispose, así que mientras nadie lo escuche se
-  // dispone. Pero la `read` siguiente pone state que sobrevive sólo lo
-  // suficiente: en cuanto el widget del modal hace `ref.watch`, el
-  // listener se registra y el state que pusimos acá se mantiene.
-  final container = ProviderScope.containerOf(context);
-  final notifier = container.read(plantillaFormStateProvider.notifier);
-  if (mode == 'editar') {
-    notifier.inicializarParaEditar(initialPlantilla!);
-  } else {
-    notifier.inicializarParaCrear();
-  }
 
   final isMobile = MediaQuery.of(context).size.width < 900;
 
@@ -140,32 +128,277 @@ class _PlantillaFormScaffoldState
     extends ConsumerState<_PlantillaFormScaffold> {
   // Key del Form del Paso 1 — vive acá para que el padre coordine el
   // validate() antes de avanzar al Paso 2.
-  //
-  // El state del provider ya viene inicializado por showPlantillaFormPage()
-  // antes de que este scaffold se construya. No tocamos el provider en
-  // initState para no chocar con la regla de Riverpod 3 que prohibe
-  // modificar providers durante el build del árbol de widgets.
   final GlobalKey<FormState> _paso1FormKey = GlobalKey<FormState>();
+
+  // Key del ScaffoldMessenger local al modal. Sin esto,
+  // `ScaffoldMessenger.of(context)` puede resolver al messenger global de
+  // la app (detrás del Dialog) y el SnackBar aparece duplicado o invisible.
+  // Con la key invocamos directamente el messenger local del modal.
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicialización del state vía postFrame: corre DESPUÉS del primer
+    // frame, cuando ya hay listeners activos del provider (el modal
+    // hizo ref.watch). Esto evita la race condition de autoDispose con
+    // la versión sincrónica anterior.
+    //
+    // Los pasos hijos cuyo initState lee state vacío en ese primer
+    // frame (ej. Paso 1 con controllers) se sincronizan via ref.listen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notifier = ref.read(plantillaFormStateProvider.notifier);
+      if (widget.mode == 'editar' && widget.initialPlantilla != null) {
+        notifier.inicializarParaEditar(widget.initialPlantilla!);
+      } else {
+        notifier.inicializarParaCrear();
+      }
+    });
+  }
 
   // ─── ACCIONES ─────────────────────────────────────────────────────────────
 
-  void _onCancelar() {
-    // TODO(plantillas-modulo): confirmación "cambios sin guardar" — Bloque 4.
-    Navigator.of(context).pop();
+  /// Cierra el modal. Si hay cambios sin guardar pide confirmación; si no,
+  /// pop directo. Lo usan tanto el botón X del header como Cancelar del
+  /// footer.
+  Future<void> _onCancelar() async {
+    final tieneCambios = ref
+        .read(plantillaFormStateProvider.notifier)
+        .tieneCambios();
+
+    if (!tieneCambios) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si salís ahora, los datos cargados se perderán y no se '
+          'guardará la plantilla.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Seguir editando'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _onSiguiente() {
-    final paso = ref.read(plantillaFormStateProvider).pasoActual;
+    final state = ref.read(plantillaFormStateProvider);
+    final paso = state.pasoActual;
+
     if (paso == 0) {
+      // Paso 1 → 2: validar el Form (nombre + tipo + especificaciones).
       final ok = _paso1FormKey.currentState?.validate() ?? false;
       if (!ok) return;
+    } else if (paso == 1) {
+      // Paso 2 → 3: exigir tallas Y que TODAS las medidas estén completas.
+      // El PDF de Den lo dice explícito: "no se debe continuar sin las
+      // medidas".
+      if (state.tallasSeleccionadas.isEmpty) {
+        _messengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text('Seleccioná al menos una talla antes de avanzar.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
+      if (state.medidas.isEmpty) {
+        _messengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text('Agregá al menos un punto de medida.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
+      // TODAS las medidas deben estar completas: nombre no vacío Y al
+      // menos un valor numérico > 0 en alguna talla. Una sola medida
+      // fantasma bloquea el avance hasta que se complete o se elimine.
+      final incompletas = state.medidas.where(
+        (m) =>
+            m.nombre.trim().isEmpty ||
+            !m.valoresPorTalla.values.any((v) => v > 0),
+      );
+      if (incompletas.isNotEmpty) {
+        _messengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Completá nombre y al menos un valor por cada punto de medida, '
+              'o eliminá los que estén vacíos.',
+            ),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+    } else if (paso == 2) {
+      // Paso 3 → 4: exigir al menos UN material, y todos completos.
+      if (state.materiales.isEmpty) {
+        _messengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text('Agregá al menos un material.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
+      final incompletos = state.materiales.where(
+        (m) => m.idInsumo.isEmpty || m.cantidad <= 0,
+      );
+      if (incompletos.isNotEmpty) {
+        _messengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Completá todos los materiales (insumo y cantidad > 0) '
+              'o eliminalos antes de avanzar.',
+            ),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
     }
-    // Pasos 2/3 son placeholders — siempre permite avanzar por ahora.
+
     ref.read(plantillaFormStateProvider.notifier).irSiguiente();
   }
 
   void _onAtras() {
     ref.read(plantillaFormStateProvider.notifier).irAtras();
+  }
+
+  /// Guardado del Paso 4. Muestra confirm dialog, llama a crearPlantilla
+  /// o actualizarPlantilla según el modo, y cierra el modal con SnackBar.
+  /// El optimistic update del listado lo maneja el notifier — no hace
+  /// falta `ref.invalidate(plantillaProvider)` acá.
+  Future<void> _onGuardar() async {
+    final state = ref.read(plantillaFormStateProvider);
+    final mode = widget.mode;
+    final initial = widget.initialPlantilla;
+
+    // Sanity check: el botón sólo se habilita en Paso 4, pero por las
+    // dudas validamos que los campos obligatorios estén OK. Para esto
+    // re-corremos el validate del Paso 1.
+    if (state.idTipoPrenda == null || state.nombre.trim().isEmpty) {
+      _messengerKey.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Faltan datos obligatorios. Volvé al Paso 1 para completarlos.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: const Text('¿Guardar plantilla?'),
+        content: Text(
+          mode == 'crear'
+              ? 'Se creará la plantilla "${state.nombre}". '
+                    'Podrás agregar medidas y materiales luego editándola.'
+              : 'Se actualizará la plantilla "${state.nombre}" '
+                    'a la versión v${(initial!.version) + 1}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    setState(() => _guardando = true);
+
+    try {
+      if (mode == 'crear') {
+        await ref
+            .read(plantillaProvider.notifier)
+            .crearPlantilla(
+              nombre: state.nombre,
+              idTipoPrenda: state.idTipoPrenda!,
+              especificaciones: state.especificaciones,
+              tallasSeleccionadas: state.tallasSeleccionadas,
+              medidas: state.medidas,
+              materiales: state.materiales,
+            );
+      } else {
+        await ref
+            .read(plantillaProvider.notifier)
+            .actualizarPlantilla(
+              id: initial!.id,
+              nombre: state.nombre,
+              idTipoPrenda: state.idTipoPrenda!,
+              especificaciones: state.especificaciones,
+              tallasSeleccionadas: state.tallasSeleccionadas,
+              medidas: state.medidas,
+              materiales: state.materiales,
+            );
+      }
+
+      if (!mounted) return;
+      _messengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(
+            mode == 'crear'
+                ? 'Plantilla creada correctamente'
+                : 'Plantilla actualizada correctamente',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      _messengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   // ─── BUILD ────────────────────────────────────────────────────────────────
@@ -199,7 +432,9 @@ class _PlantillaFormScaffoldState
               PlantillaFormPaso1Info(formKey: _paso1FormKey),
               const PlantillaFormPaso2Medidas(),
               const PlantillaFormPaso3Materiales(),
-              const PlantillaFormPaso4Resumen(),
+              PlantillaFormPaso4Resumen(
+                initialPlantilla: widget.initialPlantilla,
+              ),
             ],
           ),
         ),
@@ -209,17 +444,29 @@ class _PlantillaFormScaffoldState
           onCancelar: _onCancelar,
           onAtras: _onAtras,
           onSiguiente: _onSiguiente,
+          onGuardar: _onGuardar,
+          guardando: _guardando,
         ),
       ],
     );
 
     if (widget.isMobile) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(child: body),
+      return ScaffoldMessenger(
+        key: _messengerKey,
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(child: body),
+        ),
       );
     }
-    return body;
+    // Desktop: envolver en ScaffoldMessenger + Scaffold para que el modal
+    // tenga su propio messenger local. Sin esto, los SnackBars escalan al
+    // messenger global de la app y aparecen duplicados o invisibles
+    // detrás del Dialog.
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(backgroundColor: AppColors.background, body: body),
+    );
   }
 }
 
@@ -313,31 +560,39 @@ class _StepCircle extends StatelessWidget {
     final isCompleted = index < pasoActual;
     final isActive = index == pasoActual;
 
+    // bg/fg aplican al contenido del CÍRCULO (fondo + foreground interno).
+    // labelColor es independiente: el texto debajo del círculo va sobre el
+    // fondo blanco del modal, así que no puede usar `fg` (que es brandWhite
+    // en estados completed/active y quedaría invisible).
     final Color bg;
     final Color fg;
+    final Color labelColor;
     final Widget child;
 
     if (isCompleted) {
       bg = AppColors.success;
       fg = AppColors.brandWhite;
+      labelColor = AppColors.success;
       child = const Icon(Icons.check, size: 16, color: AppColors.brandWhite);
     } else if (isActive) {
       bg = AppColors.primary500;
       fg = AppColors.brandWhite;
+      labelColor = AppColors.primary500;
       child = Text(
         '${index + 1}',
         style: AppTypography.small.copyWith(
-          color: AppColors.brandWhite,
+          color: fg,
           fontWeight: FontWeight.w600,
         ),
       );
     } else {
       bg = AppColors.neutral100;
       fg = AppColors.textMuted;
+      labelColor = AppColors.textMuted;
       child = Text(
         '${index + 1}',
         style: AppTypography.small.copyWith(
-          color: AppColors.textMuted,
+          color: fg,
           fontWeight: FontWeight.w600,
         ),
       );
@@ -357,7 +612,7 @@ class _StepCircle extends StatelessWidget {
         Text(
           label,
           style: AppTypography.caption.copyWith(
-            color: fg,
+            color: labelColor,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
           ),
           maxLines: 1,
@@ -399,45 +654,84 @@ class _Footer extends StatelessWidget {
     required this.onCancelar,
     required this.onAtras,
     required this.onSiguiente,
+    required this.onGuardar,
+    required this.guardando,
   });
 
   final int pasoActual;
   final VoidCallback onCancelar;
   final VoidCallback onAtras;
   final VoidCallback onSiguiente;
+  final Future<void> Function() onGuardar;
+  final bool guardando;
 
   @override
   Widget build(BuildContext context) {
     final esUltimo = pasoActual == 3;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          TextButton(onPressed: onCancelar, child: const Text('Cancelar')),
-          const Spacer(),
-          if (pasoActual > 0)
-            OutlinedButton.icon(
-              onPressed: onAtras,
-              icon: const Icon(Icons.arrow_back, size: 16),
-              label: const Text('Atrás'),
-            ),
-          const SizedBox(width: AppSpacing.sm),
-          if (!esUltimo)
-            FilledButton.icon(
-              onPressed: onSiguiente,
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Siguiente'),
-            )
-          else
-            // TODO(plantillas-modulo): habilitar y conectar a
-            // crearPlantilla / actualizarPlantilla en Bloque 4.
-            const FilledButton(onPressed: null, child: Text('Guardar')),
-        ],
-      ),
+    // En pantallas chicas (< 380 px), los 3 botones con texto no entran
+    // y "Siguiente" / "Guardar" quedan cortados. Colapsamos a íconos para
+    // Atrás/Siguiente y abreviamos Guardar a "OK".
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 380;
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: guardando ? null : onCancelar,
+                child: const Text('Cancelar'),
+              ),
+              const Spacer(),
+              if (pasoActual > 0) ...[
+                if (compact)
+                  IconButton(
+                    onPressed: guardando ? null : onAtras,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    tooltip: 'Atrás',
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: guardando ? null : onAtras,
+                    icon: const Icon(Icons.arrow_back, size: 16),
+                    label: const Text('Atrás'),
+                  ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              if (!esUltimo)
+                compact
+                    ? IconButton.filled(
+                        onPressed: onSiguiente,
+                        icon: const Icon(Icons.arrow_forward, size: 18),
+                        tooltip: 'Siguiente',
+                      )
+                    : FilledButton.icon(
+                        onPressed: onSiguiente,
+                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        label: const Text('Siguiente'),
+                      )
+              else
+                FilledButton(
+                  onPressed: guardando ? null : onGuardar,
+                  child: guardando
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brandWhite,
+                          ),
+                        )
+                      : Text(compact ? 'OK' : 'Guardar'),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
