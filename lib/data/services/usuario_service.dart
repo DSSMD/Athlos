@@ -58,7 +58,7 @@ class UsuarioService {
       if (response.status != 200 && response.status != 201) {
         throw Exception('Error del servidor: ${response.data}');
       }
-      } on FunctionException catch (e) {
+      } on FunctionException {
       // Si el error viene de Supabase (ej: ya existe el correo), 
       // lo pasamos tal cual hacia la interfaz visual.
       rethrow;

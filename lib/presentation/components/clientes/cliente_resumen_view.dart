@@ -38,6 +38,11 @@ class ClienteResumenView extends StatelessWidget {
 
           _ResumenFinancieroCard(cliente: cliente),
           const SizedBox(height: AppSpacing.lg),
+          
+          if (cliente.notas != null && cliente.notas!.isNotEmpty) ...[
+                _NotasCard(notas: cliente.notas!),
+                const SizedBox(height: AppSpacing.lg),
+              ],
 
           const _UltimasOrdenesCard(),
           const SizedBox(height: AppSpacing.xl),
@@ -453,6 +458,34 @@ class _WhatsappMiniButton extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// NOTAS INTERNAS (si existen, con fondo resaltado)
+// ══════════════════════════════════════════════════════════════════════════════
+class _NotasCard extends StatelessWidget {
+  const _NotasCard({required this.notas});
+  final String notas;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      title: 'Notas internas',
+      // Podrías ponerle un fondo amarillo pálido para que resalte
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.warningBg,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Text(
+          notas,
+          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
         ),
       ),
     );
