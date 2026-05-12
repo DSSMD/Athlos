@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/inventario_item_model.dart';
 import '../../../../providers/inventario_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -27,8 +26,6 @@ void showInsumoFormModal(BuildContext context) {
     );
   }
 }
-
-const _kUnidades = ['m', 'cm', 'kg', 'unidades'];
 
 class InsumoFormModal extends ConsumerStatefulWidget {
   const InsumoFormModal({super.key, required this.isMobile});
@@ -153,8 +150,32 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
                   .obtenerCategoriasDropdown(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  // Mantiene el diseño mientras carga
-                  return const LinearProgressIndicator();
+                  // Placeholder con el mismo alto/borde que el dropdown
+                  // final. Antes había LinearProgressIndicator() heredando
+                  // primary500 (rojo), que se leía como error.
+                  return InputDecorator(
+                    decoration: const InputDecoration(),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Cargando...',
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 if (snapshot.hasError ||
@@ -191,7 +212,29 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
                   .obtenerUnidadesDropdown(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LinearProgressIndicator();
+                  return InputDecorator(
+                    decoration: const InputDecoration(),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Cargando...',
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 if (snapshot.hasError ||
