@@ -283,8 +283,14 @@ class _DesktopLayoutState extends ConsumerState<_DesktopLayout> {
                       selected: !isStock,
                       onTap: () => _onTabChange(1),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
+                    // Spacer empuja el search a la derecha. Antes el
+                    // SearchInput estaba en un Expanded que lo estiraba
+                    // al ancho restante (se veía demasiado largo). Ahora
+                    // el search tiene 320 px fijo — mismo patrón que
+                    // StickyTopbar usa en las demás páginas.
+                    const Spacer(),
+                    SizedBox(
+                      width: 320,
                       child: SearchInput(
                         hintText: isStock
                             ? (wide

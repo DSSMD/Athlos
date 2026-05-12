@@ -2,8 +2,11 @@
 // sticky_topbar.dart
 // Ubicación: lib/presentation/widgets/shared/sticky_topbar.dart
 // Descripción: Barra superior sticky para pantallas de listado (Usuarios,
-// Clientes, etc.). Contiene título + buscador + botón "nuevo". Se adapta a
-// mobile (2 filas) y desktop (1 fila).
+// Clientes, etc.). Contiene título + buscador + botón "nuevo".
+// - Mobile: bloque oscuro (sidebarDark) — título y SearchInput agrupados
+//   visualmente dentro del mismo header oscuro. Consistente con
+//   MobileScreenHeader que usa Inventario y Mi Perfil.
+// - Desktop: bloque blanco con border bottom (look anterior, sin cambios).
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -44,13 +47,19 @@ class StickyTopbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: isMobile ? AppColors.sidebarDark : AppColors.background,
+        border: isMobile
+            ? null
+            : const Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-        vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+      // En mobile damos un poco más de aire abajo (xl en vez de lg) para que
+      // el SearchInput no quede pegado al borde del bloque oscuro.
+      padding: EdgeInsets.fromLTRB(
+        isMobile ? AppSpacing.lg : AppSpacing.xl2,
+        isMobile ? AppSpacing.lg : AppSpacing.xl,
+        isMobile ? AppSpacing.lg : AppSpacing.xl2,
+        isMobile ? AppSpacing.xl : AppSpacing.xl,
       ),
       child: isMobile ? _buildMobile() : _buildDesktop(),
     );
@@ -62,7 +71,15 @@ class StickyTopbar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(title, style: AppTypography.h1)),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.h1.copyWith(
+                  color: AppColors.brandWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             ElevatedButton.icon(
               onPressed: onNewPressed,
               icon: const Icon(Icons.add, size: 18),
@@ -70,7 +87,7 @@ class StickyTopbar extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         SearchInput(
           hintText: searchHint,
           controller: searchController,
