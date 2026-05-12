@@ -127,14 +127,19 @@ class _Kpis extends StatelessWidget {
       ),
     ];
 
+    // Mobile y desktop usan el mismo patrón seguro `for (i; i < cards.length)`
+    // para que agregar/quitar KPIs no rompa la fila. Antes el mobile path
+    // accedía a `cards[0]` y `cards[1]` hardcoded; si el array de KPIs queda
+    // con 1 elemento o crece, el patrón actual lo absorbe sin RangeError.
     if (isMobile) {
       return IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: cards[1]),
+            for (var i = 0; i < cards.length; i++) ...[
+              Expanded(child: cards[i]),
+              if (i < cards.length - 1) const SizedBox(width: AppSpacing.sm),
+            ],
           ],
         ),
       );
@@ -188,7 +193,14 @@ class _TiposChipsRow extends ConsumerWidget {
                 onChanged();
               },
             ),
-            for (final t in TipoMovimiento.values) ...[
+            // Solo mostramos chips para ingreso y salida. Los tipos `auto`
+            // y `ajuste` siguen existiendo en el enum (el backend puede
+            // generarlos internamente) pero el usuario no filtra por ellos
+            // desde acá — decisión del equipo tras retroalimentación de Mel.
+            for (final t in const [
+              TipoMovimiento.ingreso,
+              TipoMovimiento.salida,
+            ]) ...[
               const SizedBox(width: AppSpacing.sm),
               _TipoChip(
                 label: _tipoChipLabel(t),
