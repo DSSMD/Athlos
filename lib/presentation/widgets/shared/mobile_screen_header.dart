@@ -15,6 +15,7 @@ class MobileScreenHeader extends StatelessWidget {
     this.showAvatar = true,
     this.trailing,
     this.bottom,
+    this.onBack,
   });
 
   final String title;
@@ -22,6 +23,13 @@ class MobileScreenHeader extends StatelessWidget {
   final bool showAvatar;
   final Widget? trailing;
   final Widget? bottom;
+
+  /// Callback opcional para el botón de back. Si es `null`, usa
+  /// `Navigator.of(context).maybePop()` (default — útil cuando la pantalla
+  /// se navega por route). Pasalo cuando la pantalla se renderiza por
+  /// state-swap del parent (ej. OrdenDetallePage) y necesita disparar el
+  /// callback del parent en vez del Navigator.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +51,8 @@ class MobileScreenHeader extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: AppSpacing.sm),
                       child: IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
+                        onPressed:
+                            onBack ?? () => Navigator.of(context).maybePop(),
                         icon: const Icon(
                           Icons.arrow_back,
                           color: AppColors.brandWhite,

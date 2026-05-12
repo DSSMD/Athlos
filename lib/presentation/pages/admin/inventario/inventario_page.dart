@@ -40,10 +40,58 @@ class InventarioPage extends ConsumerWidget {
 
 // ─── MOBILE ──────────────────────────────────────────────────────────────────
 
-class _MobileLayout extends ConsumerWidget {
+class _MobileLayout extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MobileLayout> createState() => _MobileLayoutState();
+}
+
+class _MobileLayoutState extends ConsumerState<_MobileLayout> {
+  late final TextEditingController _searchCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final tab = ref.read(_inventarioTabProvider);
+    final initialQuery = tab == 0
+        ? ref.read(inventarioFiltrosProvider).query
+        : ref.read(movimientoFiltrosProvider).query;
+    _searchCtrl = TextEditingController(text: initialQuery);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Al cambiar de tab limpia tanto el controller del buscador como las
+  /// queries en ambos providers, para que no queden filtros invisibles.
+  /// Mismo patrón que `_DesktopLayoutState._onTabChange`.
+  void _onTabChange(int newTab) {
+    final current = ref.read(_inventarioTabProvider);
+    if (current == newTab) return;
+    _searchCtrl.clear();
+    ref.read(inventarioFiltrosProvider.notifier).setQuery('');
+    ref.read(movimientoFiltrosProvider.notifier).setQuery('');
+    ref.read(_inventarioTabProvider.notifier).set(newTab);
+  }
+
+  /// El buscador escribe al provider de filtros correspondiente al tab
+  /// activo. Stock y Movimientos tienen estados de filtros separados,
+  /// no se contaminan entre sí.
+  void _onSearchChanged(String v) {
+    final tab = ref.read(_inventarioTabProvider);
+    if (tab == 0) {
+      ref.read(inventarioFiltrosProvider.notifier).setQuery(v);
+    } else {
+      ref.read(movimientoFiltrosProvider.notifier).setQuery(v);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(_inventarioTabProvider);
+    final isStock = tab == 0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -51,20 +99,37 @@ class _MobileLayout extends ConsumerWidget {
         children: [
           MobileScreenHeader(
             title: 'Inventario',
-            bottom: MobileTabsRow(
-              labels: const ['Stock', 'Movimientos'],
-              selectedIndex: tab,
-              onTap: (i) => ref.read(_inventarioTabProvider.notifier).set(i),
+            // El bottom slot del header oscuro lleva 3 niveles en un Column:
+            // tabs Stock/Movimientos, espacio, y el SearchInput. Todo queda
+            // dentro del bloque oscuro (sidebarDark) — mismo patrón que
+            // StickyTopbar mobile en las otras pantallas.
+            bottom: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                MobileTabsRow(
+                  labels: const ['Stock', 'Movimientos'],
+                  selectedIndex: tab,
+                  onTap: _onTabChange,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SearchInput(
+                  hintText: isStock
+                      ? 'Buscar por nombre, código, categoría...'
+                      : 'Buscar movimiento...',
+                  controller: _searchCtrl,
+                  onChanged: _onSearchChanged,
+                ),
+              ],
             ),
           ),
           Expanded(
-            child: tab == 0
+            child: isStock
                 ? const StockTabContent(isMobile: true)
                 : const MovimientosTabContent(isMobile: true),
           ),
         ],
       ),
-      floatingActionButton: tab == 0
+      floatingActionButton: isStock
           ? FloatingActionButton(
               onPressed: () => _showInventarioActionsSheet(context),
               backgroundColor: AppColors.primary500,

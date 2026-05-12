@@ -9,6 +9,8 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../theme/breakpoints.dart';
 
+import '../../widgets/shared/mobile_screen_header.dart';
+
 import '../../../domain/models/orden_model.dart';
 import '../../providers/orden_provider.dart';
 
@@ -70,30 +72,42 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
 
     return Column(
       children: [
-        // Topbar con botón volver
-        Container(
-          decoration: const BoxDecoration(
-            color: AppColors.background,
-            border: Border(bottom: BorderSide(color: AppColors.border)),
+        // Topbar con botón volver. Mobile usa MobileScreenHeader (header
+        // oscuro del design system, mismo que Clientes/Usuarios/Órdenes/
+        // Inventario). Desktop mantiene su Container blanco con el botón
+        // de texto "Volver al listado" (look anterior).
+        if (isMobile)
+          MobileScreenHeader(
+            title: '#$codigoCorto',
+            showBackButton: true,
+            onBack: widget.onVolver,
+            showAvatar: false,
+            trailing: _EstadoChip(idEstado: orden.idEstado),
+          )
+        else
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl2,
+              vertical: AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                TextButton.icon(
+                  onPressed: widget.onVolver,
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: const Text('Volver al listado'),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Text('#$codigoCorto', style: AppTypography.h3),
+                const SizedBox(width: AppSpacing.md),
+                _EstadoChip(idEstado: orden.idEstado),
+              ],
+            ),
           ),
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-            vertical: AppSpacing.md,
-          ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                onPressed: widget.onVolver,
-                icon: const Icon(Icons.arrow_back, size: 18),
-                label: const Text('Volver al listado'),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text('#$codigoCorto', style: AppTypography.h3),
-              const SizedBox(width: AppSpacing.md),
-              _EstadoChip(idEstado: orden.idEstado),
-            ],
-          ),
-        ),
 
         // Contenido scrolleable
         Expanded(

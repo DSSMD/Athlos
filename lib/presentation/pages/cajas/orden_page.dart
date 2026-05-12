@@ -13,9 +13,12 @@ import '../../theme/app_typography.dart';
 import '../../theme/breakpoints.dart';
 
 // Widgets compartidos (reutilizables entre módulos)
+import '../../widgets/shared/compact_new_button.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 
 // Widgets específicos de usuarios (KpiCard — se comparte sin mover por ahora)
@@ -115,18 +118,32 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
 
         return Column(
           children: [
-            StickyTopbar(
-              isMobile: isMobile,
-              title: 'Órdenes',
-              searchHint: 'Buscar orden, cliente...',
-              searchController: _searchController,
-              onSearchChanged: (_) => setState(() => _currentPage = 1),
-              newButtonLabelMobile: 'Nueva',
-              newButtonLabelDesktop: 'Nueva orden',
-              onNewPressed: () {
-                setState(() => _creandoOrden = true);
-              },
-            ),
+            if (isMobile)
+              MobileScreenHeader(
+                title: 'Órdenes',
+                trailing: CompactNewButton(
+                  label: 'Nueva',
+                  onPressed: () {
+                    setState(() => _creandoOrden = true);
+                  },
+                ),
+                bottom: SearchInput(
+                  hintText: 'Buscar orden, cliente...',
+                  controller: _searchController,
+                  onChanged: (_) => setState(() => _currentPage = 1),
+                ),
+              )
+            else
+              StickyTopbar(
+                title: 'Órdenes',
+                searchHint: 'Buscar orden, cliente...',
+                searchController: _searchController,
+                onSearchChanged: (_) => setState(() => _currentPage = 1),
+                newButtonLabelDesktop: 'Nueva orden',
+                onNewPressed: () {
+                  setState(() => _creandoOrden = true);
+                },
+              ),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(
@@ -702,3 +719,4 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+

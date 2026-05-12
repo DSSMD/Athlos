@@ -78,7 +78,17 @@ class _StockBodyState extends ConsumerState<_StockBody> {
         .toList();
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
+      // Mobile: bottom de 80 px para reservar aire al FAB del Scaffold
+      // (FAB de 56 px + margin) y que no tape la fila de paginación.
+      // Desktop: padding uniforme normal.
+      padding: isMobile
+          ? const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              80,
+            )
+          : const EdgeInsets.all(AppSpacing.xl2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

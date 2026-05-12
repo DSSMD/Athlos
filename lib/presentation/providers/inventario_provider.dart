@@ -190,11 +190,14 @@ final inventarioFiltradoProvider = Provider<List<InventarioItemModel>>((ref) {
       final estado = item.estado;
       if (estado == StockState.ok) return false;
     }
-    // Filtro búsqueda
+    // Filtro búsqueda: nombre + código + categoría (snake_case del enum).
+    // `categoria.name` da por ejemplo "telas", "hilos" — coincide con cómo
+    // el usuario tipea en el buscador (case-insensitive vía .toLowerCase).
     final q = filtros.query.toLowerCase().trim();
     if (q.isEmpty) return true;
     return item.nombre.toLowerCase().contains(q) ||
-        item.codigo.toLowerCase().contains(q);
+        item.codigo.toLowerCase().contains(q) ||
+        item.categoria.name.toLowerCase().contains(q);
   }).toList();
 });
 

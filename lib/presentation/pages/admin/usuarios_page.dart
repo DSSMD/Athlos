@@ -28,6 +28,7 @@ import '../../theme/app_typography.dart';
 import '../../theme/breakpoints.dart';
 
 import '../../widgets/users/kpi_card.dart';
+import '../../widgets/shared/compact_new_button.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
 import '../../widgets/shared/mobile_screen_header.dart';
@@ -146,25 +147,29 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        // Header — mobile usa MobileScreenHeader, desktop mantiene StickyTopbar
+        // Header — mobile usa MobileScreenHeader (con search en bottom),
+        // desktop mantiene StickyTopbar.
         if (isMobile)
           MobileScreenHeader(
             title: 'Usuarios',
-            trailing: _CompactNewButton(
+            trailing: CompactNewButton(
               label: 'Nuevo',
               onPressed: () => showUserFormDrawer(context),
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar usuario...',
+              controller: _searchController,
+              onChanged: (_) => setState(() => _currentPage = 1),
             ),
           )
         else
           StickyTopbar(
-            isMobile: isMobile,
             title: 'Usuarios',
             searchHint: 'Buscar usuario...',
             searchController: _searchController,
             onSearchChanged: (_) => setState(() {
               _currentPage = 1;
             }),
-            newButtonLabelMobile: 'Nuevo',
             newButtonLabelDesktop: 'Nuevo usuario',
             onNewPressed: () => showUserFormDrawer(context),
           ),
@@ -175,14 +180,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (isMobile) ...[
-                  SearchInput(
-                    hintText: 'Buscar usuario...',
-                    controller: _searchController,
-                    onChanged: (_) => setState(() => _currentPage = 1),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
                 _TabSelector(
                   selected: _selectedTab,
                   onChanged: (i) => setState(() {
@@ -272,19 +269,22 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
         if (isMobile)
           MobileScreenHeader(
             title: 'Usuarios',
-            trailing: _CompactNewButton(
+            trailing: CompactNewButton(
               label: 'Nuevo',
               onPressed: () => showUserFormDrawer(context),
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar usuario...',
+              controller: _searchController,
+              onChanged: (_) => setState(() {}),
             ),
           )
         else
           StickyTopbar(
-            isMobile: isMobile,
             title: 'Usuarios',
             searchHint: 'Buscar usuario...',
             searchController: _searchController,
             onSearchChanged: (_) => setState(() {}),
-            newButtonLabelMobile: 'Nuevo',
             newButtonLabelDesktop: 'Nuevo usuario',
             onNewPressed: () => showUserFormDrawer(context),
           ),
@@ -591,45 +591,3 @@ class _MobileList extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// COMPACT NEW BUTTON — para el header mobile (espacio limitado)
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _CompactNewButton extends StatelessWidget {
-  const _CompactNewButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.primary500,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.add, size: 16, color: AppColors.brandWhite),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: AppTypography.small.copyWith(
-                  color: AppColors.brandWhite,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
