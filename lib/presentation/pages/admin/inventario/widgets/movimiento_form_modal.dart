@@ -130,8 +130,8 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
     final insumos = asyncInsumos.value ?? const <InventarioItemModel>[];
     final nombreUnidad = _insumo?.unidad ?? 'unidad';
     final esDim = _insumo != null &&
-        (_insumo!.categoria.label.toLowerCase().contains('tela') ||
-         _insumo!.categoria.label.toLowerCase().contains('paño'));
+        (_insumo!.nombreCategoria.toLowerCase().contains('tela') ||
+         _insumo!.nombreCategoria.toLowerCase().contains('paño'));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),

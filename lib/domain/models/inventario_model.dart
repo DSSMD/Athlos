@@ -3,54 +3,13 @@ import 'dart:convert';
 
 enum StockState { ok, alerta, bajo, critico }
 
-enum CategoriaInsumo {
-  telas,
-  hilos,
-  accesorios,
-  etiquetas,
-  empaque,
-  otros;
 
-  String get label {
-    switch (this) {
-      case CategoriaInsumo.telas:
-        return 'Telas';
-      case CategoriaInsumo.hilos:
-        return 'Hilos';
-      case CategoriaInsumo.accesorios:
-        return 'Accesorios';
-      case CategoriaInsumo.etiquetas:
-        return 'Etiquetas';
-      case CategoriaInsumo.empaque:
-        return 'Empaque';
-      case CategoriaInsumo.otros:
-        return 'Otros';
-    }
-  }
-
-  static CategoriaInsumo fromString(String? raw) {
-    switch (raw) {
-      case 'telas':
-        return CategoriaInsumo.telas;
-      case 'hilos':
-        return CategoriaInsumo.hilos;
-      case 'accesorios':
-        return CategoriaInsumo.accesorios;
-      case 'etiquetas':
-        return CategoriaInsumo.etiquetas;
-      case 'empaque':
-        return CategoriaInsumo.empaque;
-      default:
-        return CategoriaInsumo.otros;
-    }
-  }
-}
 
 class InventarioItemModel {
   const InventarioItemModel({
     required this.id,
     required this.nombre,
-    required this.categoria,
+    required this.nombreCategoria, 
     required this.stockActual,
     required this.stockMinimo,
     required this.unidad,
@@ -61,7 +20,7 @@ class InventarioItemModel {
 
   final String id;
   final String nombre;
-  final CategoriaInsumo categoria;
+  final String nombreCategoria; 
   final double stockActual;
   final double stockMinimo;
   final String unidad;
@@ -118,7 +77,6 @@ class InventarioItemModel {
     return InventarioItemModel(
       id: json['id_insumo'] ?? '',
       nombre: (json['nombre'] ?? '') as String,
-      categoria: CategoriaInsumo.fromString(nombreCategoria),
       stockActual: json['stock_actual'] != null
           ? double.tryParse(json['stock_actual'].toString()) ?? 0.0
           : 0.0,
@@ -133,6 +91,7 @@ class InventarioItemModel {
           ? jsonEncode(json['atributos_tecnicos'])
           : null,
       activo: (json['activo'] as bool?) ?? true,
+      nombreCategoria: nombreCategoria,
     );
   }
 

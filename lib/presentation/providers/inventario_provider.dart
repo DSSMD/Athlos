@@ -83,32 +83,47 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
   }
 }
 
+enum InventarioOrden {
+  recientes('Recientes', 'recientes'),
+  alfabetico('A-Z', 'alfabetico'),
+  stockMenor('Menor stock', 'stock_asc'),
+  stockMayor('Mayor stock', 'stock_desc');
+
+  const InventarioOrden(this.label, this.value);
+  final String label;
+  final String value;
+}
+
 // 3. Estado de filtros
 class InventarioFiltros {
   const InventarioFiltros({
     this.query = '',
-    this.categoria,
+    this.nombreCategoriaFiltro,
     this.stockBajoOnly = false,
+    this.orden = InventarioOrden.recientes,
   });
 
   final String query;
-  final CategoriaInsumo? categoria;
+  final String? nombreCategoriaFiltro;
   final bool stockBajoOnly;
+  final InventarioOrden orden;
 
   InventarioFiltros copyWith({
     String? query,
-    CategoriaInsumo? categoria,
+    String? nombreCategoriaFiltro,
     bool? stockBajoOnly,
+    InventarioOrden? orden,
     bool clearCategoria = false,
   }) {
     return InventarioFiltros(
       query: query ?? this.query,
-      categoria: clearCategoria ? null : (categoria ?? this.categoria),
+      nombreCategoriaFiltro: clearCategoria ? null : (nombreCategoriaFiltro ?? this.nombreCategoriaFiltro),
       stockBajoOnly: stockBajoOnly ?? this.stockBajoOnly,
+      orden: orden ?? this.orden,
     );
   }
 
-  bool get hasFiltros => query.isNotEmpty || categoria != null || stockBajoOnly;
+  bool get hasFiltros => query.isNotEmpty || nombreCategoriaFiltro != null || stockBajoOnly || orden != InventarioOrden.recientes;
 }
 
 class InventarioFiltrosNotifier extends Notifier<InventarioFiltros> {
@@ -119,12 +134,16 @@ class InventarioFiltrosNotifier extends Notifier<InventarioFiltros> {
     state = state.copyWith(query: q);
   }
 
-  void setCategoria(CategoriaInsumo? cat) {
-    state = state.copyWith(categoria: cat, clearCategoria: cat == null);
+  void setCategoria(String? nombreCategoria) {
+    state = state.copyWith(nombreCategoriaFiltro: nombreCategoria, clearCategoria: nombreCategoria == null);
   }
 
   void toggleStockBajo() {
     state = state.copyWith(stockBajoOnly: !state.stockBajoOnly);
+  }
+
+  void setOrden(InventarioOrden orden) {
+    state = state.copyWith(orden: orden);
   }
 
   void limpiar() {
@@ -146,7 +165,7 @@ final inventarioFiltradoProvider = Provider<List<InventarioItemModel>>((ref) {
 
   return items.where((item) {
     // Filtro categoría
-    if (filtros.categoria != null && item.categoria != filtros.categoria) {
+    if (filtros.nombreCategoriaFiltro != null && item.nombreCategoria != filtros.nombreCategoriaFiltro) {
       return false;
     }
     // Filtro stock bajo (incluye crítico, bajo y alerta)
@@ -161,8 +180,22 @@ final inventarioFiltradoProvider = Provider<List<InventarioItemModel>>((ref) {
     if (q.isEmpty) return true;
     return item.nombre.toLowerCase().contains(q) ||
         item.codigo.toLowerCase().contains(q) ||
-        item.categoria.name.toLowerCase().contains(q);
-  }).toList();
+        item.nombreCategoria.toLowerCase().contains(q);
+  }).toList()
+  ..sort((a, b) {
+    switch (filtros.orden) {
+      case InventarioOrden.alfabetico:
+        return a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase());
+      case InventarioOrden.stockMenor:
+        return a.stockActual.compareTo(b.stockActual);
+      case InventarioOrden.stockMayor:
+        return b.stockActual.compareTo(a.stockActual);
+      case InventarioOrden.recientes:
+      default:
+        // Por ahora, usamos el ID para simular más recientes (los UUID nuevos suelen ser más grandes lexicográficamente, aunque no siempre, idealmente usaríamos un campo creado_en).
+        return b.id.compareTo(a.id); 
+    }
+  });
 });
 
 // 5. KPIs (provider derivado)
@@ -209,4 +242,9 @@ final inventarioKpisProvider = Provider<InventarioKpis>((ref) {
     stockCritico: critico,
     valorTotalInventario: valor,
   );
+});
+
+
+final categoriasProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  return ref.read(inventarioServiceProvider).obtenerCategoriasDropdown();
 });

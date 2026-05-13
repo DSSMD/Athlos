@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/presentation/pages/admin/inventario/widgets/insumo_detalle_modal.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
 import '../../../../providers/inventario_provider.dart';
@@ -210,80 +211,108 @@ class _FiltrosCard extends ConsumerWidget {
   final int totalResultados;
   final VoidCallback onPageReset;
 
-  @override
+ @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filtrosNotifier = ref.read(inventarioFiltrosProvider.notifier);
-    final categoriaActivaLabel = filtros.categoria?.label;
+    final categoriaActivaLabel = filtros.nombreCategoriaFiltro;
+    
+    // 1. Obtenemos las categorías reales de la BD vía Provider
+    final asyncCategorias = ref.watch(categoriasProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Chips de categoría + link "Limpiar filtros" alineado derecha
-        Row(
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
-              child: Scrollbar(
-                thumbVisibility: true,
-                trackVisibility: true,
-                thickness: 4,
-                radius: const Radius.circular(2),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Row(
-                    children: [
-                      _CategoriaChip(
-                        label: 'Todos',
-                        active:
-                            filtros.categoria == null && !filtros.stockBajoOnly,
-                        onTap: () {
-                          filtrosNotifier.setCategoria(null);
-                          if (filtros.stockBajoOnly) {
-                            filtrosNotifier.toggleStockBajo();
-                          }
-                          onPageReset();
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _CategoriaChip(
-                        label: 'Stock bajo',
-                        active: filtros.stockBajoOnly,
-                        onTap: () {
-                          filtrosNotifier.toggleStockBajo();
-                          onPageReset();
-                        },
-                      ),
-                      for (final cat in const [
-                        CategoriaInsumo.telas,
-                        CategoriaInsumo.hilos,
-                        CategoriaInsumo.accesorios,
-                        CategoriaInsumo.etiquetas,
-                        CategoriaInsumo.empaque,
-                      ]) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        _CategoriaChip(
-                          label: cat.label,
-                          active: filtros.categoria == cat,
-                          onTap: () {
-                            filtrosNotifier.setCategoria(
-                              filtros.categoria == cat ? null : cat,
-                            );
-                            onPageReset();
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+            // Filtro de Categoría (Dropdown)
+            SizedBox(
+              width: 180,
+              child: asyncCategorias.when(
+                data: (cats) {
+                  final items = [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Todas las categorías', overflow: TextOverflow.ellipsis),
+                    ),
+                    ...cats.map((c) {
+                      final nombre = c['nombre_categoria'] as String;
+                      return DropdownMenuItem<String?>(
+                        value: nombre,
+                        child: Text(nombre, overflow: TextOverflow.ellipsis),
+                      );
+                    }),
+                  ];
+
+                  return DropdownButtonFormField<String?>(
+                    value: filtros.nombreCategoriaFiltro,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    ),
+                    items: items,
+                    onChanged: (v) {
+                      filtrosNotifier.setCategoria(v);
+                      onPageReset();
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const Text('Error al cargar categorías'),
               ),
             ),
+            
+            // Filtro de Ordenamiento (Dropdown)
+            SizedBox(
+              width: 150,
+              child: DropdownButtonFormField<InventarioOrden>(
+                value: filtros.orden,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                ),
+                items: InventarioOrden.values.map((o) {
+                  return DropdownMenuItem(
+                    value: o,
+                    child: Text(o.label, overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    filtrosNotifier.setOrden(v);
+                    onPageReset();
+                  }
+                },
+              ),
+            ),
+            
+            // Filtro Stock Bajo
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: filtros.stockBajoOnly,
+                  onChanged: (_) {
+                    filtrosNotifier.toggleStockBajo();
+                    onPageReset();
+                  },
+                ),
+                Text('Solo insumos en riesgo', style: AppTypography.small),
+              ],
+            ),
+            
             if (filtros.hasFiltros)
-              TextButton(
+              TextButton.icon(
                 onPressed: () {
                   filtrosNotifier.limpiar();
                   onPageReset();
                 },
-                child: const Text('Limpiar filtros'),
+                icon: const Icon(Icons.clear, size: 16),
+                label: const Text('Limpiar'),
               ),
           ],
         ),
@@ -577,7 +606,19 @@ class _DesktopRow extends StatelessWidget {
             flex: _kColCategoria,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: _CategoriaBadge(categoria: item.categoria),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  item.nombreCategoria,
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: _kColGap),
@@ -683,60 +724,100 @@ class _DesktopRow extends StatelessWidget {
           const SizedBox(width: _kColGap),
           Expanded(
             flex: _kColEditar,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => _abrirHistorial(context, item),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    'Historial',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.primary500,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  return PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                    tooltip: 'Acciones',
+                    onSelected: (value) async {
+                      if (value == 'detalle') {
+                        showInsumoDetalleModal(context, item);
+                      } else if (value == 'historial') {
+                        _abrirHistorial(context, item);
+                      } else if (value == 'estado') {
+                        // Acción explícita para activar/desactivar con confirmación
+                        final accion = item.activo ? 'Desactivar' : 'Activar';
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text('$accion Insumo'),
+                            content: Text('¿Estás seguro de que deseas $accion "${item.nombre}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Confirmar'),
+                              ),
+                            ],
+                          ),
+                        );
 
-                // Switch de activar/desactivar sin texto para ahorrar espacio. El tooltip indica el estado.
-                Consumer(
-                  builder: (context, ref, child) {
-                    // Le quitamos el Row y el Text para que no pelee por espacio con el Historial.
-                    // Usamos Tooltip para que al pasar el mouse por encima diga el estado.
-                    return Tooltip(
-                      message: item.activo ? 'Activo' : 'Inactivo',
-                      child: Switch(
-                        value: item.activo,
-                        onChanged: (bool nuevoValor) async {
-                          // 1. Lógica del backend
+                        if (confirm == true) {
                           await ref
                               .read(inventarioProvider.notifier)
-                              .cambiarEstadoInsumo(item.id, nuevoValor);
-
-                          // 2. Mensaje de feedback
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                nuevoValor
-                                    ? 'Insumo activado'
-                                    : 'Insumo desactivado',
+                              .cambiarEstadoInsumo(item.id, !item.activo);
+                          
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Insumo $accion exitosamente'),
+                                backgroundColor: !item.activo ? AppColors.success : AppColors.error,
                               ),
-                              duration: const Duration(seconds: 2),
-                              backgroundColor: nuevoValor
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          );
-                        },
+                            );
+                          }
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'detalle',
+                        child: Row(
+                          children: [
+                            Icon(Icons.visibility, size: 18),
+                            SizedBox(width: 8),
+                            Text('Ver Detalles'),
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ],
+                      const PopupMenuItem(
+                        value: 'historial',
+                        child: Row(
+                          children: [
+                            Icon(Icons.history, size: 18),
+                            SizedBox(width: 8),
+                            Text('Kardex / Historial'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'estado',
+                        child: Row(
+                          children: [
+                            Icon(
+                              item.activo ? Icons.block : Icons.check_circle_outline,
+                              size: 18,
+                              color: item.activo ? AppColors.error : AppColors.success,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              item.activo ? 'Desactivar' : 'Activar',
+                              style: TextStyle(
+                                color: item.activo ? AppColors.error : AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -765,13 +846,13 @@ class _MobileItemsList extends StatelessWidget {
   }
 }
 
-class _MobileItemCard extends StatelessWidget {
+class _MobileItemCard extends ConsumerWidget {
   const _MobileItemCard({required this.item});
 
   final InventarioItemModel item;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final estadoColor = _stockStateColor(item.estado);
 
     return Container(
@@ -807,7 +888,17 @@ class _MobileItemCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              _CategoriaBadge(categoria: item.categoria),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  item.nombreCategoria,
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
               _EstadoChip(estado: item.estado),
             ],
@@ -883,53 +974,51 @@ class _MobileItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => _abrirHistorial(context, item),
-                    icon: const Icon(Icons.history, size: 16),
-                    label: const Text('Historial'),
-                  ),
+                  // Menú de acciones (3 puntos) para ahorrar espacio
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                    tooltip: 'Acciones',
+                    onSelected: (value) async {
+                      if (value == 'detalle') {
+                        showInsumoDetalleModal(context, item);
+                      } else if (value == 'historial') {
+                        _abrirHistorial(context, item);
+                      } else if (value == 'estado') {
+                        final accion = item.activo ? 'Desactivar' : 'Activar';
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text('$accion Insumo'),
+                            content: Text('¿Estás seguro de que deseas $accion "${item.nombre}"?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmar')),
+                            ],
+                          ),
+                        );
 
-                  // Switch de activar/desactivar sin texto para ahorrar espacio. El tooltip indica el estado.
-                  Consumer(
-                    builder: (context, ref, child) {
-                      // Le quitamos el Row y el Text para que no pelee por espacio con el Historial.
-                      // Usamos Tooltip para que al pasar el mouse por encima diga el estado.
-                      return Tooltip(
-                        message: item.activo ? 'Activo' : 'Inactivo',
-                        child: Switch(
-                          value: item.activo,
-
-                          onChanged: (bool nuevoValor) async {
-                            // 1. Lógica del backend
-                            await ref
-                                .read(inventarioProvider.notifier)
-                                .cambiarEstadoInsumo(item.id, nuevoValor);
-
-                            // 2. Mensaje de feedback
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  nuevoValor
-                                      ? 'Insumo activado'
-                                      : 'Insumo desactivado',
-                                ),
-                                duration: const Duration(seconds: 2),
-                                backgroundColor: nuevoValor
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                            );
-                          },
-                        ),
-                      );
+                        if (confirm == true) {
+                          await ref.read(inventarioProvider.notifier).cambiarEstadoInsumo(item.id, !item.activo);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Insumo $accion exitosamente')));
+                        }
+                      }
                     },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'detalle', child: Row(children: [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('Ver Detalles')])),
+                      const PopupMenuItem(value: 'historial', child: Row(children: [Icon(Icons.history, size: 18), SizedBox(width: 8), Text('Kardex / Historial')])),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'estado',
+                        child: Row(
+                          children: [
+                            Icon(item.activo ? Icons.block : Icons.check_circle_outline, size: 18, color: item.activo ? AppColors.error : AppColors.success),
+                            const SizedBox(width: 8),
+                            Text(item.activo ? 'Desactivar' : 'Activar', style: TextStyle(color: item.activo ? AppColors.error : AppColors.success)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
             ],
           ),
         ],
@@ -939,35 +1028,6 @@ class _MobileItemCard extends StatelessWidget {
 }
 
 // ─── BADGES / CHIPS ──────────────────────────────────────────────────────────
-
-class _CategoriaBadge extends StatelessWidget {
-  const _CategoriaBadge({required this.categoria});
-
-  final CategoriaInsumo categoria;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.neutral100,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        categoria.label,
-        style: AppTypography.caption.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
 
 class _EstadoChip extends StatelessWidget {
   const _EstadoChip({required this.estado});
@@ -1164,7 +1224,7 @@ String _formatMoney(double n) {
     if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
     buf.write(digits[i]);
   }
-  return '${negativo ? '-' : ''}\$$buf,$decimales';
+  return '${negativo ? '-' : ''}Bs $buf,$decimales';
 }
 
 void _abrirHistorial(BuildContext context, InventarioItemModel item) {
