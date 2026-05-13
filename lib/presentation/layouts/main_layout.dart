@@ -58,6 +58,7 @@ class MainLayout extends ConsumerWidget {
     WidgetRef ref,
     int selectedIndex,
     bool isExtended,
+    
   ) {
     final isManuallyCollapsed = ref.watch(sidebarCollapsedProvider);
     final shouldCollapse = !isExtended || isManuallyCollapsed;
