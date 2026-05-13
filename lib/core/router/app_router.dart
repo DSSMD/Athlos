@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
+import 'package:workspace/presentation/pages/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
 
 // Importamos el cerebro y tus providers
@@ -113,7 +114,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _buildPlaceholder('Pagos'), // 5. Pagos
             _buildPlaceholder('Balance'), // 6. Balance
             const UsuariosPage(), // 7. Usuarios
-            _buildPlaceholder('Configuración'), // 8. Config
+            const ConjuntosPage(), // 8. Config
             _buildPlaceholder('Avisos'), // 9. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),
