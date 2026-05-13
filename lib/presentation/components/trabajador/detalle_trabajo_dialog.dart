@@ -39,7 +39,6 @@ class DetalleTrabajoDialog extends StatelessWidget {
               const SizedBox(height: AppSpacing.xl),
 
               // Información Operativa (Punto 2 de tu plantilla)
-              _buildInfoSection('¿QUÉ DEBE HACER?', trabajo.actividad, isHighlight: true),
               _buildInfoSection('CANTIDAD A PRODUCIR:', '${trabajo.cantidad} unidades'),
               _buildInfoSection('TALLAS ASIGNADAS:', trabajo.tallas.join(', ')),
               

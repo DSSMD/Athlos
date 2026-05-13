@@ -21,7 +21,6 @@ class _TrabajadorDashboardPageState extends State<TrabajadorDashboardPage> {
       cliente: 'Textiles Athlos',
       estado: 'PENDIENTE',
       fechaAsignacion: DateTime.now(),
-      actividad: 'CORTAR TELA',
       cantidad: 250,
       tallas: ['S', 'M', 'L'],
       instrucciones: 'Usar patrón de corte tipo Slim Fit. Cuidado con el desperdicio en las esquinas.',
@@ -135,10 +134,6 @@ class _TrabajoCard extends StatelessWidget {
                   Text(
                     trabajo.loteId, 
                     style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary)
-                  ),
-                  Text(
-                    trabajo.actividad, 
-                    style: AppTypography.body.copyWith(color: AppColors.textSecondary, fontSize: 13)
                   ),
                 ],
               ),

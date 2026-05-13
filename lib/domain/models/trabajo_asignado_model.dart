@@ -6,7 +6,6 @@ class TrabajoAsignadoModel {
   final String cliente;
   final String estado; // 'PENDIENTE', 'EN PROCESO', 'TERMINADO'
   final DateTime fechaAsignacion;
-  final String actividad; // Ej: "Cortar tela", "Costura de mangas"
   final int cantidad;
   final List<String> tallas;
   final String instrucciones;
@@ -17,7 +16,6 @@ class TrabajoAsignadoModel {
     required this.cliente,
     required this.estado,
     required this.fechaAsignacion,
-    required this.actividad,
     required this.cantidad,
     required this.tallas,
     required this.instrucciones,
@@ -35,7 +33,6 @@ class TrabajoAsignadoModel {
       cliente: cliente,
       estado: estado ?? this.estado,
       fechaAsignacion: fechaAsignacion,
-      actividad: actividad ?? this.actividad,
       cantidad: cantidad,
       tallas: tallas,
       instrucciones: instrucciones,
@@ -52,7 +49,6 @@ class TrabajoAsignadoModel {
       fechaAsignacion: json['fecha_asignacion'] != null 
           ? DateTime.parse(json['fecha_asignacion']) 
           : DateTime.now(),
-      actividad: json['actividad'] ?? '',
       cantidad: json['cantidad'] ?? 0,
       tallas: List<String>.from(json['tallas'] ?? []),
       instrucciones: json['instrucciones'] ?? 'Sin instrucciones adicionales.',
@@ -64,7 +60,6 @@ class TrabajoAsignadoModel {
     return {
       'lote_id': loteId,
       'estado': estado,
-      'actividad': actividad,
       // No solemos enviar todos los campos de vuelta, 
       // solo los que el trabajador puede cambiar (como el estado).
     };
