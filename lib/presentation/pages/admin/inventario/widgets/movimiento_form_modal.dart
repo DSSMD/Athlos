@@ -129,9 +129,10 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
     final asyncInsumos = ref.watch(inventarioProvider);
     final insumos = asyncInsumos.value ?? const <InventarioItemModel>[];
     final nombreUnidad = _insumo?.unidad ?? 'unidad';
+    // Si el insumo se mide en metros, asumimos que viene en rollos (es dimensionable)
     final esDim = _insumo != null &&
-        (_insumo!.nombreCategoria.toLowerCase().contains('tela') ||
-         _insumo!.nombreCategoria.toLowerCase().contains('paño'));
+        (_insumo!.unidad.toLowerCase().contains('metro') ||
+         _insumo!.unidad.toLowerCase() == 'm');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),

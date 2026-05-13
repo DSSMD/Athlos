@@ -347,6 +347,7 @@ class _FiltrosCard extends ConsumerWidget {
   }
 }
 
+// ignore: unused_element
 class _CategoriaChip extends StatelessWidget {
   const _CategoriaChip({
     required this.label,

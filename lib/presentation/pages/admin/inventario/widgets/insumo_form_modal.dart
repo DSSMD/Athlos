@@ -62,12 +62,11 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
   int?   _idUnidad;
   String _nombreUnidad = '';
 
-  /// El sistema determina automáticamente si es dimensionable según el nombre
-  /// de la categoría. No se le pregunta al usuario.
+  /// El sistema determina automáticamente si es dimensionable (Rollos) según la
+  /// unidad de medida. Si se mide en metros, es dimensionable. No depende de la categoría.
   bool get _esDimensionable =>
-      _nombreCategoria.toLowerCase().contains('tela') ||
-      _nombreCategoria.toLowerCase().contains('paño') ||
-      _nombreCategoria.toLowerCase().contains('fabric');
+      _nombreUnidad.toLowerCase().contains('metro') ||
+      _nombreUnidad.toLowerCase() == 'm';
 
   // ── Paso 2 ────────────────────────────────────────────────────────────────
   final _formKey2   = GlobalKey<FormState>();

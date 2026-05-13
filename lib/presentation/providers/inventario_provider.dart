@@ -191,8 +191,7 @@ final inventarioFiltradoProvider = Provider<List<InventarioItemModel>>((ref) {
       case InventarioOrden.stockMayor:
         return b.stockActual.compareTo(a.stockActual);
       case InventarioOrden.recientes:
-      default:
-        // Por ahora, usamos el ID para simular más recientes (los UUID nuevos suelen ser más grandes lexicográficamente, aunque no siempre, idealmente usaríamos un campo creado_en).
+      // Por ahora, usamos el ID para simular más recientes (los UUID nuevos suelen ser más grandes lexicográficamente, aunque no siempre, idealmente usaríamos un campo creado_en).
         return b.id.compareTo(a.id); 
     }
   });
