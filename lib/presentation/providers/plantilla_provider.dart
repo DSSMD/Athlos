@@ -99,6 +99,14 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
+    final nombresMedidas = medidas
+        .map((m) => m.nombre.toLowerCase().trim())
+        .toList();
+    if (nombresMedidas.length != nombresMedidas.toSet().length) {
+      throw Exception(
+        'Error: Tienes dos medidas con el mismo nombre. Usa nombres únicos.',
+      );
+    }
     final service = ref.read(plantillaServiceProvider);
     try {
       final nueva = await service.crearPlantilla(
