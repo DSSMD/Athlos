@@ -22,9 +22,9 @@ class StickyTopbar extends StatelessWidget {
     required this.searchHint,
     required this.searchController,
     required this.onSearchChanged,
-    required this.newButtonLabelMobile,
-    required this.newButtonLabelDesktop,
-    required this.onNewPressed,
+    this.newButtonLabelMobile,
+    this.newButtonLabelDesktop,
+    this.onNewPressed,
   });
 
   final bool isMobile;
@@ -34,12 +34,12 @@ class StickyTopbar extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
 
   /// Label corto para mobile (ej: "Nuevo")
-  final String newButtonLabelMobile;
+  final String? newButtonLabelMobile;
 
   /// Label completo para desktop (ej: "Nuevo usuario")
-  final String newButtonLabelDesktop;
+  final String? newButtonLabelDesktop;
 
-  final VoidCallback onNewPressed;
+  final VoidCallback? onNewPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +66,7 @@ class StickyTopbar extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onNewPressed,
               icon: const Icon(Icons.add, size: 18),
-              label: Text(newButtonLabelMobile),
+              label: Text(newButtonLabelMobile!),
             ),
           ],
         ),
@@ -97,7 +97,7 @@ class StickyTopbar extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: onNewPressed,
           icon: const Icon(Icons.add, size: 18),
-          label: Text(newButtonLabelDesktop),
+          label: Text(newButtonLabelDesktop!),
         ),
       ],
     );

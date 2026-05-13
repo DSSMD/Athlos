@@ -34,6 +34,7 @@ class AppColors {
   static const Color neutral600 = Color(0xFF525252);
   static const Color neutral800 = Color(0xFF262626);
   static const Color neutral950 = Color(0xFF0A0A0A);
+  static const Color text = Color(0xFFFFFFFF); // Blanco puro para resaltar en fondos oscuros
 
   // === Semánticos ===
   static const Color success = Color(0xFF16A34A);

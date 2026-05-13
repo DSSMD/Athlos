@@ -14,6 +14,7 @@ import '../../presentation/layouts/main_layout.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
+import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 
@@ -106,9 +107,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _buildPlaceholder('Dashboard'), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes
             _buildPlaceholder('Inventario'), // 2. Inventario
-            _buildPlaceholder(
-              'Producción',
-            ), // 3. Producción (Reemplazado por placeholder)
+            const ProduccionPage(), // 3. Producción (Reemplazado por placeholder)
             const ClientesPage(), // 4. Clientes
             _buildPlaceholder('Pagos'), // 5. Pagos
             _buildPlaceholder('Balance'), // 6. Balance
