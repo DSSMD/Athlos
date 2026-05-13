@@ -35,7 +35,7 @@ final conjuntosProvider = FutureProvider<List<Conjunto>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase
       .from('conjunto')
-      .select('id_conjunto, nombre, descripcion, precio_conjunto, activo')
+      .select('id_conjunto, nombre, descripcion, activo')
       .eq('activo', true)
       .order('nombre');
   return (response as List<dynamic>)
@@ -51,7 +51,7 @@ final plantillasProvider = FutureProvider<List<Plantilla>>((ref) async {
       .from('plantilla_prenda')
       .select(
         'id_plantilla, id_tipo_prenda, nombre, especificaciones, '
-        'precio_plantilla, version, activo, '
+        'version, activo, '
         'tipo_prenda (nombre_prenda)',
       )
       .eq('activo', true)

@@ -2,14 +2,14 @@
 /// una prenda específica (ej: "Polera manga corta v1") que puede usarse
 /// suelta en una orden, o ser parte de un conjunto vía conjunto_plantilla.
 /// Mapea con la tabla plantilla_prenda.
+/// Nota: el precio NO se almacena en el catálogo; el vendedor lo ingresa
+/// manualmente al crear la orden (se guarda en detalle_orden.precio_unitario).
 class Plantilla {
   final String idPlantilla;
   final int idTipoPrenda;
-  final String? nombreTipoPrenda; // denormalizado del join con tipo_prenda
+  final String? nombreTipoPrenda;
   final String nombre;
   final String? especificaciones;
-  final double?
-  precioPlantilla; // nullable hasta que Den agregue la columna en BD
   final int version;
   final bool activo;
 
@@ -19,7 +19,6 @@ class Plantilla {
     this.nombreTipoPrenda,
     required this.nombre,
     this.especificaciones,
-    this.precioPlantilla,
     this.version = 1,
     this.activo = true,
   });
@@ -31,7 +30,6 @@ class Plantilla {
       nombreTipoPrenda: json['tipo_prenda']?['nombre_prenda'] as String?,
       nombre: json['nombre'] as String,
       especificaciones: json['especificaciones'] as String?,
-      precioPlantilla: (json['precio_plantilla'] as num?)?.toDouble(),
       version: (json['version'] as num?)?.toInt() ?? 1,
       activo: (json['activo'] as bool?) ?? true,
     );
@@ -43,7 +41,6 @@ class Plantilla {
       'id_tipo_prenda': idTipoPrenda,
       'nombre': nombre,
       'especificaciones': especificaciones,
-      'precio_plantilla': precioPlantilla,
       'version': version,
       'activo': activo,
     };
@@ -55,7 +52,6 @@ class Plantilla {
     String? nombreTipoPrenda,
     String? nombre,
     String? especificaciones,
-    double? precioPlantilla,
     int? version,
     bool? activo,
   }) {
@@ -65,7 +61,6 @@ class Plantilla {
       nombreTipoPrenda: nombreTipoPrenda ?? this.nombreTipoPrenda,
       nombre: nombre ?? this.nombre,
       especificaciones: especificaciones ?? this.especificaciones,
-      precioPlantilla: precioPlantilla ?? this.precioPlantilla,
       version: version ?? this.version,
       activo: activo ?? this.activo,
     );
