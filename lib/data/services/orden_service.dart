@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:workspace/domain/models/detalle_orden_model.dart';
 import 'package:workspace/domain/models/orden_model.dart';
 import 'package:workspace/presentation/components/ordenes/orden_draft.dart';
 
@@ -116,22 +117,65 @@ class OrdenService {
   }
 
   // =================================================================
-  // CREACIÓN DE ORDEN DESDE DRAFT — STUB (pendiente de BD + permisos)
+  // CREACIÓN DE ORDEN DESDE DRAFT
   // =================================================================
-  /// Pendiente de implementación. Requiere:
-  /// (1) Den agregue las columnas plantilla_prenda.precio_plantilla y
-  ///     conjunto.precio_conjunto en BD.
-  /// (2) Mel le dé a Saul permisos owner en Supabase para crear la RPC
-  ///     crear_orden_completa(p_payload jsonb).
-  /// Una vez ambos disponibles, este método se reescribe para construir el
-  /// payload desde draft.items y llamar a la RPC en una transacción atómica.
-  Future<void> crearOrdenDesdeDraft(OrdenDraft draft) async {
-    throw UnimplementedError(
-      'crearOrdenDesdeDraft está pendiente de migración al schema nuevo. '
-      'Bloqueado en: (a) columnas BD precio_plantilla/precio_conjunto, '
-      '(b) permisos owner en Supabase para la RPC crear_orden_completa. '
-      'Se implementa cuando ambos estén disponibles.',
-    );
+  /// Crea una orden con sus detalles y tallas vía la RPC plpgsql
+  /// `crear_orden_completa`. Transaccional del lado BD: si cualquier paso
+  /// falla, se rollback el bloque entero.
+  ///
+  /// Retorna el `num_orden` (UUID como String) de la orden recién creada
+  /// para que el caller pueda navegar al detalle si quiere.
+  ///
+  /// Lanza Exception con mensaje útil en caso de error de validación,
+  /// FK violation, o cualquier error de Supabase.
+  Future<String> crearOrdenDesdeDraft(OrdenDraft draft) async {
+    // 1. Construir el payload de items
+    final itemsPayload = draft.items.map((item) {
+      return {
+        'id_conjunto': item.tipoItem == TipoItem.conjunto
+            ? item.idConjunto
+            : null,
+        'id_plantilla': item.tipoItem == TipoItem.plantilla
+            ? item.idPlantilla
+            : null,
+        'precio_unitario': item.precioUnitario,
+        'tallas': item.tallas
+            .map((t) => {'id_talla': t.idTalla, 'cantidad': t.cantidad})
+            .toList(),
+      };
+    }).toList();
+
+    // 2. Postgres `date` espera 'YYYY-MM-DD'
+    final fecha = draft.fechaEntrega;
+    if (fecha == null) {
+      throw Exception('La fecha de entrega es requerida');
+    }
+    final fechaStr =
+        '${fecha.year.toString().padLeft(4, '0')}-'
+        '${fecha.month.toString().padLeft(2, '0')}-'
+        '${fecha.day.toString().padLeft(2, '0')}';
+
+    // 3. notas_adicionales: enviar null si descripción está vacía
+    final descTrim = draft.descripcion.trim();
+    final notas = descTrim.isNotEmpty ? descTrim : null;
+
+    // 4. Llamar a la RPC
+    try {
+      final result = await _supabase.rpc(
+        'crear_orden_completa',
+        params: {
+          'p_fecha_entrega': fechaStr,
+          'p_items': itemsPayload,
+          'p_id_cliente': draft.idCliente,
+          'p_notas_adicionales': notas,
+          'p_imagen_modelo': null,
+        },
+      );
+
+      return result.toString();
+    } on PostgrestException catch (e) {
+      throw Exception('Error al crear orden: ${e.message}');
+    }
   }
 
   // =================================================================
