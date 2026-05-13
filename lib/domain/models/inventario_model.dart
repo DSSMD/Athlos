@@ -49,7 +49,6 @@ enum CategoriaInsumo {
 class InventarioItemModel {
   const InventarioItemModel({
     required this.id,
-    required this.codigo,
     required this.nombre,
     required this.categoria,
     required this.stockActual,
@@ -57,21 +56,24 @@ class InventarioItemModel {
     required this.unidad,
     required this.costoUnitario,
     required this.activo,
-    this.dimensionable = false,
     this.atributosTecnicosJson,
   });
 
   final String id;
-  final String codigo;
   final String nombre;
   final CategoriaInsumo categoria;
   final double stockActual;
   final double stockMinimo;
   final String unidad;
   final double costoUnitario;
-  final bool dimensionable;
   final String? atributosTecnicosJson;
   final bool activo;
+
+  /// Código presentacional generado desde el UUID — no persiste en BD.
+  String get codigo => id.substring(0, 8).toUpperCase();
+
+  /// True si el insumo tiene atributos técnicos jsonb definidos.
+  bool get dimensionable => atributosTecnicosJson != null;
 
   double get valorTotal => stockActual * costoUnitario;
 
@@ -115,7 +117,6 @@ class InventarioItemModel {
     }
     return InventarioItemModel(
       id: json['id_insumo'] ?? '',
-      codigo: json['id_insumo'].toString().substring(0, 8).toUpperCase(),
       nombre: (json['nombre'] ?? '') as String,
       categoria: CategoriaInsumo.fromString(nombreCategoria),
       stockActual: json['stock_actual'] != null
@@ -128,7 +129,6 @@ class InventarioItemModel {
       costoUnitario: json['costo_unitario'] != null
           ? double.tryParse(json['costo_unitario'].toString()) ?? 0.0
           : 0.0,
-      dimensionable: (json['dimensionable'] as bool?) ?? false,
       atributosTecnicosJson: json['atributos_tecnicos'] != null
           ? jsonEncode(json['atributos_tecnicos'])
           : null,
@@ -136,18 +136,16 @@ class InventarioItemModel {
     );
   }
 
+  /// Serializa solo los campos modificables, alineados con las columnas reales
+  /// de la tabla `insumo`. No incluye id_insumo (auto UUID) ni activo (default).
   Map<String, dynamic> toJson() {
     return {
-      'id_insumo': codigo,
       'nombre': nombre,
-      'categoria': categoria.name,
       'stock_actual': stockActual,
       'stock_minimo': stockMinimo,
-      'unidad': unidad,
       'costo_unitario': costoUnitario,
-      'dimensionable': dimensionable,
       if (atributosTecnicosJson != null)
-        'atributos_tecnicos_json': atributosTecnicosJson,
+        'atributos_tecnicos': jsonDecode(atributosTecnicosJson!),
     };
   }
 }

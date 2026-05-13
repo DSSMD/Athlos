@@ -3,7 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/inventario_service.dart';
-import '../../domain/models/inventario_item_model.dart';
+import '../../domain/models/inventario_model.dart';
 
 // 1. Servicio
 final inventarioServiceProvider = Provider<InventarioService>((ref) {
@@ -46,46 +46,25 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
   /// MOCK — crea un insumo a través del service y lo agrega al state local.
   /// Cuando exista backend, el service hará el INSERT y ya no será mock.
   Future<InventarioItemModel> crearInsumo({
-    required String codigo,
     required String nombre,
     required int idCategoria,
     required double stockMinimo,
     required int idUnidad,
-    required double costoUnitario,
     required bool dimensionable,
     String? atributosTecnicosJson,
   }) async {
     final service = ref.read(inventarioServiceProvider);
     final nuevo = await service.crearInsumo(
-      codigo: codigo,
       nombre: nombre,
       idCategoria: idCategoria,
       stockMinimo: stockMinimo,
       idUnidad: idUnidad,
-      costoUnitario: costoUnitario,
       dimensionable: dimensionable,
       atributosTecnicosJson: atributosTecnicosJson,
     );
     final actuales = state.value ?? const <InventarioItemModel>[];
     state = AsyncValue.data([...actuales, nuevo]);
     return nuevo;
-  }
-
-  /// Genera el siguiente código `INS-NNN` correlativo basado en la lista
-  /// actual. Si no hay items, devuelve `INS-001`.
-  String generarSiguienteCodigo() {
-    final items = state.value ?? const <InventarioItemModel>[];
-    if (items.isEmpty) return 'INS-001';
-    var maxNumero = 0;
-    final regex = RegExp(r'INS-(\d+)');
-    for (final item in items) {
-      final match = regex.firstMatch(item.codigo);
-      if (match != null) {
-        final n = int.tryParse(match.group(1)!) ?? 0;
-        if (n > maxNumero) maxNumero = n;
-      }
-    }
-    return 'INS-${(maxNumero + 1).toString().padLeft(3, '0')}';
   }
 
   /// True si ya existe un insumo con ese nombre (case-insensitive, trimmed).
@@ -95,27 +74,12 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     return items.any((item) => item.nombre.toLowerCase().trim() == target);
   }
 
-  /// MOCK — reemplaza el stock de un insumo en la lista en memoria.
-  /// Cuando exista backend, esto debe disparar UPDATE en Supabase y
-  /// volver a hacer fetch (o aplicar optimistic update + reconciliar).
-  void actualizarStock(String idInsumo, double nuevoStock) {
-    final current = state.value;
-    if (current == null) return;
-    final updated = current.map((item) {
-      if (item.id != idInsumo) return item;
-      return InventarioItemModel(
-        id: item.id,
-        codigo: item.codigo,
-        nombre: item.nombre,
-        categoria: item.categoria,
-        stockActual: nuevoStock,
-        stockMinimo: item.stockMinimo,
-        unidad: item.unidad,
-        costoUnitario: item.costoUnitario,
-        activo: true,
-      );
-    }).toList();
-    state = AsyncValue.data(List<InventarioItemModel>.from(updated));
+  /// Persiste el nuevo stock en Supabase y refresca la lista local.
+  Future<void> actualizarStock(String idInsumo, double nuevoStock) async {
+    final service = ref.read(inventarioServiceProvider);
+    await service.actualizarStockInsumo(idInsumo, nuevoStock);
+    // Invalidar fuerza un re-fetch real desde BD para que la UI quede sincronizada.
+    ref.invalidateSelf();
   }
 }
 

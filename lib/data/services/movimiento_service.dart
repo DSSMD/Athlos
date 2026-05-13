@@ -67,26 +67,22 @@ class MovimientoService {
     required String motivo,
     required String usuario,
     required double stockAntes,
+    /// Costo por unidad mínima calculado en la UI (solo aplica para entradas).
+    /// Para salidas el trigger lo sobreescribe con el CPP del catálogo.
+    double costoUnitarioTransaccional = 0,
   }) async {
     try {
-      final insumo = await _client
-          .from('insumo')
-          .select('costo_unitario')
-          .eq('id_insumo', idInsumo)
-          .single();
-      final costoUnitario = (insumo['costo_unitario'] ?? 0).toDouble();
-
-      // 1. OBLIGAMOS A LA BD A USAR SOLO 1 (ENTRADA) o 2 (SALIDA)
+      // id_estado_mov: 1 = ENTRADA, 2 = SALIDA
       int idEstado = 1;
       if (tipo == TipoMovimiento.salida || tipo == TipoMovimiento.auto) {
         idEstado = 2;
       } else if (tipo == TipoMovimiento.ajuste && cantidad < 0) {
-        idEstado = 2; // Si es ajuste negativo, es salida
+        idEstado = 2;
       }
 
-      // 2. EL TRUCO: Le pegamos una etiqueta secreta al motivo
+      // Etiquetas de tipo en el motivo (para decodificar en fromJson)
       String motivoFinal = motivo;
-      if (tipo == TipoMovimiento.auto) motivoFinal = '[AUTO] $motivo';
+      if (tipo == TipoMovimiento.auto)   motivoFinal = '[AUTO] $motivo';
       if (tipo == TipoMovimiento.ajuste) motivoFinal = '[AJUSTE] $motivo';
 
       final idUsuario =
@@ -95,12 +91,15 @@ class MovimientoService {
 
       final payload = {
         'id_insumo': idInsumo,
-        'id_estado_mov': idEstado, // Solo envía 1 o 2
+        'id_estado_mov': idEstado,
         'id_usuario': idUsuario,
         'cantidad': cantidad.abs(),
-        'motivo': motivoFinal, // Envía el motivo con la etiqueta
-        'costo_unitario_transaccional': costoUnitario,
-        'subtotal_movimiento': cantidad.abs() * costoUnitario,
+        'motivo': motivoFinal,
+        // El trigger gestiona el CPP y sobreescribe subtotal en BEFORE INSERT.
+        // Para entradas usamos el costo calculado por la UI.
+        // Para salidas el trigger usa el CPP del catálogo (ignora este valor).
+        'costo_unitario_transaccional': costoUnitarioTransaccional,
+        'subtotal_movimiento': cantidad.abs() * costoUnitarioTransaccional,
       };
 
       final response = await _client

@@ -6,7 +6,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/movimiento_service.dart';
-import '../../domain/models/inventario_item_model.dart';
+import '../../domain/models/inventario_model.dart';
 import '../../domain/models/movimiento_model.dart';
 import 'inventario_provider.dart';
 
@@ -44,9 +44,9 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
     required double cantidad,
     required String motivo,
     required String usuario,
+    /// Costo por unidad mínima (solo para entradas). El trigger lo sobreescribe en salidas.
+    double costoUnitarioTransaccional = 0,
   }) async {
-    // Obtener stock actual del insumo ANTES del movimiento.
-
     final inventario =
         ref.read(inventarioProvider).value ?? const <InventarioItemModel>[];
     final item = inventario.firstWhere((i) => i.id == idInsumo);
@@ -60,12 +60,10 @@ class MovimientoNotifier extends AsyncNotifier<List<MovimientoModel>> {
       motivo: motivo,
       usuario: usuario,
       stockAntes: stockAntes,
+      costoUnitarioTransaccional: costoUnitarioTransaccional,
     );
 
-    // 👇 1. FORZAR RECARGA DEL KÁRDEX (Borramos el state manual)
     ref.invalidateSelf();
-
-    // 👇 2. FORZAR RECARGA DEL STOCK DE INSUMOS (Ya lo tenías, ¡está perfecto!)
     ref.invalidate(inventarioProvider);
 
     return movimiento;

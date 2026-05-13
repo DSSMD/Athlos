@@ -1,8 +1,10 @@
 // lib/data/services/inventario_service.dart
 
+import 'dart:convert';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../domain/models/inventario_item_model.dart';
+import '../../domain/models/inventario_model.dart';
 
 class InventarioService {
   InventarioService();
@@ -74,14 +76,39 @@ class InventarioService {
   Future<List<Map<String, dynamic>>> obtenerUnidadesDropdown() async {
     try {
       final data = await _client
-          .from('unidad_medida') // Reemplaza si tu tabla tiene otro nombre
+          .from('unidad_medida')
           .select('id_unidad, nom_unidad')
           .order('id_unidad', ascending: true);
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('🚨 ERROR AL CARGAR UNIDADES DROPDOWN: $e');
       throw Exception('Error al cargar opciones de unidades');
+    }
+  }
+
+  /// Devuelve solo las unidades de medida válidas para [idCategoria],
+  /// consultando la tabla intermedia `categoria_unidad` con JOIN a `unidad_medida`.
+  Future<List<Map<String, dynamic>>> obtenerUnidadesPorCategoria(
+    int idCategoria,
+  ) async {
+    try {
+      final data = await _client
+          .from('categoria_unidad')
+          .select('unidad_medida(id_unidad, nom_unidad)')
+          .eq('id_categoria', idCategoria)
+          .order('id_unidad', referencedTable: 'unidad_medida', ascending: true);
+
+      // Supabase devuelve [{unidad_medida: {id_unidad: x, nom_unidad: y}}, ...]
+      // Lo aplanamos al mismo formato que los demás dropdowns.
+      return (data as List).map<Map<String, dynamic>>((row) {
+        final u = row['unidad_medida'] as Map<String, dynamic>;
+        return {
+          'id_unidad': u['id_unidad'] as int,
+          'nom_unidad': u['nom_unidad'].toString(),
+        };
+      }).toList();
+    } catch (e) {
+      throw Exception('Error al cargar unidades para la categoría: $e');
     }
   }
 
@@ -99,30 +126,26 @@ class InventarioService {
   }
 
   Future<InventarioItemModel> crearInsumo({
-    required String codigo,
     required String nombre,
     required int idCategoria,
     required double stockMinimo,
     required int idUnidad,
-    required double costoUnitario,
     required bool dimensionable,
     String? atributosTecnicosJson,
   }) async {
     try {
-      // Armamos el payload (JSON) que vamos a enviar a la base de datos
-      final payload = {
+      final payload = <String, dynamic>{
         'nombre': nombre,
-        // Convertimos el enum a String para guardarlo en BD (ej: "telas")
         'id_categoria': idCategoria,
-        'stock_actual': 0, // Como pidió Den, siempre inicia en 0
+        'stock_actual': 0,   // inicia en 0; el trigger lo actualiza en el primer ingreso
         'stock_minimo': stockMinimo,
         'id_unidad': idUnidad,
-        'costo_unitario': costoUnitario,
-        if (atributosTecnicosJson != null)
-          'atributos_tecnicos': atributosTecnicosJson,
+        // costo_unitario omitido: el trigger de Costo Promedio Ponderado lo calcula
+        // automáticamente al insertar el primer movimiento_insumo de entrada.
+        if (atributosTecnicosJson != null && atributosTecnicosJson.isNotEmpty)
+          'atributos_tecnicos': jsonDecode(atributosTecnicosJson),
       };
 
-      // Insertamos y le pedimos a Supabase que nos devuelva la fila recién creada (.select().single())
       final response = await _client
           .from('insumo')
           .insert(payload)
@@ -131,35 +154,26 @@ class InventarioService {
           )
           .single();
 
-      // Devolvemos el modelo creado para que la UI se actualice al instante
       return InventarioItemModel.fromJson(response);
     } catch (e) {
       throw Exception('Error al crear el insumo en Supabase: $e');
     }
+  }
 
-    // MOCK — eliminar / reemplazar con Supabase cuando exista insert.
-    // Stock inicia en 0 (anotación de Den en el PDF).
-    /*final nuevo = InventarioItemModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      codigo: codigo,
-      nombre: nombre,
-      categoria: categoria,
-      stockActual: 0,
-      stockMinimo: stockMinimo,
-      unidad: unidad,
-      costoUnitario: costoUnitario,
-      dimensionable: dimensionable,
-      atributosTecnicosJson: atributosTecnicosJson,
-    );
-
-    if (_useMockData) {
-      _mockItems.add(nuevo);
-    } else {
-      // TODO: insertar en Supabase tabla `insumos`.
-      throw UnimplementedError('Backend pendiente');
+  /// Actualiza directamente `stock_actual` en la tabla `insumo`.
+  /// Usado por [InventarioNotifier.actualizarStock] tras registrar un movimiento.
+  Future<void> actualizarStockInsumo(
+    String idInsumo,
+    double nuevoStock,
+  ) async {
+    try {
+      await _client
+          .from('insumo')
+          .update({'stock_actual': nuevoStock})
+          .eq('id_insumo', idInsumo);
+    } catch (e) {
+      throw Exception('Error al actualizar stock del insumo: $e');
     }
-
-    return nuevo;*/
   }
 }
 

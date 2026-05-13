@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/inventario_item_model.dart';
+import '../../../../../domain/models/inventario_model.dart';
 import '../../../../providers/inventario_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';

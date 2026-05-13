@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/inventario_item_model.dart';
+import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/movimiento_model.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
