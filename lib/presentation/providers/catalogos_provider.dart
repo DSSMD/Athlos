@@ -38,3 +38,20 @@ final insumosProvider = FutureProvider<List<InsumoModel>>((ref) async {
   final service = ref.read(catalogoServiceProvider);
   return service.obtenerInsumos(soloActivos: true);
 });
+
+/// Lista de categorías únicas ordenadas alfabéticamente, derivada del
+/// catálogo `tiposPrendaProvider` ya cargado — sin query extra.
+///
+/// Devuelve `AsyncValue<List<String>>` sincronizado con `tiposPrendaProvider`.
+/// Si el catálogo aún carga o falla, este provider refleja el mismo estado.
+/// Orden: alfabético (Accesorio, Exterior, Inferior, Superior).
+///
+/// Uso en el formulario de Plantillas (Paso 1): el usuario elige primero
+/// la categoría, y luego el tipo de prenda filtrado por esa categoría.
+final categoriasPrendaProvider = Provider<AsyncValue<List<String>>>((ref) {
+  final tiposAsync = ref.watch(tiposPrendaProvider);
+  return tiposAsync.whenData((tipos) {
+    final cats = tipos.map((t) => t.categoria).toSet().toList()..sort();
+    return cats;
+  });
+});

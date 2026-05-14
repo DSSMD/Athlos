@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/plantilla_model.dart';
+import '../../../../providers/catalogos_provider.dart';
 import '../../../../providers/plantilla_form_provider.dart';
 import '../../../../providers/plantilla_provider.dart';
 import '../../../../theme/app_colors.dart';
@@ -153,7 +154,26 @@ class _PlantillaFormScaffoldState
       if (!mounted) return;
       final notifier = ref.read(plantillaFormStateProvider.notifier);
       if (widget.mode == 'editar' && widget.initialPlantilla != null) {
-        notifier.inicializarParaEditar(widget.initialPlantilla!);
+        // Resolver la categoriaPrenda desde el catálogo ya cargado.
+        // Si el catálogo aún no cargó, la categoría quedará null y el
+        // dropdown de categoría mostrará "sin categoría" — aceptable porque
+        // el usuario puede re-seleccionarla. En la práctica el catálogo
+        // ya está cacheado (FutureProvider sin autoDispose) cuando se
+        // llega a abrir el modal en modo editar.
+        final tiposAsync = ref.read(tiposPrendaProvider);
+        final idTipo = widget.initialPlantilla!.idTipoPrenda;
+        final categoriaPrenda = tiposAsync.whenOrNull(
+          data: (tipos) {
+            return tipos
+                .where((t) => t.id == idTipo)
+                .firstOrNull
+                ?.categoria;
+          },
+        );
+        notifier.inicializarParaEditar(
+          widget.initialPlantilla!,
+          categoriaPrenda: categoriaPrenda,
+        );
       } else {
         notifier.inicializarParaCrear();
       }

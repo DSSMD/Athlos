@@ -2,18 +2,25 @@
 // lib/presentation/pages/admin/plantillas/widgets/plantilla_form_paso1_info.dart
 // ============================================================================
 // Paso 1 del form multi-paso de Plantillas — Información general.
-// - 3 campos: nombre (req), tipo de prenda (req), especificaciones (opcional)
-// - El padre (PlantillaFormPage) pasa un GlobalKey<FormState> y llama
-//   key.currentState!.validate() antes de avanzar al Paso 2.
-// - State persiste en plantillaFormStateProvider — al volver al Paso 1
-//   desde otro paso, los datos se mantienen.
 //
-// Tipo de prenda: dropdown dinámico contra `tiposPrendaProvider`. Si el
-// catálogo aún está cargando, se muestra un loading inline; si falla, un
-// mensaje de error.
+// FLUJO SECUENCIAL OBLIGATORIO:
+//   1. Categoría de prenda  (dropdown) — siempre habilitado.
+//   2. Tipo de prenda       (dropdown) — habilitado solo con categoría elegida,
+//                                        items filtrados por esa categoría.
+//   3. Nombre de la plantilla (text)  — habilitado solo con tipo elegido.
+//   4. Especificaciones     (text)    — siempre disponible (campo opcional).
 //
-// DECISIÓN: el form padre controla la validación llamando al hijo. RAZÓN:
-// el padre coordina la navegación, el hijo valida sus propios campos.
+// Si el usuario cambia la categoría, el tipo se resetea automáticamente
+// (lo maneja `PlantillaFormNotifier.setCategoriaPrenda` en el provider).
+// Si el tipo se resetea, el campo nombre vuelve a quedar deshabilitado.
+//
+// El padre (PlantillaFormPage) pasa un GlobalKey<FormState> y llama
+// key.currentState!.validate() antes de avanzar al Paso 2.
+// State persiste en plantillaFormStateProvider — al volver al Paso 1
+// desde otro paso, los datos se mantienen.
+//
+// DECISIÓN: el form padre controla la validación llamando al hijo.
+// RAZÓN: el padre coordina la navegación, el hijo valida sus propios campos.
 // CAMBIAR: si los pasos crecen mucho, considerar mover validación al notifier.
 // ============================================================================
 
@@ -87,6 +94,7 @@ class _PlantillaFormPaso1InfoState
     final state = ref.watch(plantillaFormStateProvider);
     final notifier = ref.read(plantillaFormStateProvider.notifier);
     final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
+    final categoriasAsync = ref.watch(categoriasPrendaProvider);
 
     // Sincroniza controllers cuando el state cambia desde afuera (ej.
     // inicialización por postFrameCallback en modo editar). Compara
@@ -102,6 +110,20 @@ class _PlantillaFormPaso1InfoState
       }
     });
 
+    // ─── Estado derivado de la secuencia ──────────────────────────────────
+    final categoriaElegida = state.categoriaPrenda;
+    final tipoElegido = state.idTipoPrenda;
+    final tieneCategoria = categoriaElegida != null;
+    final tieneTipo = tipoElegido != null;
+
+    // Tipos filtrados por la categoría seleccionada.
+    final tiposFiltrados = tiposPrendaAsync.whenOrNull(
+          data: (tipos) => tieneCategoria
+              ? tipos.where((t) => t.categoria == categoriaElegida).toList()
+              : <dynamic>[],
+        ) ??
+        <dynamic>[];
+
     return Form(
       key: widget.formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -110,18 +132,56 @@ class _PlantillaFormPaso1InfoState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _label('Nombre de la prenda *'),
-            TextFormField(
-              controller: _nombreCtrl,
-              maxLength: 100,
-              decoration: const InputDecoration(
-                hintText: 'Ej: Camisa Manga Larga Clásica',
+            // ── PASO A: Categoría ────────────────────────────────────────
+            _label('Categoría de prenda *'),
+            categoriasAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Center(child: CircularProgressIndicator()),
               ),
-              onChanged: notifier.setNombre,
-              validator: _validarNombre,
+              error: (e, _) => Text(
+                'Error al cargar categorías: $e',
+                style: AppTypography.small.copyWith(color: AppColors.error),
+              ),
+              data: (categorias) {
+                // Sanitizo el value: si la categoría del state no está en el
+                // catálogo actual, paso null para evitar el assert del Dropdown.
+                final valorActual = categorias.contains(categoriaElegida)
+                    ? categoriaElegida
+                    : null;
+
+                final dropdownKey = ValueKey(
+                  'cat-${state.mode}-${state.plantillaOriginalId ?? "new"}',
+                );
+
+                return DropdownButtonFormField<String>(
+                  key: dropdownKey,
+                  initialValue: valorActual,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Seleccioná una categoría',
+                  ),
+                  items: categorias
+                      .map(
+                        (c) => DropdownMenuItem<String>(
+                          value: c,
+                          child: Text(c),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => notifier.setCategoriaPrenda(v),
+                  validator: (v) =>
+                      v == null ? 'Seleccioná una categoría de prenda' : null,
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.md),
-            _label('Tipo de prenda *'),
+
+            // ── PASO B: Tipo de prenda (bloqueado sin categoría) ─────────
+            _label(
+              'Tipo de prenda *',
+              hint: !tieneCategoria ? 'Primero seleccioná una categoría' : null,
+            ),
             tiposPrendaAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -133,43 +193,79 @@ class _PlantillaFormPaso1InfoState
               ),
               data: (tipos) {
                 // Sanitizo el value: si el idTipoPrenda del state no está en
-                // el catálogo actual (por ejemplo, fue eliminado de la BD),
-                // paso null para evitar el assert de Dropdown.
-                final valorActual = tipos.any((t) => t.id == state.idTipoPrenda)
-                    ? state.idTipoPrenda
+                // los tipos filtrados por la categoría actual, paso null.
+                final valorActual = tiposFiltrados.any((t) {
+                      // tiposFiltrados es List<TipoPrendaModel> en tiempo real
+                      // pero tipado como List<dynamic> por el whenOrNull.
+                      // Acceso seguro con cast dinámico.
+                      return (t as dynamic).id == tipoElegido;
+                    })
+                    ? tipoElegido
                     : null;
-                // Key del FormField cambia cuando state.mode/originalId
-                // varía (transición crear→editar o cambio de plantilla).
-                // Esto fuerza remount del FormField para que tome el nuevo
-                // initialValue — necesario porque FormField solo lee
-                // initialValue en su propio initState.
+
+                // Key cambia cuando cambia la categoría (para forzar remount
+                // del FormField y limpiar visualmente el item seleccionado).
                 final dropdownKey = ValueKey(
-                  'tipo-${state.mode}-${state.plantillaOriginalId ?? "new"}',
+                  'tipo-${state.mode}-'
+                  '${state.plantillaOriginalId ?? "new"}-$categoriaElegida',
                 );
+
                 return DropdownButtonFormField<int>(
                   key: dropdownKey,
                   initialValue: valorActual,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Seleccioná un tipo',
+                  // Deshabilitar si no hay categoría seleccionada.
+                  onChanged: tieneCategoria
+                      ? (v) {
+                          if (v != null) notifier.setIdTipoPrenda(v);
+                        }
+                      : null,
+                  decoration: InputDecoration(
+                    hintText: tieneCategoria
+                        ? 'Seleccioná un tipo'
+                        : 'Primero seleccioná una categoría',
+                    // Estilo visual de "deshabilitado" sin perder estructura.
+                    fillColor: tieneCategoria
+                        ? null
+                        : AppColors.neutral100,
                   ),
-                  items: tipos
+                  items: tiposFiltrados
+                      .cast<dynamic>()
                       .map(
                         (t) => DropdownMenuItem<int>(
-                          value: t.id,
-                          child: Text(t.nombre),
+                          value: (t as dynamic).id as int,
+                          child: Text((t as dynamic).nombre as String),
                         ),
                       )
                       .toList(),
-                  onChanged: (v) {
-                    if (v != null) notifier.setIdTipoPrenda(v);
-                  },
                   validator: (v) =>
                       v == null ? 'Seleccioná un tipo de prenda' : null,
                 );
               },
             ),
             const SizedBox(height: AppSpacing.md),
+
+            // ── PASO C: Nombre (bloqueado sin tipo) ──────────────────────
+            _label(
+              'Nombre de la plantilla *',
+              hint: !tieneTipo ? 'Primero seleccioná el tipo de prenda' : null,
+            ),
+            TextFormField(
+              controller: _nombreCtrl,
+              maxLength: 100,
+              enabled: tieneTipo,
+              decoration: InputDecoration(
+                hintText: tieneTipo
+                    ? 'Ej: Camisa Manga Larga Clásica'
+                    : 'Primero seleccioná el tipo de prenda',
+                fillColor: tieneTipo ? null : AppColors.neutral100,
+              ),
+              onChanged: tieneTipo ? notifier.setNombre : null,
+              validator: tieneTipo ? _validarNombre : null,
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // ── PASO D: Especificaciones (siempre disponible, opcional) ──
             _label('Especificaciones (opcional)'),
             TextFormField(
               controller: _especificacionesCtrl,
@@ -191,15 +287,32 @@ class _PlantillaFormPaso1InfoState
 
   // ─── HELPERS ──────────────────────────────────────────────────────────────
 
-  Widget _label(String text) {
+  /// Devuelve el widget de label. Si [hint] no es null, lo muestra como
+  /// subtexto en color muted para guiar al usuario sobre qué hacer primero.
+  Widget _label(String text, {String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Text(
-        text,
-        style: AppTypography.small.copyWith(
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            text,
+            style: AppTypography.small.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              hint,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textMuted,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

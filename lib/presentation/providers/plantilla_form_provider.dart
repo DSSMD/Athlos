@@ -11,6 +11,13 @@
 // tallasSeleccionadas: List<int>). Los nombres se resuelven contra
 // `tiposPrendaProvider` y `tallasProvider` en la UI.
 //
+// FLUJO PASO 1 (secuencial obligatorio):
+//   1. categoriaPrenda (String?) — elige categoría primero.
+//   2. idTipoPrenda    (int?)   — filtrado por categoría elegida.
+//   3. nombre          (String) — nombre de la plantilla.
+//   4. especificaciones (String) — descripción opcional.
+// Al cambiar `categoriaPrenda`, `idTipoPrenda` se resetea automáticamente.
+//
 // DECISIÓN: autoDispose para que el state se limpie al cerrar el modal.
 // RAZÓN: si el usuario cancela y vuelve a abrir, debe arrancar limpio.
 // CAMBIAR: si quieren persistir borrador "draft" entre aperturas, sacar
@@ -28,6 +35,7 @@ import '../../domain/models/plantilla_model.dart';
 class PlantillaFormState {
   const PlantillaFormState({
     this.nombre = '',
+    this.categoriaPrenda,
     this.idTipoPrenda,
     this.especificaciones = '',
     this.tallasSeleccionadas = const [],
@@ -39,6 +47,12 @@ class PlantillaFormState {
   });
 
   final String nombre;
+
+  /// Categoría elegida en el Paso 1 (ej. 'Superior', 'Inferior').
+  /// null hasta que el usuario la elija. Al cambiar, `idTipoPrenda`
+  /// se resetea para evitar inconsistencias.
+  final String? categoriaPrenda;
+
   final int? idTipoPrenda; // null hasta que el usuario lo elija
   final String especificaciones;
   final List<int> tallasSeleccionadas;
@@ -57,7 +71,12 @@ class PlantillaFormState {
 
   PlantillaFormState copyWith({
     String? nombre,
+    // Para resetear categoriaPrenda a null usar clearCategoria: true.
+    String? categoriaPrenda,
+    bool clearCategoria = false,
+    // Para resetear idTipoPrenda a null usar clearTipo: true.
     int? idTipoPrenda,
+    bool clearTipo = false,
     String? especificaciones,
     List<int>? tallasSeleccionadas,
     List<MedidaPunto>? medidas,
@@ -68,7 +87,9 @@ class PlantillaFormState {
   }) {
     return PlantillaFormState(
       nombre: nombre ?? this.nombre,
-      idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
+      categoriaPrenda:
+          clearCategoria ? null : (categoriaPrenda ?? this.categoriaPrenda),
+      idTipoPrenda: clearTipo ? null : (idTipoPrenda ?? this.idTipoPrenda),
       especificaciones: especificaciones ?? this.especificaciones,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
       medidas: medidas ?? this.medidas,
@@ -92,11 +113,15 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
   }
 
   /// Carga los campos de la plantilla en el state, en modo `'editar'`.
-  void inicializarParaEditar(PlantillaModel p) {
+  /// [categoriaPrenda] debe resolverse en la UI buscando el tipo en el
+  /// catálogo (ver plantilla_form_page.dart) y pasarse acá para que
+  /// el dropdown de categoría quede preseleccionado.
+  void inicializarParaEditar(PlantillaModel p, {String? categoriaPrenda}) {
     state = PlantillaFormState(
       mode: 'editar',
       plantillaOriginalId: p.id,
       nombre: p.nombre,
+      categoriaPrenda: categoriaPrenda,
       idTipoPrenda: p.idTipoPrenda,
       especificaciones: p.especificaciones,
       tallasSeleccionadas: p.tallasSeleccionadas,
@@ -109,7 +134,19 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
 
   void setNombre(String v) => state = state.copyWith(nombre: v);
 
-  void setIdTipoPrenda(int? id) => state = state.copyWith(idTipoPrenda: id);
+  /// Cambia la categoría seleccionada y **resetea el tipo de prenda**
+  /// para evitar que quede un tipo de otra categoría seleccionado.
+  void setCategoriaPrenda(String? categoria) {
+    if (categoria == state.categoriaPrenda) return;
+    state = state.copyWith(
+      categoriaPrenda: categoria,
+      clearCategoria: categoria == null,
+      clearTipo: true,
+    );
+  }
+
+  void setIdTipoPrenda(int? id) =>
+      state = state.copyWith(idTipoPrenda: id, clearTipo: id == null);
 
   void setEspecificaciones(String v) =>
       state = state.copyWith(especificaciones: v);
@@ -276,6 +313,7 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
     final s = state;
     if (s.mode == 'crear') {
       return s.nombre.trim().isNotEmpty ||
+          s.categoriaPrenda != null ||
           s.idTipoPrenda != null ||
           s.especificaciones.trim().isNotEmpty ||
           s.tallasSeleccionadas.isNotEmpty ||

@@ -256,6 +256,11 @@ class _InfoGeneralCard extends StatelessWidget {
             value: state.nombre.isEmpty ? '—' : state.nombre,
           ),
           const SizedBox(height: AppSpacing.sm),
+          _InfoRow(
+            label: 'Categoría',
+            value: state.categoriaPrenda ?? '—',
+          ),
+          const SizedBox(height: AppSpacing.sm),
           _InfoRow(label: 'Tipo de prenda', value: _nombreTipo()),
           const SizedBox(height: AppSpacing.sm),
           _InfoRow(label: 'Versión', value: _versionLabel()),

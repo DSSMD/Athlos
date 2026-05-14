@@ -136,7 +136,7 @@ class PlantillaModel {
   String nombreTipoPrenda(List<TipoPrendaModel> catalogo) {
     final tipo = catalogo.firstWhere(
       (t) => t.id == idTipoPrenda,
-      orElse: () => const TipoPrendaModel(id: 0, nombre: 'Tipo no disponible'),
+      orElse: () => const TipoPrendaModel(id: 0, nombre: 'Tipo no disponible', categoria: ''),
     );
     return tipo.nombre;
   }

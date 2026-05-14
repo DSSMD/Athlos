@@ -25,7 +25,8 @@ class CatalogoService {
     try {
       final response = await _supabase
           .from('tipo_prenda')
-          .select('id_tipo_prenda, nombre_prenda, descripcion')
+          .select('id_tipo_prenda, nombre_prenda, descripcion, categoria_prenda')
+          .order('categoria_prenda')
           .order('nombre_prenda');
       return (response as List)
           .map((j) => TipoPrendaModel.fromJson(j as Map<String, dynamic>))

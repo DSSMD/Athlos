@@ -16,7 +16,7 @@ import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
-import '../../presentation/pages/admin/plantillas_page.dart';
+import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
 import '../../presentation/layouts/splash_screen_page.dart';

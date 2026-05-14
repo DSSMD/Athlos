@@ -21,21 +21,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../domain/models/plantilla_model.dart';
-import '../../../domain/models/tipo_prenda_model.dart';
-import '../../providers/catalogos_provider.dart';
-import '../../providers/plantilla_provider.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_typography.dart';
+import '../../../../domain/models/plantilla_model.dart';
+import '../../../../domain/models/tipo_prenda_model.dart';
+import '../../../providers/catalogos_provider.dart';
+import '../../../providers/plantilla_provider.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_typography.dart';
 
-import '../../widgets/shared/empty_state.dart';
-import '../../widgets/shared/filter_chips.dart';
-import '../../widgets/shared/pagination.dart';
-import '../../widgets/shared/sticky_topbar.dart';
-import '../../widgets/users/kpi_card.dart';
+import '../../../widgets/shared/empty_state.dart';
+import '../../../widgets/shared/filter_chips.dart';
+import '../../../widgets/shared/pagination.dart';
+import '../../../widgets/shared/sticky_topbar.dart';
+import '../../../widgets/users/kpi_card.dart';
 
-import 'plantillas/widgets/plantilla_form_page.dart';
+import 'widgets/plantilla_form_page.dart';
 
 class PlantillasPage extends ConsumerStatefulWidget {
   const PlantillasPage({super.key});
