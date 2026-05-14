@@ -115,7 +115,12 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                     usuariosReales,
                     key: const ValueKey('usuarios'),
                   )
-                : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
+                // AÑADE EL ARGUMENTO FALTANTE AQUÍ (ejemplo: usuariosReales o filteredUsers)
+                : _buildPagosTab(
+                    isMobile,
+                    usuariosReales, // <--- Aquí pasas el segundo argumento posicional
+                    key: const ValueKey('pagos'),
+                  ),
           ),
         );
       },
