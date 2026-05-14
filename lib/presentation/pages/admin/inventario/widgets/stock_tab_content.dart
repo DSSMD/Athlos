@@ -93,8 +93,6 @@ class _StockBodyState extends ConsumerState<_StockBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Kpis(isMobile: isMobile, kpis: widget.kpis),
-          const SizedBox(height: AppSpacing.xl),
           _FiltrosCard(
             isMobile: isMobile,
             filtros: filtros,
@@ -118,80 +116,6 @@ class _StockBodyState extends ConsumerState<_StockBody> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── KPIs ────────────────────────────────────────────────────────────────────
-
-class _Kpis extends StatelessWidget {
-  const _Kpis({required this.isMobile, required this.kpis});
-
-  final bool isMobile;
-  final InventarioKpis kpis;
-
-  @override
-  Widget build(BuildContext context) {
-    final cards = [
-      KpiCard(
-        value: '${kpis.totalInsumos}',
-        label: 'Total insumos',
-        description: 'En 8 categorías',
-      ),
-      KpiCard(
-        value: '${kpis.stockBajo}',
-        label: 'Stock bajo',
-        description: 'Requieren compra',
-        valueColor: AppColors.warning,
-      ),
-      KpiCard(
-        value: '${kpis.stockCritico}',
-        label: 'Stock crítico',
-        description: 'Urgente',
-        valueColor: AppColors.error,
-      ),
-      KpiCard(
-        value: _formatMoney(kpis.valorTotalInventario),
-        label: 'Valor total inventario',
-        description: '+\$0 este mes',
-      ),
-    ];
-
-    if (isMobile) {
-      return Column(
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: cards[1]),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[2]),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(child: cards[3]),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          Expanded(child: cards[i]),
-          if (i < cards.length - 1) const SizedBox(width: AppSpacing.lg),
-        ],
-      ],
     );
   }
 }
