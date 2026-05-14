@@ -1,24 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../../domain/models/lote_model.dart'; // Asegúrate de que el path sea correcto
 
 class AsignarTrabajadorDialog extends StatefulWidget {
-  final String areaActual;
-  final String loteId;
+  final LoteModel lote; // Recibimos el objeto completo
 
-  const AsignarTrabajadorDialog({
-    super.key, 
-    required this.areaActual, 
-    required this.loteId,
-  });
+  const AsignarTrabajadorDialog({super.key, required this.lote});
 
   @override
-  State<AsignarTrabajadorDialog> createState() => _AsignarTrabajadorDialogState();
+  State<AsignarTrabajadorDialog> createState() =>
+      _AsignarTrabajadorDialogState();
 }
 
 class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
   String? _trabajadorSeleccionado;
+  bool _isLoading = false;
+
+  List<Map<String, dynamic>> _trabajadoresDisponibles = [];
+  bool _cargandoLista = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarTrabajadores();
+  }
+
+  Future<void> _cargarTrabajadores() async {
+    try {
+      // Convertimos el idArea (que guardamos en el modelo) a número,
+      // porque tu base de datos espera un 'integer'
+      final idAreaInt = int.tryParse(widget.lote.idArea) ?? 0;
+      print(
+        '🔥 DEBUG ÁREA LOTE: El número que intentamos buscar es: $idAreaInt',
+      );
+      // Si imprime "0", era exactamente este problema.
+
+      final response = await Supabase.instance.client
+          .from('trabajadores')
+          .select('id_trabajador, profiles(nombre, apellido)')
+          // 👇 AQUÍ ESTÁ LA SERIALIZACIÓN: Filtramos por el área del lote
+          .eq('id_area', idAreaInt);
+
+      if (mounted) {
+        setState(() {
+          _trabajadoresDisponibles = List<Map<String, dynamic>>.from(response);
+          _cargandoLista = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error al cargar trabajadores: $e');
+      if (mounted) setState(() => _cargandoLista = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,19 +71,19 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cabecera con estilo de títulos del Success Dialog
               Text(
                 'Asignar Trabajador',
                 style: AppTypography.h3.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Lote: ${widget.loteId}',
-                style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+                'Lote ID: ${widget.lote.id}', // Mostramos el UUID real
+                style: AppTypography.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
 
-              // ÁREA ACTUAL (Estilo de campo bloqueado Clean)
               Text(
                 'Área actual',
                 style: AppTypography.caption.copyWith(
@@ -57,29 +93,34 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
               ),
               const SizedBox(height: AppSpacing.xs),
               TextFormField(
-                initialValue: widget.areaActual,
+                initialValue: widget.lote.areaActual,
                 readOnly: true,
-                style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textPrimary,
+                ),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.textSecondary.withOpacity(0.05),
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, 
+                    horizontal: AppSpacing.md,
                     vertical: AppSpacing.sm,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.1)),
+                    borderSide: BorderSide(
+                      color: AppColors.textSecondary.withOpacity(0.1),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.1)),
+                    borderSide: BorderSide(
+                      color: AppColors.textSecondary.withOpacity(0.1),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // DROPDOWN DE TRABAJADORES
               Text(
                 'Trabajadores disponibles',
                 style: AppTypography.caption.copyWith(
@@ -88,73 +129,157 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              DropdownButtonFormField<String>(
-                value: _trabajadorSeleccionado,
-                dropdownColor: AppColors.brandWhite,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
-                hint: Text(
-                  'Seleccionar...', 
-                  style: AppTypography.small.copyWith(color: AppColors.textSecondary),
-                ),
-                style: AppTypography.body.copyWith(color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: '1', 
-                    child: Text('Juan Pérez (${widget.areaActual})')
-                  ),
-                  DropdownMenuItem(
-                    value: '2', 
-                    child: Text('María López (${widget.areaActual})')
-                  ),
-                ],
-                onChanged: (value) => setState(() => _trabajadorSeleccionado = value),
-              ),
+
+              _cargandoLista
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : DropdownButtonFormField<String>(
+                      value: _trabajadorSeleccionado,
+                      dropdownColor: AppColors.brandWhite,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.textSecondary,
+                      ),
+                      hint: Text(
+                        _trabajadoresDisponibles.isEmpty
+                            ? 'No hay trabajadores en esta área'
+                            : 'Seleccionar...',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                      ),
+
+                      // 👇 AQUÍ ESTÁ EL PASO 3: LA SERIALIZACIÓN DEL DROPDOWN
+                      // Busca la parte de los "items:" en tu Dropdown y cámbiala por esto:
+                      items: _trabajadoresDisponibles.map((t) {
+                        final profile = t['profiles'];
+
+                        // 👇 Sacamos nombre y apellido de forma segura
+                        final nombre = profile != null
+                            ? (profile['nombre'] ?? '')
+                            : '';
+                        final apellido = profile != null
+                            ? (profile['apellido'] ?? '')
+                            : '';
+
+                        // Los unimos (el .trim() quita espacios extra si falta el apellido)
+                        final nombreCompleto = '$nombre $apellido'.trim();
+
+                        return DropdownMenuItem<String>(
+                          value: t['id_trabajador'].toString(),
+                          child: Text(
+                            nombreCompleto.isEmpty
+                                ? 'Sin nombre'
+                                : nombreCompleto,
+                          ),
+                        );
+                      }).toList(),
+
+                      onChanged:
+                          (_isLoading || _trabajadoresDisponibles.isEmpty)
+                          ? null
+                          : (value) =>
+                                setState(() => _trabajadorSeleccionado = value),
+                    ),
               const SizedBox(height: AppSpacing.xl2),
 
-              // ACCIONES (Botón principal estilo ElevatedButton del Success Dialog)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary500,
                     foregroundColor: AppColors.brandWhite,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     elevation: 0,
                     disabledBackgroundColor: AppColors.border,
                   ),
-                  onPressed: _trabajadorSeleccionado == null ? null : () {
-                    // TODO: BACKEND Lógica de asignación
-                    Navigator.pop(context);
-                  },
-                  child: Text(
-                    'Confirmar Asignación',
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.brandWhite,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onPressed: (_trabajadorSeleccionado == null || _isLoading)
+                      ? null
+                      : () async {
+                          setState(() => _isLoading = true);
+
+                          try {
+                            // El INSERT a la tabla asignaciones_lote
+                            await Supabase.instance.client
+                                .from('asignaciones_lote')
+                                .insert({
+                                  'id_lote': widget.lote.id,
+                                  'id_trabajador': _trabajadorSeleccionado,
+                                  'id_estado_asignacion': 1,
+                                });
+
+                            if (mounted) {
+                              Navigator.pop(context, true);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Trabajador asignado con éxito',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
+                        },
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Confirmar Asignación',
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.brandWhite,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _isLoading ? null : () => Navigator.pop(context),
                   child: Text(
                     'Cancelar',
-                    style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),

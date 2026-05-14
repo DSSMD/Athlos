@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../../domain/models/lote_model.dart'; 
+import '../../../domain/models/lote_model.dart';
 
 class LoteDetalleDialog extends StatelessWidget {
-  final LoteModel lote; 
-  
+  final LoteModel lote;
+
   const LoteDetalleDialog({super.key, required this.lote});
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: AppColors.brandWhite,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(
@@ -26,14 +28,28 @@ class LoteDetalleDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Información del Lote', style: AppTypography.h3.copyWith(color: AppColors.textPrimary)),
+                  Text(
+                    'Información del Lote',
+                    style: AppTypography.h3.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: AppColors.textSecondary),
+                    icon: const Icon(
+                      Icons.close,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              Text('ID: ${lote.id}', style: AppTypography.small.copyWith(color: AppColors.textSecondary)),
+              Text(
+                'ID: ${lote.id}',
+                style: AppTypography.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
               const SizedBox(height: AppSpacing.xl),
 
               // Campos normales
@@ -51,9 +67,21 @@ class LoteDetalleDialog extends StatelessWidget {
               // ESTADOS (Diseño mejorado: más pequeño y estilizado)
               Row(
                 children: [
-                  Expanded(child: _buildStatusCard('Estado', lote.estado, AppColors.primary500)),
+                  Expanded(
+                    child: _buildStatusCard(
+                      'Estado',
+                      lote.estado,
+                      AppColors.primary500,
+                    ),
+                  ),
                   const SizedBox(width: AppSpacing.md),
-                  Expanded(child: _buildStatusCard('Área', lote.areaActual, Colors.orange.shade700)),
+                  Expanded(
+                    child: _buildStatusCard(
+                      'Área',
+                      lote.areaActual,
+                      Colors.orange.shade700,
+                    ),
+                  ),
                 ],
               ),
 
@@ -65,11 +93,21 @@ class LoteDetalleDialog extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary500,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Entendido', style: AppTypography.small.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Entendido',
+                    style: AppTypography.small.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -86,8 +124,17 @@ class LoteDetalleDialog extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.small.copyWith(color: AppColors.textSecondary)),
-          Text(value, style: AppTypography.small.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+          ),
+          Text(
+            value,
+            style: AppTypography.small.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -98,7 +145,9 @@ class LoteDetalleDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.05), // Fondo muy suave del color del estado
+        color: accentColor.withOpacity(
+          0.05,
+        ), // Fondo muy suave del color del estado
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: accentColor.withOpacity(0.1)),
       ),
@@ -111,7 +160,7 @@ class LoteDetalleDialog extends StatelessWidget {
               fontSize: 10, // Letra muy pequeña para el label
               letterSpacing: 1.1,
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.bold
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
@@ -120,7 +169,10 @@ class LoteDetalleDialog extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

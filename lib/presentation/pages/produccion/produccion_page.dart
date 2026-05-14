@@ -10,6 +10,7 @@ import '../../widgets/shared/filter_chips.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 import '../../components/produccion/lote_historial_dialog.dart';
+import '../../providers/lote_provider.dart'; // 1. Ahora es un ConsumerWidget para poder leer a Riverpod
 
 // TODO: Importar tus providers y modelos reales cuando existan
 import '../../../domain/models/lote_model.dart';
@@ -25,12 +26,13 @@ class ProduccionPage extends ConsumerStatefulWidget {
   ConsumerState<ProduccionPage> createState() => _ProduccionPageState();
 }
 
+// TODO: Asegúrate de importar el provider que creamos
+// import '../providers/lote_provider.dart';
+
 class _ProduccionPageState extends ConsumerState<ProduccionPage> {
   final TextEditingController _searchController = TextEditingController();
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
-
-  // 0: Todos, 1: Corte, 2: Costura, 3: Acabado
   int _selectedFilter = 0;
 
   @override
@@ -39,21 +41,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
     super.dispose();
   }
 
-  // TODO: BACKEND - Cambiar por ref.watch(produccionProvider)
-  // He añadido un elemento mock para que puedas probar la funcionalidad de los botones inmediatamente
-  final List<LoteModel> _lotesMock = [
-    LoteModel(
-      id: '#LT-2045',
-      ordenId: '#ORD-889',
-      cliente: 'Textiles Athlos',
-      prenda: 'Camiseta Deportiva',
-      tallas: ['S', 'M', 'L'],
-      cantidad: 150,
-      areaActual: 'CORTE',
-      estado: 'En Proceso',
-    ),
-  ];
-
+  // 👇 MÉTODOS DEL FRONT MANTENIDOS INTACTOS
   void _abrirDetalle(LoteModel lote) {
     showDialog(
       context: context,
@@ -61,15 +49,12 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
     );
   }
 
-  // Ajustado para que coincida con la firma que espera el Widget de la tabla
+  // Busca donde abres el diálogo y cámbialo a esto:
+  // En tu produccion_page.dart
   void _abrirAsignacion(LoteModel lote) {
     showDialog(
       context: context,
-      builder: (context) => AsignarTrabajadorDialog(
-        // Punto 3: El área actual filtra los trabajadores en el backend
-        areaActual: lote.areaActual,
-        loteId: lote.id,
-      ),
+      builder: (context) => AsignarTrabajadorDialog(lote: lote), // <-- ASÍ
     );
   }
 
@@ -77,9 +62,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
     showDialog(
       context: context,
       builder: (context) => LoteHistorialDialog(
-        loteId: lote.id,
-        historial:
-            const [], // Enviamos lista vacía para ver el mensaje "No hay historial"
+        loteId: lote.id, // Solo pasamos el ID, el diálogo hará el resto
       ),
     );
   }
@@ -87,8 +70,10 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 900;
-    final int totalItems = _lotesMock.length;
-    final int totalPages = (totalItems / _itemsPerPage).ceil().clamp(1, 999);
+
+    // 👇 1. LLAMAMOS AL BACKEND USANDO RIVERPOD
+    final lotesAsync = ref.watch(lotesListProvider);
+
     return Column(
       children: [
         StickyTopbar(
@@ -97,40 +82,64 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
           searchHint: 'Buscar por Lote ID u Orden...',
           searchController: _searchController,
           onSearchChanged: (value) {
-            // TODO: BACKEND - Trigger de búsqueda filtrada
             setState(() => _currentPage = 1);
           },
         ),
+
         Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.lg),
+          // 👇 2. ENVOLVEMOS EL CONTENIDO EN EL .WHEN PARA ESPERAR LOS DATOS
+          child: lotesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) =>
+                Center(child: Text('Error al cargar datos:\n$err')),
+            data: (lotesReales) {
+              // 👇 3. LÓGICA REAL DE PAGINACIÓN BASADA EN LA BD
+              final int totalItems = lotesReales.length;
+              final int totalPages = (totalItems > 0)
+                  ? (totalItems / _itemsPerPage).ceil()
+                  : 1;
 
-                // Tabla Desktop Corregida
-                _DesktopTableLotes(
-                  lotes: _lotesMock, // Pasamos la lista de datos
-                  onView: _abrirDetalle, // Conectamos Ver Detalle
-                  onAssign: _abrirAsignacion, // Conectamos Asignar/Reasignar
-                  onHistory: _verHistorial, // Conectamos Ver Historial
+              // Cortamos la lista para mostrar solo los 10 de la página actual
+              final startIndex = (_currentPage - 1) * _itemsPerPage;
+              final endIndex = (startIndex + _itemsPerPage).clamp(
+                0,
+                totalItems,
+              );
+              final lotesPaginados = lotesReales.sublist(startIndex, endIndex);
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(
+                  isMobile ? AppSpacing.lg : AppSpacing.xl2,
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.lg),
 
-                const SizedBox(height: AppSpacing.xl),
+                    // 👇 4. PASAMOS LOS LOTES REALES A LA TABLA DEL FRONT
+                    _DesktopTableLotes(
+                      lotes: lotesPaginados,
+                      onView: _abrirDetalle,
+                      onAssign: _abrirAsignacion,
+                      onHistory: _verHistorial,
+                    ),
 
-                // Paginación
-                DesktopPagination(
-                  currentPage: _currentPage,
-                  totalPages: totalPages,
-                  totalItems:
-                      totalItems, // Corregido: muestra la cantidad real de la lista
-                  itemsPerPage: _itemsPerPage,
-                  onPageChanged: (page) => setState(() => _currentPage = page),
-                  recordsLabel: 'lotes',
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // Paginación conectada a la BD
+                    DesktopPagination(
+                      currentPage: _currentPage,
+                      totalPages: totalPages,
+                      totalItems: totalItems,
+                      itemsPerPage: _itemsPerPage,
+                      onPageChanged: (page) =>
+                          setState(() => _currentPage = page),
+                      recordsLabel: 'lotes',
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
@@ -141,6 +150,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
 // ══════════════════════════════════════════════════════════════════════════════
 // DESKTOP TABLE
 // ══════════════════════════════════════════════════════════════════════════════
+
 class _DesktopTableLotes extends StatelessWidget {
   // Ahora recibimos la lista de lotes y funciones que aceptan el modelo como parámetro
   final List<LoteModel> lotes;
@@ -256,7 +266,10 @@ class _LoteListRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              lote.id,
+              // SOLUCIÓN: Acortar el ID para que no rompa la tabla visualmente
+              lote.id.length > 8
+                  ? lote.id.substring(0, 8).toUpperCase()
+                  : lote.id,
               style: AppTypography.small.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary500,
