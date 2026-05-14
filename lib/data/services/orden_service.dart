@@ -31,7 +31,7 @@ class OrdenService {
               cantidad_total, precio_unitario, subtotal,
               conjunto (nombre),
               plantilla_prenda (nombre, tipo_prenda (nombre_prenda)),
-              detalle_orden_talla (id_desglose, cantidad, tallas (nombre_talla, id_talla))
+              detalle_orden_talla (id_desglose, id_talla, cantidad, tallas (nombre_talla))
             )
           ''')
           .order('fecha_orden', ascending: false);
@@ -69,7 +69,7 @@ class OrdenService {
                 conjunto_plantilla (cantidad_por_conjunto, plantilla_prenda (nombre))
               ),
               plantilla_prenda (nombre, tipo_prenda (nombre_prenda)),
-              detalle_orden_talla (id_desglose, cantidad, tallas (nombre_talla, id_talla))
+              detalle_orden_talla (id_desglose, id_talla, cantidad, tallas (nombre_talla))
             )
           ''')
           .eq('num_orden', numOrden)
