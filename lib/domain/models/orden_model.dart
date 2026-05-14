@@ -34,7 +34,7 @@ class OrdenModel {
   // ───── Estados ─────
   final int idEstado;
   final String estadoOrden;
-  final int idEstadoPago;
+  final int? idEstadoPago;
   final String estadoPago;
 
   // ───── Fechas y costos ─────
@@ -76,7 +76,7 @@ class OrdenModel {
     this.clienteTelefono,
     required this.idEstado,
     required this.estadoOrden,
-    required this.idEstadoPago,
+    this.idEstadoPago,
     required this.estadoPago,
     required this.fechaOrden,
     required this.fechaEntrega,
@@ -141,13 +141,13 @@ class OrdenModel {
       clienteCi: cliente?['ci_cliente'],
       idEstado: json['id_estado'] ?? 0,
       estadoOrden: eOrden?['nombre_estado'] ?? 'Desconocido',
-      idEstadoPago: json['id_estado_pago'] ?? 0,
+      idEstadoPago: (json['id_estado_pago'] as num?)?.toInt(),
       estadoPago: ePago?['nombre_estado'] ?? 'Pendiente',
       fechaOrden: DateTime.parse(json['fecha_orden']),
       fechaEntrega: DateTime.parse(json['fecha_entrega']),
       tiempoProcesamientoEstimado:
           (json['tiempo_procesamiento_estimado'] as num?)?.toDouble(),
-      costoTotal: (json['costo_total'] as num).toDouble(),
+      costoTotal: (json['costo_total'] as num?)?.toDouble() ?? 0.0,
       producto: resumen,
       cantidad: totalCant,
       detalleOrden: detalleParsed,
