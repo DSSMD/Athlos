@@ -19,11 +19,15 @@ import '../../components/clientes/cliente_list_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 
 import '../../widgets/users/kpi_card.dart';
+import '../../widgets/shared/compact_new_button.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 
 import '../../../domain/models/cliente_model.dart';
@@ -37,8 +41,6 @@ class ClientesPage extends ConsumerStatefulWidget {
 }
 
 class _ClientesPageState extends ConsumerState<ClientesPage> {
-  static const double _mobileBreakpoint = 900;
-
   final TextEditingController _searchController = TextEditingController();
 
   int _currentPage = 1;
@@ -120,23 +122,20 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < _mobileBreakpoint;
-        final clientesAsync = ref.watch(clientesProvider);
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+    final isMobile = context.isMobile;
+    final clientesAsync = ref.watch(clientesProvider);
 
-        return clientesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) =>
-              Center(child: Text('Error al cargar clientes: $error')),
-          data: (clientesReales) {
-            final filteredClientes = _aplicarBusquedaYFiltro(clientesReales);
-            return _buildListado(
-              isMobile: isMobile,
-              filteredClientes: filteredClientes,
-              allClientes: clientesReales,
-            );
-          },
+    return clientesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Center(child: Text('Error al cargar clientes: $error')),
+      data: (clientesReales) {
+        final filteredClientes = _aplicarBusquedaYFiltro(clientesReales);
+        return _buildListado(
+          isMobile: isMobile,
+          filteredClientes: filteredClientes,
+          allClientes: clientesReales,
         );
       },
     );
@@ -169,16 +168,25 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 
     return Column(
       children: [
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Clientes',
-          searchHint: 'Buscar por nombre, NIT, teléfono...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() => _currentPage = 1),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo cliente',
-          onNewPressed: _abrirCrear,
-        ),
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Clientes',
+            trailing: CompactNewButton(label: 'Nuevo', onPressed: _abrirCrear),
+            bottom: SearchInput(
+              hintText: 'Buscar por nombre, NIT, teléfono...',
+              controller: _searchController,
+              onChanged: (_) => setState(() => _currentPage = 1),
+            ),
+          )
+        else
+          StickyTopbar(
+            title: 'Clientes',
+            searchHint: 'Buscar por nombre, NIT, teléfono...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() => _currentPage = 1),
+            newButtonLabelDesktop: 'Nuevo cliente',
+            onNewPressed: _abrirCrear,
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
@@ -491,3 +499,4 @@ class _MobileList extends StatelessWidget {
     );
   }
 }
+

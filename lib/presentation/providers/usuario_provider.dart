@@ -69,9 +69,14 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
       state = await AsyncValue.guard(() async {
         return _fetchUsuarios();
       });
+
     } catch (e) {
-      state = estadoAnterior;
-      rethrow;
+      // 2. 💡 LA CORRECCIÓN: Si falla, NO ponemos estado de error. 
+      // Restauramos la tabla normal que guardamos al principio.
+      state = estadoAnterior; 
+      
+      // 3. Escupimos el error hacia el Frontend para que tu SnackBar lo atrape
+      rethrow; 
     }
   }
 

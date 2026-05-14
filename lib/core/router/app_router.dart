@@ -16,6 +16,7 @@ import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
+import '../../presentation/pages/admin/inventario/inventario_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
 import '../../presentation/layouts/splash_screen_page.dart';
@@ -29,7 +30,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // Arrancamos en loading para evaluar la sesión tranquilamente
     initialLocation: '/loading',
 
-   redirect: (context, state) {
+    redirect: (context, state) {
       final initAsync = ref.watch(appInitProvider);
       final authAsync = ref.read(authStateProvider);
       final path = state.uri.path;
@@ -90,13 +91,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // RUTA DE CARGA TRANSITORIA
       GoRoute(
-       path: '/loading',
+        path: '/loading',
         builder: (context, state) => const SplashScreenPage(),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
       // ────────── ROL 1: ADMINISTRADOR (10 Páginas) ──────────
       GoRoute(
@@ -105,7 +103,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           pages: [
             _buildPlaceholder('Dashboard'), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes
-            _buildPlaceholder('Inventario'), // 2. Inventario
+            const InventarioPage(), // 2. Inventario
             _buildPlaceholder(
               'Producción',
             ), // 3. Producción (Reemplazado por placeholder)
@@ -128,7 +126,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: [
             _buildPlaceholder('Dashboard Taller'), // 0. Dashboard
-            _buildPlaceholder('Inventario'), // 1. Inventario
+            const InventarioPage(), // 1. Inventario
             _buildPlaceholder('Producción'), // 2. Producción
           ],
           railDestinations: _buildRailFromRole('2'),

@@ -25,11 +25,15 @@ import '../../components/users/user_list_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 
 import '../../widgets/users/kpi_card.dart';
+import '../../widgets/shared/compact_new_button.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 import '../../widgets/users/role_badge.dart';
 
@@ -44,8 +48,6 @@ class UsuariosPage extends ConsumerStatefulWidget {
 }
 
 class _UsuariosPageState extends ConsumerState<UsuariosPage> {
-  static const double _mobileBreakpoint = 900;
-
   int _selectedTab = 0;
   int _selectedFilter = 0;
   final TextEditingController _searchController = TextEditingController();
@@ -92,43 +94,29 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     // 4. ¡AQUÍ ESTÁ LA MAGIA DE RIVERPOD! Escuchamos a Supabase
     final usuariosAsync = ref.watch(usuariosProvider);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < _mobileBreakpoint;
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+    final isMobile = context.isMobile;
 
-        // 5. MANEJAMOS LOS 3 ESTADOS (Cargando, Error, Datos reales)
-        return usuariosAsync.when(
-          loading: () => const Center(
-            child:
-                CircularProgressIndicator(), // Muestra un spinner mientras carga
+    return usuariosAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Center(child: Text('Error al cargar usuarios: $error')),
+      data: (usuariosReales) {
+        final filteredUsers = _getFilteredUsers(usuariosReales);
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedTab == 0
+                ? _buildUsuariosTab(
+                    isMobile,
+                    filteredUsers,
+                    usuariosReales,
+                    key: const ValueKey('usuarios'),
+                  )
+                : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
           ),
-          error: (error, stack) =>
-              Center(child: Text('Error al cargar usuarios: $error')),
-          data: (usuariosReales) {
-            // Cuando hay datos, aplicamos tus filtros
-            final filteredUsers = _getFilteredUsers(usuariosReales);
-
-            return Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _selectedTab == 0
-                    // NOTA: Tendrás que actualizar _buildUsuariosTab para que acepte
-                    // filteredUsers y usuariosReales como parámetros en lugar de usar getters globales
-                    ? _buildUsuariosTab(
-                        isMobile,
-                        filteredUsers,
-                        usuariosReales,
-                        key: const ValueKey('usuarios'),
-                      )
-                    : _buildPagosTab(
-                        isMobile,
-                        usuariosReales,
-                        key: const ValueKey('pagos'),
-                      ),
-              ),
-            );
-          },
         );
       },
     );
@@ -164,19 +152,32 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        // Topbar sticky con línea separadora
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Usuarios',
-          searchHint: 'Buscar usuario...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() {
-            _currentPage = 1;
-          }),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo usuario',
-          onNewPressed: () => showUserFormDrawer(context),
-        ),
+        // Header — mobile usa MobileScreenHeader (con search en bottom),
+        // desktop mantiene StickyTopbar.
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Usuarios',
+            trailing: CompactNewButton(
+              label: 'Nuevo',
+              onPressed: () => showUserFormDrawer(context),
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar usuario...',
+              controller: _searchController,
+              onChanged: (_) => setState(() => _currentPage = 1),
+            ),
+          )
+        else
+          StickyTopbar(
+            title: 'Usuarios',
+            searchHint: 'Buscar usuario...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() {
+              _currentPage = 1;
+            }),
+            newButtonLabelDesktop: 'Nuevo usuario',
+            onNewPressed: () => showUserFormDrawer(context),
+          ),
         // Contenido scrolleable
         Expanded(
           child: SingleChildScrollView(
@@ -281,13 +282,28 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     return Column(
       key: key,
       children: [
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Trabajadores',
-          searchHint: 'Buscar trabajador...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() {}),
-        ),
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Usuarios',
+            trailing: CompactNewButton(
+              label: 'Nuevo',
+              onPressed: () => showUserFormDrawer(context),
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar usuario...',
+              controller: _searchController,
+              onChanged: (_) => setState(() {}),
+            ),
+          )
+        else
+          StickyTopbar(
+            title: 'Usuarios',
+            searchHint: 'Buscar usuario...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() {}),
+            newButtonLabelDesktop: 'Nuevo usuario',
+            onNewPressed: () => showUserFormDrawer(context),
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
@@ -621,225 +637,6 @@ class _MobileList extends StatelessWidget {
           if (i < users.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// COMPONENTES DE TRABAJADORES (PAGOS)
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _TrabajadoresDesktopTable extends StatelessWidget {
-  const _TrabajadoresDesktopTable({required this.trabajadores});
-  final List<UsuarioModel> trabajadores;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.brandWhite,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // CABECERA
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.md,
-            ),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border)),
-              color: AppColors.neutral50,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppRadius.lg),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Text('TRABAJADOR', style: AppTypography.caption),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text('ÁREA', style: AppTypography.caption),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text('TARIFA BASE', style: AppTypography.caption),
-                ),
-                /*Expanded(
-                  flex: 2,
-                  child: Text(
-                    'ACCIÓN',
-                    style: AppTypography.caption,
-                    textAlign: TextAlign.right,
-                  ),
-                ),*/
-              ],
-            ),
-          ),
-          // FILAS
-          ...trabajadores.map((t) {
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.lg,
-              ),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.border)),
-              ),
-              child: Row(
-                children: [
-                  // Trabajador (Nombre y Rol)
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.name,
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        RoleBadge(role: t.role), // Reutilizamos tu RoleBadge
-                      ],
-                    ),
-                  ),
-                  // Área
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      t.nombreArea ?? 'Sin área',
-                      style: AppTypography.body,
-                    ),
-                  ),
-                  // Tarifa
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Bs. ${t.tarifaPagoBase?.toStringAsFixed(2) ?? '0.00'}',
-                      style: AppTypography.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.success600,
-                      ),
-                    ),
-                  ),
-
-                  // TODO: Abrir modal de pago para este trabajador
-                  // Botón de Acción
-                  /*Expanded(
-                    flex: 2,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () {
-                        },
-                        icon: const Icon(Icons.add_card, size: 18),
-                        label: const Text('Pagar'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary500,
-                        ),
-                      ),
-                    ),
-                  ),*/
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrabajadoresMobileList extends StatelessWidget {
-  const _TrabajadoresMobileList({required this.trabajadores});
-  final List<UsuarioModel> trabajadores;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: trabajadores.map((t) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.md),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: AppColors.brandWhite,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      t.name,
-                      style: AppTypography.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  RoleBadge(role: t.role),
-                ],
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Divider(height: 1, color: AppColors.border),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Área', style: AppTypography.caption),
-                      Text(
-                        t.nombreArea ?? 'Sin área',
-                        style: AppTypography.small,
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('Tarifa Base', style: AppTypography.caption),
-                      Text(
-                        'Bs. ${t.tarifaPagoBase?.toStringAsFixed(2) ?? '0.00'}',
-                        style: AppTypography.small.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              /*const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add_card, size: 18),
-                  label: const Text('Registrar Pago'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary500,
-                    side: const BorderSide(color: AppColors.primary200),
-                  ),
-                ),
-              ),*/
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 }
