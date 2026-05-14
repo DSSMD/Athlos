@@ -377,9 +377,10 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                         'Los usuarios con rol de Producción o Cajas aparecerán aquí.',
                   )
                 else if (isMobile)
-                  _TrabajadoresMobileList(trabajadores: trabajadores)
+                  _MobileList(users: trabajadores)
                 else
-                  _TrabajadoresDesktopTable(trabajadores: trabajadores),
+                  _DesktopTable(users: trabajadores),
+
               ],
             ),
           ),
