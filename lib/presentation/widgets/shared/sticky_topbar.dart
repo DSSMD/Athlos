@@ -1,17 +1,9 @@
-// ============================================================================
-// sticky_topbar.dart
-// Ubicación: lib/presentation/widgets/shared/sticky_topbar.dart
-// Descripción: Barra superior sticky para pantallas de listado (Usuarios,
-// Clientes, etc.). Contiene título + buscador + botón "nuevo". Se adapta a
-// mobile (2 filas) y desktop (1 fila).
-// ============================================================================
+// lib/presentation/widgets/shared/sticky_topbar.dart
 
 import 'package:flutter/material.dart';
-
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-
 import 'search_input.dart';
 
 class StickyTopbar extends StatelessWidget {
@@ -33,13 +25,13 @@ class StickyTopbar extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
 
-  /// Label corto para mobile (ej: "Nuevo")
   final String? newButtonLabelMobile;
-
-  /// Label completo para desktop (ej: "Nuevo usuario")
   final String? newButtonLabelDesktop;
-
   final VoidCallback? onNewPressed;
+
+  // Propiedad auxiliar para saber si debemos mostrar el botón
+  bool get _showButton => onNewPressed != null && 
+      (isMobile ? newButtonLabelMobile != null : newButtonLabelDesktop != null);
 
   @override
   Widget build(BuildContext context) {
@@ -63,11 +55,13 @@ class StickyTopbar extends StatelessWidget {
         Row(
           children: [
             Expanded(child: Text(title, style: AppTypography.h1)),
-            ElevatedButton.icon(
-              onPressed: onNewPressed,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(newButtonLabelMobile!),
-            ),
+            // Solo renderiza el botón si las propiedades existen
+            if (_showButton)
+              ElevatedButton.icon(
+                onPressed: onNewPressed,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(newButtonLabelMobile!), // Aquí el ! es seguro por el if
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -93,12 +87,15 @@ class StickyTopbar extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
         ),
-        const SizedBox(width: AppSpacing.md),
-        ElevatedButton.icon(
-          onPressed: onNewPressed,
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(newButtonLabelDesktop!),
-        ),
+        // Solo renderiza el espacio y el botón si existen
+        if (_showButton) ...[
+          const SizedBox(width: AppSpacing.md),
+          ElevatedButton.icon(
+            onPressed: onNewPressed,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(newButtonLabelDesktop!),
+          ),
+        ],
       ],
     );
   }

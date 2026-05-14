@@ -84,11 +84,6 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
     );
   }
 
-  void _crearNuevoLote() {
-    // TODO: BACKEND - Abrir formulario para crear un nuevo lote/orden
-    debugPrint("Abriendo formulario de nuevo lote");
-  }
-
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 900;
@@ -105,9 +100,6 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
             // TODO: BACKEND - Trigger de búsqueda filtrada
             setState(() => _currentPage = 1);
           },
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo Lote',
-          onNewPressed: _crearNuevoLote,
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -115,22 +107,6 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Filtros de Área
-                FilterChips(
-                  labels: const ['Todos', 'Corte', 'Costura', 'Acabado'],
-                  counts: const [
-                    120,
-                    45,
-                    50,
-                    25,
-                  ], // TODO: BACKEND - Traer conteos reales
-                  selected: _selectedFilter,
-                  onChanged: (i) => setState(() {
-                    _selectedFilter = i;
-                    _currentPage = 1;
-                    // TODO: BACKEND - Recargar lista con el nuevo filtro de área
-                  }),
-                ),
                 const SizedBox(height: AppSpacing.lg),
 
                 // Tabla Desktop Corregida
