@@ -1,81 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // <-- IMPORTANTE
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../../domain/models/trabajo_asignado_model.dart';
-import '../../components/trabajador/detalle_trabajo_dialog.dart'; // Crearemos este a continuación
+import '../../components/trabajador/detalle_trabajo_dialog.dart';
+import '../../providers/produccion_provider.dart'; // 1. Ahora es un ConsumerWidget para poder leer a Riverpod
 
-class TrabajadorDashboardPage extends StatefulWidget {
+class TrabajadorDashboardPage extends ConsumerWidget {
   const TrabajadorDashboardPage({super.key});
 
   @override
-  State<TrabajadorDashboardPage> createState() => _TrabajadorDashboardPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 2. Escuchamos al provider que creaste en el paso anterior
+    final trabajosAsync = ref.watch(misTrabajosProvider);
 
-class _TrabajadorDashboardPageState extends State<TrabajadorDashboardPage> {
-  // TODO: BACKEND - Esta lista vendrá de tu Provider filtrada por el ID del usuario logueado
-  final List<TrabajoAsignadoModel> _misTrabajos = [
-    TrabajoAsignadoModel(
-      loteId: '#LT-2045',
-      ordenId: '#ORD-889',
-      cliente: 'Textiles Athlos',
-      estado: 'PENDIENTE',
-      fechaAsignacion: DateTime.now(),
-      cantidad: 250,
-      tallas: ['S', 'M', 'L'],
-      instrucciones: 'Usar patrón de corte tipo Slim Fit. Cuidado con el desperdicio en las esquinas.',
-    ),
-  ];
-
-  void _verDetalle(TrabajoAsignadoModel trabajo) {
-    showDialog(
-      context: context,
-      builder: (context) => DetalleTrabajoDialog(trabajo: trabajo),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Mantenemos el fondo del sistema
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text('Panel de Trabajo', style: AppTypography.h3),
         backgroundColor: AppColors.brandWhite,
         elevation: 0,
         centerTitle: false,
       ),
-      body: Column(
-        children: [
-          // Resumen rápido en la parte superior
-          _buildStatsHeader(),
-          
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: _misTrabajos.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                return _TrabajoCard(
-                  trabajo: _misTrabajos[index],
-                  onTap: () => _verDetalle(_misTrabajos[index]),
-                );
-              },
+      // 3. Manejamos los 3 estados de Riverpod: Cargando, Error y Datos
+      body: trabajosAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              'Error de Base de Datos:\n$error\n\nRevisa la consola de VS Code.',
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
             ),
           ),
-        ],
+        ),
+        data: (misTrabajos) {
+          return Column(
+            children: [
+              // Le pasamos la lista real para que calcule los pendientes
+              _buildStatsHeader(misTrabajos),
+
+              Expanded(
+                child: misTrabajos.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No tienes lotes asignados en este momento.',
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        itemCount: misTrabajos.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          return _TrabajoCard(
+                            trabajo: misTrabajos[index],
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => DetalleTrabajoDialog(
+                                  trabajo: misTrabajos[index],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatsHeader() {
+  Widget _buildStatsHeader(List<TrabajoAsignadoModel> misTrabajos) {
+    // Calculamos automáticamente los contadores
+    final pendientes = misTrabajos
+        .where((t) => t.estado.toUpperCase() == 'ASIGNADO')
+        .length;
+    final enProceso = misTrabajos
+        .where((t) => t.estado.toUpperCase() == 'EN PROCESO')
+        .length;
+    // ...
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       color: AppColors.brandWhite,
       child: Row(
         children: [
-          _statItem('Pendientes', '1', AppColors.primary500),
+          _statItem('Pendientes', pendientes.toString(), AppColors.primary500),
           const SizedBox(width: AppSpacing.xl),
-          _statItem('En Proceso', '0', Colors.orange),
+          _statItem('En Proceso', enProceso.toString(), Colors.orange),
         ],
       ),
     );
@@ -85,7 +102,10 @@ class _TrabajadorDashboardPageState extends State<TrabajadorDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+        ),
         Text(count, style: AppTypography.h2.copyWith(color: color)),
       ],
     );
@@ -105,60 +125,75 @@ class _TrabajoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: BorderRadius.circular(8.0),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.brandWhite,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(8.0),
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
-            // Indicador visual de estado
             Container(
               width: 4,
               height: 40,
               decoration: BoxDecoration(
-                color: trabajo.estado == 'PENDIENTE' ? AppColors.primary500 : Colors.orange,
+                color: trabajo.estado.toUpperCase() == 'PENDIENTE'
+                    ? AppColors.primary500
+                    : Colors.orange,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            
-            // Información principal
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    trabajo.loteId, 
-                    style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary)
+                    '${trabajo.actividad} - Lote: ${trabajo.loteId}',
+                    style: AppTypography.small.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Cantidad: ${trabajo.cantidad}',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
-            
-            // Fecha y Estado
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${trabajo.fechaAsignacion.day}/${trabajo.fechaAsignacion.month}', 
-                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary)
+                  '${trabajo.fechaAsignacion.day}/${trabajo.fechaAsignacion.month}',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  trabajo.estado, 
+                  trabajo.estado,
                   style: AppTypography.caption.copyWith(
-                    fontWeight: FontWeight.bold, 
-                    color: trabajo.estado == 'PENDIENTE' ? AppColors.primary500 : Colors.orange
-                  )
+                    fontWeight: FontWeight.bold,
+                    color: trabajo.estado.toUpperCase() == 'PENDIENTE'
+                        ? AppColors.primary500
+                        : Colors.orange,
+                  ),
                 ),
               ],
             ),
             const SizedBox(width: AppSpacing.sm),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.border),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.border,
+            ),
           ],
         ),
       ),
