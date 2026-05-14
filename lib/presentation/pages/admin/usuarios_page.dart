@@ -31,6 +31,7 @@ import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/sticky_topbar.dart';
+import '../../widgets/users/role_badge.dart';
 
 import '../../../domain/models/usuario_model.dart';
 import '../../providers/usuario_provider.dart';
@@ -120,7 +121,11 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                         usuariosReales,
                         key: const ValueKey('usuarios'),
                       )
-                    : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
+                    : _buildPagosTab(
+                        isMobile,
+                        usuariosReales,
+                        key: const ValueKey('pagos'),
+                      ),
               ),
             );
           },
@@ -129,7 +134,11 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────── USUARIOS TAB ──
+  // ─────────────────────────────────────────────────────────────────────────
+  // FUNCIONES DE FILTRADO Y CONTEO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────── USUARIOS ──
 
   Widget _buildUsuariosTab(
     bool isMobile,
@@ -179,7 +188,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   selected: _selectedTab,
                   onChanged: (i) => setState(() {
                     _selectedTab = i;
-                    _currentPage = 1; // 💡 Reiniciamos al cambiar pestaña
+                    _currentPage = 1;
                   }),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -212,12 +221,11 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   ],
                   onChanged: (i) => setState(() {
                     _selectedFilter = i;
-                    _currentPage = 1; // 💡 Reiniciamos al usar los filtros
+                    _currentPage = 1;
                   }),
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                // 💡 NUEVO: Pasamos paginatedUsers en lugar de la lista completa
                 if (users.isEmpty)
                   const EmptyState(
                     icon: Icons.search_off,
@@ -231,7 +239,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // 💡 NUEVO: Llamamos a los widgets con sus nuevas variables
                 if (isMobile)
                   LoadMoreButton(
                     hasMore: _currentPage < totalPages,
@@ -257,19 +264,29 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
   // ──────────────────────────────────────────────────── PAGOS TRABAJADORES ──
 
-  Widget _buildPagosTab(bool isMobile, {Key? key}) {
+  Widget _buildPagosTab(
+    bool isMobile,
+    List<UsuarioModel> allUsers, {
+    Key? key,
+  }) {
+    var trabajadores = allUsers.where((u) => u.isTrabajador).toList();
+
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      trabajadores = trabajadores
+          .where((t) => t.name.toLowerCase().contains(query))
+          .toList();
+    }
+
     return Column(
       key: key,
       children: [
         StickyTopbar(
           isMobile: isMobile,
-          title: 'Usuarios',
-          searchHint: 'Buscar usuario...',
+          title: 'Trabajadores',
+          searchHint: 'Buscar trabajador...',
           searchController: _searchController,
           onSearchChanged: (_) => setState(() {}),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo usuario',
-          onNewPressed: () => showUserFormDrawer(context),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -279,34 +296,69 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
               children: [
                 _TabSelector(
                   selected: _selectedTab,
-                  onChanged: (i) => setState(() => _selectedTab = i),
+                  onChanged: (i) => setState(() {
+                    _selectedTab = i;
+                    _searchController.clear(); // Limpiamos búsqueda al cambiar
+                  }),
                 ),
-                const SizedBox(height: AppSpacing.xl3),
+                const SizedBox(height: AppSpacing.xl),
+
+                // 💡 Tarjeta de resumen de RRHH
                 Container(
-                  padding: const EdgeInsets.all(AppSpacing.xl3),
+                  padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(
                     color: AppColors.neutral50,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      const Icon(
-                        Icons.payments_outlined,
-                        size: 48,
-                        color: AppColors.textMuted,
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary50,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: const Icon(
+                          Icons.people_outline,
+                          color: AppColors.primary500,
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text('Pagos a trabajadores', style: AppTypography.h3),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Pendiente de diseño en Figma.',
-                        style: AppTypography.small,
-                        textAlign: TextAlign.center,
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total de trabajadores activos',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Text(
+                              '${trabajadores.length}',
+                              style: AppTypography.h3,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // 💡 LISTADO DINÁMICO
+                if (trabajadores.isEmpty)
+                  const EmptyState(
+                    icon: Icons.badge_outlined,
+                    title: 'No hay trabajadores',
+                    subtitle:
+                        'Los usuarios con rol de Producción o Cajas aparecerán aquí.',
+                  )
+                else if (isMobile)
+                  _TrabajadoresMobileList(trabajadores: trabajadores)
+                else
+                  _TrabajadoresDesktopTable(trabajadores: trabajadores),
               ],
             ),
           ),
@@ -315,7 +367,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     );
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // TAB SELECTOR — pestañas Usuarios / Pagos a trabajadores
 // ══════════════════════════════════════════════════════════════════════════════
@@ -337,7 +388,7 @@ class _TabSelector extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         _TabPill(
-          label: 'Pagos a trabajadores',
+          label: 'Trabajadores',
           selected: selected == 1,
           onTap: () => onChanged(1),
         ),
@@ -570,6 +621,225 @@ class _MobileList extends StatelessWidget {
           if (i < users.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPONENTES DE TRABAJADORES (PAGOS)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _TrabajadoresDesktopTable extends StatelessWidget {
+  const _TrabajadoresDesktopTable({required this.trabajadores});
+  final List<UsuarioModel> trabajadores;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.brandWhite,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // CABECERA
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.md,
+            ),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+              color: AppColors.neutral50,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text('TRABAJADOR', style: AppTypography.caption),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text('ÁREA', style: AppTypography.caption),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text('TARIFA BASE', style: AppTypography.caption),
+                ),
+                /*Expanded(
+                  flex: 2,
+                  child: Text(
+                    'ACCIÓN',
+                    style: AppTypography.caption,
+                    textAlign: TextAlign.right,
+                  ),
+                ),*/
+              ],
+            ),
+          ),
+          // FILAS
+          ...trabajadores.map((t) {
+            return Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.lg,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                children: [
+                  // Trabajador (Nombre y Rol)
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.name,
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        RoleBadge(role: t.role), // Reutilizamos tu RoleBadge
+                      ],
+                    ),
+                  ),
+                  // Área
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      t.nombreArea ?? 'Sin área',
+                      style: AppTypography.body,
+                    ),
+                  ),
+                  // Tarifa
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Bs. ${t.tarifaPagoBase?.toStringAsFixed(2) ?? '0.00'}',
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.success600,
+                      ),
+                    ),
+                  ),
+
+                  // TODO: Abrir modal de pago para este trabajador
+                  // Botón de Acción
+                  /*Expanded(
+                    flex: 2,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () {
+                        },
+                        icon: const Icon(Icons.add_card, size: 18),
+                        label: const Text('Pagar'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary500,
+                        ),
+                      ),
+                    ),
+                  ),*/
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrabajadoresMobileList extends StatelessWidget {
+  const _TrabajadoresMobileList({required this.trabajadores});
+  final List<UsuarioModel> trabajadores;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: trabajadores.map((t) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: AppColors.brandWhite,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      t.name,
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  RoleBadge(role: t.role),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Divider(height: 1, color: AppColors.border),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Área', style: AppTypography.caption),
+                      Text(
+                        t.nombreArea ?? 'Sin área',
+                        style: AppTypography.small,
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Tarifa Base', style: AppTypography.caption),
+                      Text(
+                        'Bs. ${t.tarifaPagoBase?.toStringAsFixed(2) ?? '0.00'}',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.success600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              /*const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add_card, size: 18),
+                  label: const Text('Registrar Pago'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary500,
+                    side: const BorderSide(color: AppColors.primary200),
+                  ),
+                ),
+              ),*/
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

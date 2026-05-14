@@ -97,8 +97,7 @@ class _UserListRowState extends State<UserListRow> {
             Expanded(
               flex: 3,
               // Dejamos este espacio vacío por ahora para no romper las columnas de la tabla.
-              // child: _PermissionsRow(permissions: u.permissions),
-              child: _PermissionsRow(permissions: u.permissions),
+              child: _PermissionsRow(permissions: u.role.defaultPermissions),
             ),
             // ESTADO
             Expanded(
