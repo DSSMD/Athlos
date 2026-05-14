@@ -2,15 +2,11 @@
 // orden_resumen_card.dart
 // Ubicación: lib/presentation/components/ordenes/orden_resumen_card.dart
 // Descripción: Card "Resumen" de la columna lateral del form Crear Orden.
-// Muestra moneda, listado de ítems con subtotales, subtotal general,
-// descuento (5% mockeado del Figma), total y equivalente en Bs si moneda es USD.
+// Muestra moneda, listado de ítems con subtotales, total y equivalente
+// en Bs si la moneda es USD.
 //
-// Refactor (esquema nuevo):
-//   - Lee draft.items (List<OrdenItemDraft>) y draft.subtotalItems en lugar
-//     de los campos legacy draft.productos / draft.subtotal.
-//   - La fila por ítem muestra nombre + cantidad total (suma de tallas) +
-//     subtotal calculado como precioUnitario × cantidadTotal.
-//   - El descuento del 5% sigue mock fijo del Figma.
+// El descuento del 5% que aparecía antes era mock del Figma; el stakeholder
+// confirmó que no se aplica descuento automático, por eso se removió.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -23,19 +19,9 @@ import 'orden_draft.dart';
 
 class OrdenResumenCard extends StatelessWidget {
   final OrdenDraft draft;
-  final double descuentoFijo;
 
-  const OrdenResumenCard({
-    super.key,
-    required this.draft,
-    this.descuentoFijo = 0.05,
-  });
+  const OrdenResumenCard({super.key, required this.draft});
 
-  static const double _porcentajeDescuento = 0.05;
-
-  // ─── Helpers locales por ítem (duplican lo que tiene OrdenProductosCard;
-  //     se pueden promover a getters de OrdenItemDraft en una limpieza
-  //     futura para deduplicar) ───
   static int _cantidadTotal(OrdenItemDraft item) =>
       item.tallas.fold(0, (sum, t) => sum + t.cantidad);
 
@@ -44,12 +30,7 @@ class OrdenResumenCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cálculos en Bolivianos internamente
-    final subtotal = draft.subtotalItems;
-    final descuento = subtotal * descuentoFijo;
-    final total = subtotal - descuento;
-
-    // Si la UI está en USD el equivalente en Bs es el total puro
+    final total = draft.subtotalItems;
     final equivalenteBs = draft.moneda == OrdenMoneda.dolares ? total : null;
 
     return Container(
@@ -73,16 +54,7 @@ class OrdenResumenCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
-
-            _filaTotal('Subtotal', draft.formatPrecio(subtotal)),
-            const SizedBox(height: AppSpacing.sm),
-            _filaDescuento(descuento),
-            const SizedBox(height: AppSpacing.md),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: AppSpacing.md),
-
             _filaTotal('Total', draft.formatPrecio(total), destacado: true),
-
             if (equivalenteBs != null) ...[
               const SizedBox(height: AppSpacing.sm),
               _filaEquivalenteBs(equivalenteBs),
@@ -164,7 +136,6 @@ class OrdenResumenCard extends StatelessWidget {
     final style = destacado
         ? AppTypography.h3.copyWith(fontWeight: FontWeight.w700)
         : AppTypography.body.copyWith(fontWeight: FontWeight.w600);
-
     return Row(
       children: [
         Expanded(
@@ -176,24 +147,6 @@ class OrdenResumenCard extends StatelessWidget {
           ),
         ),
         Text(valor, style: style),
-      ],
-    );
-  }
-
-  Widget _filaDescuento(double descuento) {
-    final porcentaje = (_porcentajeDescuento * 100).toStringAsFixed(0);
-    return Row(
-      children: [
-        Expanded(
-          child: Text('Descuento ($porcentaje%)', style: AppTypography.small),
-        ),
-        Text(
-          '-${draft.formatPrecio(descuento)}',
-          style: AppTypography.small.copyWith(
-            color: AppColors.success,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ],
     );
   }

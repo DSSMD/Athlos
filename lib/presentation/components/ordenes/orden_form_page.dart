@@ -28,11 +28,10 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
-import 'orden_anticipo_card.dart';
 import 'orden_calendario_card.dart';
 import 'orden_draft.dart';
 import 'orden_info_card.dart';
-import 'orden_prioridad_card.dart';
+import 'orden_pago_prioridad_card.dart';
 import 'orden_productos_card.dart';
 import 'orden_resumen_card.dart';
 
@@ -155,11 +154,9 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
             children: [
               OrdenResumenCard(draft: _draft),
               const SizedBox(height: AppSpacing.lg),
+              OrdenPagoPrioridadCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.lg),
               OrdenCalendarioCard(draft: _draft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
             ],
           ),
         ),
@@ -178,11 +175,9 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
         const SizedBox(height: AppSpacing.lg),
         OrdenResumenCard(draft: _draft),
         const SizedBox(height: AppSpacing.lg),
+        OrdenPagoPrioridadCard(draft: _draft, onChanged: _updateDraft),
+        const SizedBox(height: AppSpacing.lg),
         OrdenCalendarioCard(draft: _draft),
-        const SizedBox(height: AppSpacing.lg),
-        OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
-        const SizedBox(height: AppSpacing.lg),
-        OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
       ],
     );
   }

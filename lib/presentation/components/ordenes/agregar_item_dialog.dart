@@ -111,7 +111,7 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
     return AlertDialog(
       title: Text('Agregar ítem a la orden', style: AppTypography.h3),
       content: SizedBox(
-        width: 500,
+        width: 600,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
