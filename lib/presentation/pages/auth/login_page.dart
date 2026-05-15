@@ -26,6 +26,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _passwordFocusNode = FocusNode();
 
   bool _obscurePassword = true;
   //bool _rememberSession = true;
@@ -36,6 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -225,7 +227,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
           const SizedBox(height: 32),
-
           // Campo Email
           _buildFieldLabel('Correo electrónico'),
           const SizedBox(height: 6),
@@ -233,6 +234,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             controller: _emailController,
             hint: 'correo@athlos.com',
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next, // <-- Teclado muestra "Siguiente"
+            onFieldSubmitted: (_) => _passwordFocusNode.requestFocus(), // <-- Pasa al password
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Ingresa tu correo electrónico';
@@ -244,14 +247,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             },
           ),
           const SizedBox(height: 18),
-
           // Campo Contraseña
           _buildFieldLabel('Contraseña'),
           const SizedBox(height: 6),
           _buildTextField(
             controller: _passwordController,
+            focusNode: _passwordFocusNode,
             hint: '••••••••',
             obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done, // <-- Teclado muestra "Hecho/Ir"
+            onFieldSubmitted: (_) { // <-- Ejecuta el login al dar Enter
+              if (!_isLoading) {
+                _handleLogin();
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Ingresa tu contraseña';
@@ -485,11 +494,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     Widget? suffixIcon,
+    TextInputAction? textInputAction, // <-- AÑADIDO
+    void Function(String)? onFieldSubmitted, // <-- AÑADIDO
+    FocusNode? focusNode,// <-- AÑADIDO
   }) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,//<-- AÑADIDO
       obscureText: obscureText,
       keyboardType: keyboardType,
+      textInputAction: textInputAction, // <-- AÑADIDO
+      onFieldSubmitted: onFieldSubmitted, // <-- AÑADIDO
       validator: validator,
       style: const TextStyle(fontSize: 13, color: Colors.white),
       decoration: InputDecoration(

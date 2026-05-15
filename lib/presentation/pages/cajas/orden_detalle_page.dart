@@ -7,6 +7,9 @@ import '../../components/ordenes/orden_workflow_stepper.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
+
+import '../../widgets/shared/mobile_screen_header.dart';
 
 import '../../../domain/models/orden_model.dart';
 import '../../providers/orden_provider.dart';
@@ -26,8 +29,6 @@ class OrdenDetallePage extends ConsumerStatefulWidget {
 }
 
 class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
-  static const double _mobileBreakpoint = 900;
-
   late List<OrdenItem> _items;
 
   @override
@@ -62,54 +63,60 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... Tu LayoutBuilder y el resto del código _buildDesktop / _buildMobile se queda igual ...
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < _mobileBreakpoint;
-        final orden = widget.orden;
-        final codigoCorto = orden.numOrden.length > 8
-            ? orden.numOrden.substring(0, 8).toUpperCase()
-            : orden.numOrden.toUpperCase();
+    // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+    final isMobile = context.isMobile;
+    final orden = widget.orden;
+    final codigoCorto = orden.numOrden.length > 8
+        ? orden.numOrden.substring(0, 8).toUpperCase()
+        : orden.numOrden.toUpperCase();
 
-        return Column(
-          children: [
-            // Topbar con botón volver
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                border: Border(bottom: BorderSide(color: AppColors.border)),
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-                vertical: AppSpacing.md,
-              ),
-              child: Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: widget.onVolver,
-                    icon: const Icon(Icons.arrow_back, size: 18),
-                    label: const Text('Volver al listado'),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Text('#$codigoCorto', style: AppTypography.h3),
-                  const SizedBox(width: AppSpacing.md),
-                  _EstadoChip(idEstado: orden.idEstado),
-                ],
-              ),
+    return Column(
+      children: [
+        // Topbar con botón volver. Mobile usa MobileScreenHeader (header
+        // oscuro del design system, mismo que Clientes/Usuarios/Órdenes/
+        // Inventario). Desktop mantiene su Container blanco con el botón
+        // de texto "Volver al listado" (look anterior).
+        if (isMobile)
+          MobileScreenHeader(
+            title: '#$codigoCorto',
+            showBackButton: true,
+            onBack: widget.onVolver,
+            showAvatar: false,
+            trailing: _EstadoChip(idEstado: orden.idEstado),
+          )
+        else
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
-
-            // Contenido scrolleable
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(
-                  isMobile ? AppSpacing.lg : AppSpacing.xl2,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl2,
+              vertical: AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                TextButton.icon(
+                  onPressed: widget.onVolver,
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: const Text('Volver al listado'),
                 ),
-                child: isMobile ? _buildMobile(orden) : _buildDesktop(orden),
-              ),
+                const SizedBox(width: AppSpacing.md),
+                Text('#$codigoCorto', style: AppTypography.h3),
+                const SizedBox(width: AppSpacing.md),
+                _EstadoChip(idEstado: orden.idEstado),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+
+        // Contenido scrolleable
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
+            child: isMobile ? _buildMobile(orden) : _buildDesktop(orden),
+          ),
+        ),
+      ],
     );
   }
 

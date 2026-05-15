@@ -103,7 +103,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           pages: [
             _buildPlaceholder('Dashboard'), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes
-            _buildPlaceholder('Inventario'), // 2. Inventario
+            const InventarioPage(), // 2. Inventario
             _buildPlaceholder(
               'Producción',
             ), // 3. Producción (Reemplazado por placeholder)
@@ -127,7 +127,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: [
             _buildPlaceholder('Dashboard Taller'), // 0. Dashboard
-            _buildPlaceholder('Inventario'), // 1. Inventario
+            const InventarioPage(), // 1. Inventario
             _buildPlaceholder('Producción'), // 2. Producción
           ],
           railDestinations: _buildRailFromRole('2'),
