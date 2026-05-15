@@ -59,6 +59,13 @@ class SidebarMenuConfig {
     section: SidebarSection.operaciones,
   );
 
+  static const itemPlantillas = SidebarItem(
+    icon: Icons.checkroom_outlined,
+    selectedIcon: Icons.checkroom,
+    label: 'Plantillas',
+    section: SidebarSection.operaciones,
+  );
+
   // ─── COMERCIAL ──────────────────────────────────────────────────
   static const itemOrdenes = SidebarItem(
     icon: Icons.assignment_outlined,
@@ -116,9 +123,10 @@ class SidebarMenuConfig {
 
   static Map<String, List<SidebarItem>> get itemsPorRol => {
     '1': [
-      // ADMIN: 10 ítems (Ve todo)
+      // ADMIN: 11 ítems (Ve todo). Plantillas se inserta en Operaciones,
+      // después de Producción, lo que corre los índices subsiguientes en +1.
       itemDashboard, itemOrdenes, itemInventario, itemProduccion,
-      itemClientes, itemPagos, itemBalance,
+      itemPlantillas, itemClientes, itemPagos, itemBalance,
       itemUsuarios, itemConfiguracion, itemNotificaciones,
     ],
     '2': [

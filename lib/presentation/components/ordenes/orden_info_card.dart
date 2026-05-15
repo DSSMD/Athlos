@@ -108,7 +108,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     }
   }
 
-
   String _fechaDisplay() {
     final f = widget.draft.fechaEntrega;
     if (f == null) return 'dd/mm/yyyy';

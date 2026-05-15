@@ -341,7 +341,6 @@ class _ProductoRowMobile extends StatelessWidget {
   }
 }
 
-
 // ═════════════════════════════════════════════════════════════════════════════
 // DIALOG: Agregar producto (CONECTADO A BD)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -451,8 +450,8 @@ class _AgregarProductoDialogState
                           items: tallas
                               .map(
                                 (t) => DropdownMenuItem<int>(
-                                  value: t['id_talla'] as int,
-                                  child: Text(t['nombre_talla'].toString()),
+                                  value: t.id,
+                                  child: Text(t.nombre),
                                 ),
                               )
                               .toList(),
@@ -460,9 +459,9 @@ class _AgregarProductoDialogState
                             if (val != null) {
                               setState(() {
                                 _idTalla = val;
-                                _nombreTalla = tallas.firstWhere(
-                                  (t) => t['id_talla'] == val,
-                                )['nombre_talla'];
+                                _nombreTalla = tallas
+                                    .firstWhere((t) => t.id == val)
+                                    .nombre;
                               });
                             }
                           },
@@ -542,4 +541,3 @@ class _AgregarProductoDialogState
     );
   }
 }
-

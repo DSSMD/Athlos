@@ -16,7 +16,7 @@ import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
-import '../../presentation/pages/admin/inventario/inventario_page.dart';
+import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
 import '../../presentation/layouts/splash_screen_page.dart';
@@ -107,12 +107,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _buildPlaceholder(
               'Producción',
             ), // 3. Producción (Reemplazado por placeholder)
-            const ClientesPage(), // 4. Clientes
-            _buildPlaceholder('Pagos'), // 5. Pagos
-            _buildPlaceholder('Balance'), // 6. Balance
-            const UsuariosPage(), // 7. Usuarios
-            _buildPlaceholder('Configuración'), // 8. Config
-            _buildPlaceholder('Avisos'), // 9. Notificaciones
+            const PlantillasPage(), // 4. Plantillas (DEMO)
+            const ClientesPage(), // 5. Clientes
+            _buildPlaceholder('Pagos'), // 6. Pagos
+            _buildPlaceholder('Balance'), // 7. Balance
+            const UsuariosPage(), // 8. Usuarios
+            _buildPlaceholder('Configuración'), // 9. Config
+            _buildPlaceholder('Avisos'), // 10. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),

@@ -21,12 +21,7 @@ class OrdenWorkflowStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentStep = idEstado;
 
-    const steps = [
-      'Pendiente',
-      'En Producción',
-      'Finalizada',
-      'Entregada',
-    ];
+    const steps = ['Pendiente', 'En Producción', 'Finalizada', 'Entregada'];
 
     return LayoutBuilder(
       builder: (context, constraints) {
