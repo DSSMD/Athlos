@@ -35,7 +35,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/insumo_model.dart';
 import '../../../../../domain/models/material_plantilla_model.dart';
-import '../../../../../domain/models/medida_punto_model.dart';
 import '../../../../../domain/models/plantilla_model.dart';
 import '../../../../../domain/models/talla_model.dart';
 import '../../../../../domain/models/tipo_prenda_model.dart';
@@ -124,17 +123,7 @@ class PlantillaFormPaso4Resumen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
 
-          // ─── 3. CUADRO DE MEDIDAS ────────────────────────────────────
-          _SectionTitle('Cuadro de medidas'),
-          const SizedBox(height: AppSpacing.sm),
-          _MedidasResumenCards(
-            medidas: state.medidas,
-            tallasSeleccionadas: state.tallasSeleccionadas,
-            tallasAsync: tallasAsync,
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // ─── 4. MATERIALES ───────────────────────────────────────────
+          // ─── 3. MATERIALES ───────────────────────────────────────────
           _SectionTitle('Materiales'),
           const SizedBox(height: AppSpacing.sm),
           _MaterialesResumen(
@@ -401,161 +390,6 @@ class _TallaChip extends StatelessWidget {
   }
 }
 
-// ─── SECCIÓN: MEDIDAS (cards apiladas read-only) ────────────────────────────
-
-class _MedidasResumenCards extends StatelessWidget {
-  const _MedidasResumenCards({
-    required this.medidas,
-    required this.tallasSeleccionadas,
-    required this.tallasAsync,
-  });
-
-  final List<MedidaPunto> medidas;
-  final List<int> tallasSeleccionadas;
-  final AsyncValue<List<TallaModel>> tallasAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    if (medidas.isEmpty) {
-      return const _EmptySection(
-        icon: Icons.straighten,
-        titulo: 'Aún no hay medidas definidas',
-      );
-    }
-
-    return tallasAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Text(
-        'Error al cargar catálogo de tallas: $e',
-        style: AppTypography.small.copyWith(color: AppColors.error),
-      ),
-      data: (catalogo) {
-        // Tallas a mostrar como filas dentro de cada card. Usamos las
-        // seleccionadas ordenadas por catálogo; si por algún motivo no
-        // hay seleccionadas pero sí medidas (raro), tomamos las keys
-        // de la primera medida como fallback.
-        final ordenadas = _ordenarPorCatalogo(tallasSeleccionadas, catalogo);
-        final tallasParaMostrar = ordenadas.isNotEmpty
-            ? ordenadas
-            : medidas.first.valoresPorTalla.keys.toList();
-
-        // Grid responsive: mismo patrón que el Paso 2. Modal desktop
-        // ~640px → 2 cards por fila. Mobile <560px → 1 card por fila.
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            const minCardWidth = 280.0;
-            const spacing = AppSpacing.md;
-            final available = constraints.maxWidth;
-            final cardsPerRow = (available / minCardWidth)
-                .floor()
-                .clamp(1, 99);
-            final cardWidth =
-                (available - spacing * (cardsPerRow - 1)) / cardsPerRow;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: [
-                for (final medida in medidas)
-                  SizedBox(
-                    width: cardWidth,
-                    child: _MedidaResumenCard(
-                      medida: medida,
-                      tallasOrdenadas: tallasParaMostrar,
-                      catalogoTallas: catalogo,
-                    ),
-                  ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _MedidaResumenCard extends StatelessWidget {
-  const _MedidaResumenCard({
-    required this.medida,
-    required this.tallasOrdenadas,
-    required this.catalogoTallas,
-  });
-
-  final MedidaPunto medida;
-  final List<int> tallasOrdenadas;
-  final List<TallaModel> catalogoTallas;
-
-  String _nombreTalla(int id) =>
-      catalogoTallas.where((t) => t.id == id).firstOrNull?.nombre ?? '#$id';
-
-  String _valorFormateado(int idTalla) {
-    final v = medida.valoresPorTalla[idTalla];
-    if (v == null) return '—';
-    if (v == v.truncateToDouble()) return '${v.toInt()} cm';
-    return '$v cm';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final nombreVacio = medida.nombre.trim().isEmpty;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header: nombre de la medida
-          Text(
-            nombreVacio ? '(Sin nombre)' : medida.nombre,
-            style: AppTypography.small.copyWith(
-              fontWeight: FontWeight.w600,
-              color: nombreVacio
-                  ? AppColors.textMuted
-                  : AppColors.textPrimary,
-              fontStyle: nombreVacio ? FontStyle.italic : FontStyle.normal,
-            ),
-          ),
-          const Divider(height: AppSpacing.lg, color: AppColors.border),
-          // Una row por talla
-          for (final idTalla in tallasOrdenadas)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 60,
-                    child: Text(
-                      _nombreTalla(idTalla),
-                      style: AppTypography.small.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      _valorFormateado(idTalla),
-                      textAlign: TextAlign.right,
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 // ─── SECCIÓN: MATERIALES ────────────────────────────────────────────────────
 
@@ -586,6 +420,14 @@ class _MaterialesResumen extends StatelessWidget {
         style: AppTypography.small.copyWith(color: AppColors.error),
       ),
       data: (catalogo) {
+        double total = 0.0;
+        for (final m in materiales) {
+          final insumo = catalogo.where((i) => i.id == m.idInsumo).firstOrNull;
+          if (insumo != null) {
+            total += m.cantidad * insumo.costoUnitario;
+          }
+        }
+
         return Container(
           decoration: BoxDecoration(
             color: AppColors.background,
@@ -601,6 +443,35 @@ class _MaterialesResumen extends StatelessWidget {
                   catalogoInsumos: catalogo,
                 ),
               ],
+              const Divider(height: 1, color: AppColors.border),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppRadius.lg),
+                    bottomRight: Radius.circular(AppRadius.lg),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Costo Total Estimado',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '\$${total.toStringAsFixed(2)}',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
@@ -625,6 +496,9 @@ class _MaterialRow extends StatelessWidget {
     final huerfano = insumo == null;
     final nombre = insumo?.nombre ?? 'Insumo no disponible';
     final unidad = insumo?.unidad ?? '';
+
+    final costoUnitario = insumo?.costoUnitario ?? 0.0;
+    final costoParcial = material.cantidad * costoUnitario;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -658,6 +532,18 @@ class _MaterialRow extends StatelessWidget {
             style: AppTypography.small.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '\$${costoParcial.toStringAsFixed(2)}',
+              textAlign: TextAlign.right,
+              style: AppTypography.small.copyWith(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

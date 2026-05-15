@@ -33,6 +33,9 @@ import '../../../widgets/shared/empty_state.dart';
 import '../../../widgets/shared/filter_chips.dart';
 import '../../../widgets/shared/pagination.dart';
 import '../../../widgets/shared/sticky_topbar.dart';
+import '../../../widgets/shared/mobile_screen_header.dart';
+import '../../../widgets/shared/compact_new_button.dart';
+import '../../../widgets/shared/search_input.dart';
 import '../../../widgets/users/kpi_card.dart';
 
 import 'widgets/plantilla_form_page.dart';
@@ -259,16 +262,28 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
 
     return Column(
       children: [
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Plantillas',
-          searchHint: 'Buscar por nombre o tipo de prenda...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() => _currentPage = 1),
-          newButtonLabelMobile: 'Nueva',
-          newButtonLabelDesktop: 'Nueva plantilla',
-          onNewPressed: _abrirNueva,
-        ),
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Plantillas',
+            trailing: CompactNewButton(
+              label: 'Nueva',
+              onPressed: _abrirNueva,
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar por nombre o tipo...',
+              controller: _searchController,
+              onChanged: (_) => setState(() => _currentPage = 1),
+            ),
+          )
+        else
+          StickyTopbar(
+            title: 'Plantillas',
+            searchHint: 'Buscar por nombre o tipo de prenda...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() => _currentPage = 1),
+            newButtonLabelDesktop: 'Nueva plantilla',
+            onNewPressed: _abrirNueva,
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),

@@ -14,7 +14,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/plantilla_service.dart';
 import '../../domain/models/material_plantilla_model.dart';
-import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
 // ─── SERVICE PROVIDER ───────────────────────────────────────────────────────
@@ -95,26 +94,18 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     required String nombre,
     required int idTipoPrenda,
     required String especificaciones,
+    required double precioPlantilla,
     required List<int> tallasSeleccionadas,
-    required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
-    final nombresMedidas = medidas
-        .map((m) => m.nombre.toLowerCase().trim())
-        .toList();
-    if (nombresMedidas.length != nombresMedidas.toSet().length) {
-      throw Exception(
-        'Error: Tienes dos medidas con el mismo nombre. Usa nombres únicos.',
-      );
-    }
     final service = ref.read(plantillaServiceProvider);
     try {
       final nueva = await service.crearPlantilla(
         nombre: nombre,
         idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
+        precioPlantilla: precioPlantilla,
         tallasSeleccionadas: tallasSeleccionadas,
-        medidas: medidas,
         materiales: materiales,
       );
       final actuales = state.value ?? const <PlantillaModel>[];
@@ -134,8 +125,8 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     required String nombre,
     required int idTipoPrenda,
     required String especificaciones,
+    required double precioPlantilla,
     required List<int> tallasSeleccionadas,
-    required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
     final service = ref.read(plantillaServiceProvider);
@@ -145,8 +136,8 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
         nombre: nombre,
         idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
+        precioPlantilla: precioPlantilla,
         tallasSeleccionadas: tallasSeleccionadas,
-        medidas: medidas,
         materiales: materiales,
       );
       final actuales = state.value ?? const <PlantillaModel>[];

@@ -730,7 +730,9 @@ class _Pagination extends StatelessWidget {
     if (current > 3) result.add(-1);
     final start = (current - 1).clamp(2, total - 1);
     final end = (current + 1).clamp(2, total - 1);
-    for (var i = start; i <= end; i++) result.add(i);
+    for (var i = start; i <= end; i++) {
+      result.add(i);
+    }
     if (current < total - 2) result.add(-1);
     result.add(total);
     return result;

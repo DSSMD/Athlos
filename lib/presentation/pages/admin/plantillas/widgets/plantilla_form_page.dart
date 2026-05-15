@@ -236,44 +236,11 @@ class _PlantillaFormScaffoldState
       final ok = _paso1FormKey.currentState?.validate() ?? false;
       if (!ok) return;
     } else if (paso == 1) {
-      // Paso 2 → 3: exigir tallas Y que TODAS las medidas estén completas.
-      // El PDF de Den lo dice explícito: "no se debe continuar sin las
-      // medidas".
+      // Paso 2 → 3: exigir tallas.
       if (state.tallasSeleccionadas.isEmpty) {
         _messengerKey.currentState?.showSnackBar(
           const SnackBar(
             content: Text('Seleccioná al menos una talla antes de avanzar.'),
-            backgroundColor: AppColors.warning,
-          ),
-        );
-        return;
-      }
-
-      if (state.medidas.isEmpty) {
-        _messengerKey.currentState?.showSnackBar(
-          const SnackBar(
-            content: Text('Agregá al menos un punto de medida.'),
-            backgroundColor: AppColors.warning,
-          ),
-        );
-        return;
-      }
-
-      // TODAS las medidas deben estar completas: nombre no vacío Y al
-      // menos un valor numérico > 0 en alguna talla. Una sola medida
-      // fantasma bloquea el avance hasta que se complete o se elimine.
-      final incompletas = state.medidas.where(
-        (m) =>
-            m.nombre.trim().isEmpty ||
-            !m.valoresPorTalla.values.any((v) => v > 0),
-      );
-      if (incompletas.isNotEmpty) {
-        _messengerKey.currentState?.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Completá nombre y al menos un valor por cada punto de medida, '
-              'o eliminá los que estén vacíos.',
-            ),
             backgroundColor: AppColors.warning,
           ),
         );
@@ -371,6 +338,15 @@ class _PlantillaFormScaffoldState
     setState(() => _guardando = true);
 
     try {
+      final insumos = ref.read(insumosProvider).value ?? [];
+      double precioTotal = 0.0;
+      for (final m in state.materiales) {
+        final insumo = insumos.where((i) => i.id == m.idInsumo).firstOrNull;
+        if (insumo != null) {
+          precioTotal += m.cantidad * insumo.costoUnitario;
+        }
+      }
+
       if (mode == 'crear') {
         await ref
             .read(plantillaProvider.notifier)
@@ -378,8 +354,8 @@ class _PlantillaFormScaffoldState
               nombre: state.nombre,
               idTipoPrenda: state.idTipoPrenda!,
               especificaciones: state.especificaciones,
+              precioPlantilla: precioTotal,
               tallasSeleccionadas: state.tallasSeleccionadas,
-              medidas: state.medidas,
               materiales: state.materiales,
             );
       } else {
@@ -390,8 +366,8 @@ class _PlantillaFormScaffoldState
               nombre: state.nombre,
               idTipoPrenda: state.idTipoPrenda!,
               especificaciones: state.especificaciones,
+              precioPlantilla: precioTotal,
               tallasSeleccionadas: state.tallasSeleccionadas,
-              medidas: state.medidas,
               materiales: state.materiales,
             );
       }
@@ -545,7 +521,7 @@ class _Stepper extends StatelessWidget {
 
   final int pasoActual;
 
-  static const _labels = ['Info', 'Medidas', 'Materiales', 'Resumen'];
+  static const _labels = ['Info', 'Tallas', 'Materiales', 'Resumen'];
 
   @override
   Widget build(BuildContext context) {

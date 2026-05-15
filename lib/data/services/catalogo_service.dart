@@ -62,7 +62,7 @@ class CatalogoService {
     try {
       final base = _supabase
           .from('insumo')
-          .select('id_insumo, nombre, activo, unidad_medida(abreviatura)');
+          .select('id_insumo, nombre, activo, costo_unitario, unidad_medida(abreviatura)');
       final filtered = soloActivos ? base.eq('activo', true) : base;
       final response = await filtered.order('nombre');
       return (response as List)

@@ -27,7 +27,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/material_plantilla_model.dart';
-import '../../domain/models/medida_punto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
@@ -39,7 +38,6 @@ class PlantillaFormState {
     this.idTipoPrenda,
     this.especificaciones = '',
     this.tallasSeleccionadas = const [],
-    this.medidas = const [],
     this.materiales = const [],
     this.pasoActual = 0,
     this.mode = 'crear',
@@ -56,7 +54,6 @@ class PlantillaFormState {
   final int? idTipoPrenda; // null hasta que el usuario lo elija
   final String especificaciones;
   final List<int> tallasSeleccionadas;
-  final List<MedidaPunto> medidas;
   final List<MaterialPlantilla> materiales;
 
   /// 0..3 → Paso 1..4.
@@ -79,7 +76,6 @@ class PlantillaFormState {
     bool clearTipo = false,
     String? especificaciones,
     List<int>? tallasSeleccionadas,
-    List<MedidaPunto>? medidas,
     List<MaterialPlantilla>? materiales,
     int? pasoActual,
     String? mode,
@@ -92,7 +88,6 @@ class PlantillaFormState {
       idTipoPrenda: clearTipo ? null : (idTipoPrenda ?? this.idTipoPrenda),
       especificaciones: especificaciones ?? this.especificaciones,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
-      medidas: medidas ?? this.medidas,
       materiales: materiales ?? this.materiales,
       pasoActual: pasoActual ?? this.pasoActual,
       mode: mode ?? this.mode,
@@ -125,7 +120,6 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
       idTipoPrenda: p.idTipoPrenda,
       especificaciones: p.especificaciones,
       tallasSeleccionadas: p.tallasSeleccionadas,
-      medidas: p.medidas,
       materiales: p.materiales,
     );
   }
@@ -151,94 +145,18 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
   void setEspecificaciones(String v) =>
       state = state.copyWith(especificaciones: v);
 
-  /// Reemplaza la lista de tallas seleccionadas. Si alguna talla se quita,
-  /// limpia su valor del Map `valoresPorTalla` de cada MedidaPunto — así
-  /// no quedan valores fantasmas asociados a una talla deseleccionada.
-  /// Los valores de las tallas que SIGUEN seleccionadas se preservan.
-  void setTallasSeleccionadas(List<int> nuevasTallas) {
-    final removidas = state.tallasSeleccionadas
-        .where((id) => !nuevasTallas.contains(id))
-        .toSet();
+  // ─── PASO 2: Tallas ───────────────────────────────────────────────────────
 
-    final medidasLimpiadas = removidas.isEmpty
-        ? state.medidas
-        : state.medidas.map((m) {
-            final nuevoMap = {
-              for (final e in m.valoresPorTalla.entries)
-                if (!removidas.contains(e.key)) e.key: e.value,
-            };
-            return m.copyWith(valoresPorTalla: nuevoMap);
-          }).toList();
-
-    state = state.copyWith(
-      tallasSeleccionadas: nuevasTallas,
-      medidas: medidasLimpiadas,
-    );
+  void setTallasSeleccionadas(List<int> ids) {
+    state = state.copyWith(tallasSeleccionadas: ids);
   }
 
-  void setMedidas(List<MedidaPunto> medidas) =>
-      state = state.copyWith(medidas: medidas);
-
-  void setMateriales(List<MaterialPlantilla> materiales) =>
-      state = state.copyWith(materiales: materiales);
-
-  // ─── SETTERS DE MEDIDAS (Paso 2) ──────────────────────────────────────────
+  // ─── PASO 3: Receta de Materiales ──────────────────────────────────────────
 
   /// Genera un id temporal único usando microsegundos. Solo vive en el form;
   /// cuando se guarda en SQL, la BD genera el uuid real (medida_ficha.id_medida).
   String _nuevoIdTemp(String prefijo) =>
       '$prefijo-${DateTime.now().microsecondsSinceEpoch}';
-
-  /// Agrega una MedidaPunto vacía al final de la lista.
-  void agregarMedida() {
-    final nueva = MedidaPunto(
-      id: _nuevoIdTemp('medida'),
-      nombre: '',
-      valoresPorTalla: const {},
-    );
-    state = state.copyWith(medidas: [...state.medidas, nueva]);
-  }
-
-  void removerMedida(String idTemp) {
-    state = state.copyWith(
-      medidas: state.medidas.where((m) => m.id != idTemp).toList(),
-    );
-  }
-
-  void setNombreMedida(String idTemp, String nuevoNombre) {
-    state = state.copyWith(
-      medidas: [
-        for (final m in state.medidas)
-          if (m.id == idTemp) m.copyWith(nombre: nuevoNombre) else m,
-      ],
-    );
-  }
-
-  /// Setea el valor de una talla en una medida. `null` o `0` elimina la
-  /// entrada del Map (en vez de dejar el 0.0 como valor real).
-  void setValorMedida(String idTemp, int idTalla, double? valor) {
-    state = state.copyWith(
-      medidas: [
-        for (final m in state.medidas)
-          if (m.id == idTemp)
-            m.copyWith(
-              valoresPorTalla: () {
-                final nuevoMap = Map<int, double>.from(m.valoresPorTalla);
-                if (valor == null || valor == 0) {
-                  nuevoMap.remove(idTalla);
-                } else {
-                  nuevoMap[idTalla] = valor;
-                }
-                return nuevoMap;
-              }(),
-            )
-          else
-            m,
-      ],
-    );
-  }
-
-  // ─── SETTERS DE MATERIALES (Paso 3) ───────────────────────────────────────
 
   /// Agrega un MaterialPlantilla vacío al final de la lista.
   void agregarMaterial() {
@@ -317,7 +235,6 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
           s.idTipoPrenda != null ||
           s.especificaciones.trim().isNotEmpty ||
           s.tallasSeleccionadas.isNotEmpty ||
-          s.medidas.isNotEmpty ||
           s.materiales.isNotEmpty;
     }
     return true;

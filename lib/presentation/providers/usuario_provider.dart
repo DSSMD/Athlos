@@ -66,7 +66,7 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
       state = await AsyncValue.guard(() async {
         return _fetchUsuarios();
       });
-    } catch (e, stack) {
+    } catch (e) {
       // 2. 💡 LA CORRECCIÓN: Si falla, NO ponemos estado de error.
       // Restauramos la tabla normal que guardamos al principio.
       state = estadoAnterior;

@@ -70,7 +70,7 @@ class PlantillaFormPaso3Materiales extends ConsumerWidget {
 
               if (state.materiales.isEmpty)
                 const _EmptyMateriales()
-              else
+              else ...[
                 Column(
                   children: [
                     for (var i = 0; i < state.materiales.length; i++) ...[
@@ -100,6 +100,9 @@ class PlantillaFormPaso3Materiales extends ConsumerWidget {
                     ],
                   ],
                 ),
+                const SizedBox(height: AppSpacing.lg),
+                _FooterCostoTotal(materiales: state.materiales, insumos: insumos),
+              ],
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
@@ -259,6 +262,18 @@ class _MaterialRowState extends State<_MaterialRow> {
       },
     );
 
+    final insumoSelected = widget.insumos.where((i) => i.id == widget.material.idInsumo).firstOrNull;
+    final costoUnitario = insumoSelected?.costoUnitario ?? 0.0;
+    final costoParcial = widget.material.cantidad * costoUnitario;
+    
+    final costoText = Text(
+      '\$${costoParcial.toStringAsFixed(2)}',
+      style: AppTypography.small.copyWith(
+        color: AppColors.success,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
     final papelera = IconButton(
       icon: const Icon(Icons.delete_outline, size: 20),
       color: AppColors.error,
@@ -275,6 +290,8 @@ class _MaterialRowState extends State<_MaterialRow> {
           Row(
             children: [
               Expanded(child: cantidad),
+              const SizedBox(width: AppSpacing.sm),
+              costoText,
               const SizedBox(width: AppSpacing.xs),
               papelera,
             ],
@@ -290,7 +307,9 @@ class _MaterialRowState extends State<_MaterialRow> {
         children: [
           Expanded(flex: 5, child: dropdown),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(flex: 3, child: cantidad),
+          Expanded(flex: 2, child: cantidad),
+          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: 80, child: costoText),
           papelera,
         ],
       ),
@@ -334,6 +353,55 @@ class _EmptyMateriales extends StatelessWidget {
             "Apretá '+ Agregar insumo' para empezar la receta.",
             style: AppTypography.caption.copyWith(color: AppColors.textMuted),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── FOOTER COSTO TOTAL ──────────────────────────────────────────────────────
+
+class _FooterCostoTotal extends StatelessWidget {
+  const _FooterCostoTotal({
+    required this.materiales,
+    required this.insumos,
+  });
+
+  final List<MaterialPlantilla> materiales;
+  final List<InsumoModel> insumos;
+
+  @override
+  Widget build(BuildContext context) {
+    double total = 0.0;
+    for (final m in materiales) {
+      final insumo = insumos.where((i) => i.id == m.idInsumo).firstOrNull;
+      if (insumo != null) {
+        total += m.cantidad * insumo.costoUnitario;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Costo Total Estimado',
+            style: AppTypography.small.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            '\$${total.toStringAsFixed(2)}',
+            style: AppTypography.h3.copyWith(
+              color: AppColors.success,
+            ),
           ),
         ],
       ),

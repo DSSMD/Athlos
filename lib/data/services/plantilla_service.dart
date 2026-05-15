@@ -69,62 +69,33 @@ class PlantillaService {
     }
   }
 
-  /// Carga plantilla con sus medidas y materiales (para abrir el form en
-  /// modo editar). Ejecuta 3 queries en paralelo.
+  /// Carga plantilla con sus materiales (para abrir el form en
+  /// modo editar).
   Future<PlantillaModel> obtenerPlantillaCompleta(String idPlantilla) async {
     try {
-      // Future.wait con dynamic porque los builders de Supabase devuelven
-      // tipos heterogéneos (Map / List) que la inferencia no puede unificar.
-      final results = await Future.wait<dynamic>([
-        _client
-            .from('plantilla_prenda')
-            .select()
-            .eq('id_plantilla', idPlantilla)
-            .single(),
-        _client.from('medida_ficha').select().eq('id_plantilla', idPlantilla),
-        _client
-            .from('receta_material')
-            .select()
-            .eq('id_plantilla', idPlantilla),
-      ]);
+      final res = await _client
+          .from('plantilla_prenda')
+          .select('''
+            *,
+            receta_material (
+              id_receta,
+              id_insumo,
+              cantidad_requerida
+            )
+          ''')
+          .eq('id_plantilla', idPlantilla)
+          .single();
 
-      final plantillaRaw = results[0] as Map<String, dynamic>;
-      final medidasRaw = results[1] as List;
-      final materialesRaw = results[2] as List;
+      final plantillaBase = PlantillaModel.fromJson(res);
 
-      // Agrupar medidas por nombre_medida → una MedidaPunto por nombre.
-      final Map<String, List<Map<String, dynamic>>> filasPorNombre = {};
-      for (final fila in medidasRaw) {
-        final map = fila as Map<String, dynamic>;
-        final nombre = (map['nombre_medida'] ?? '') as String;
-        filasPorNombre.putIfAbsent(nombre, () => []).add(map);
-      }
-      final medidas = filasPorNombre.entries
-          .map(
-            (e) => MedidaPunto.fromFilasSQL(
-              idPlantilla: idPlantilla,
-              nombreMedida: e.key,
-              filas: e.value,
-            ),
-          )
-          .toList();
+      // Parsear materiales
+      final rawMateriales = res['receta_material'] as List?;
+      final materiales = rawMateriales?.map((r) {
+            return MaterialPlantilla.fromJson(r as Map<String, dynamic>);
+          }).toList() ??
+          [];
 
-      // Inferir tallas seleccionadas desde el conjunto de tallas usadas en
-      // medidas. Si no hay medidas, queda vacío (el form lo dejará al
-      // usuario seleccionarlas en Paso 2).
-      final Set<int> tallasSet = {};
-      for (final m in medidas) {
-        tallasSet.addAll(m.valoresPorTalla.keys);
-      }
-      final tallas = tallasSet.toList()..sort();
-
-      final materiales = materialesRaw
-          .map((j) => MaterialPlantilla.fromJson(j as Map<String, dynamic>))
-          .toList();
-
-      return PlantillaModel.fromJson(plantillaRaw).copyWith(
-        tallasSeleccionadas: tallas,
-        medidas: medidas,
+      return plantillaBase.copyWith(
         materiales: materiales,
       );
     } catch (e) {
@@ -161,25 +132,22 @@ class PlantillaService {
 
   // ─── CREAR PLANTILLA ──────────────────────────────────────────────────────
 
-  /// Inserta plantilla + hijas en 3 pasos secuenciales. Si falla un paso,
-  /// los anteriores quedan persistidos. Ver TODO Backend Mel del header.
   Future<PlantillaModel> crearPlantilla({
     required String nombre,
     required int idTipoPrenda,
     required String especificaciones,
+    required double precioPlantilla,
     required List<int> tallasSeleccionadas,
-    required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
     try {
-      // Paso 1: INSERT plantilla_prenda. La version arranca en 1 (default
-      // de la BD), id_plantilla y created_at los genera Postgres.
       final insertResponse = await _client
           .from('plantilla_prenda')
           .insert({
             'nombre': nombre,
             'id_tipo_prenda': idTipoPrenda,
             'especificaciones': especificaciones,
+            'precio_plantilla': precioPlantilla,
             'activo': true,
           })
           .select()
@@ -187,15 +155,6 @@ class PlantillaService {
 
       final idPlantilla = insertResponse['id_plantilla'].toString();
 
-      // Paso 2: INSERT medida_ficha — una fila por (talla × medida).
-      final filasMedidas = <Map<String, dynamic>>[
-        for (final medida in medidas) ...medida.aFilasSQL(idPlantilla),
-      ];
-      if (filasMedidas.isNotEmpty) {
-        await _client.from('medida_ficha').insert(filasMedidas);
-      }
-
-      // Paso 3: INSERT receta_material.
       final filasMateriales = [
         for (final m in materiales)
           {
@@ -210,7 +169,7 @@ class PlantillaService {
 
       return PlantillaModel.fromJson(insertResponse).copyWith(
         tallasSeleccionadas: tallasSeleccionadas,
-        medidas: medidas,
+        //medidas: medidas,
         materiales: materiales,
       );
     } catch (e) {
@@ -220,20 +179,16 @@ class PlantillaService {
 
   // ─── ACTUALIZAR PLANTILLA ─────────────────────────────────────────────────
 
-  /// Estrategia: UPDATE plantilla_prenda (incrementando version) + DELETE
-  /// total de las filas hijas + INSERT nuevas. No es transaccional —
-  /// ver TODO Backend Mel del header.
   Future<PlantillaModel> actualizarPlantilla({
     required String id,
     required String nombre,
     required int idTipoPrenda,
     required String especificaciones,
+    required double precioPlantilla,
     required List<int> tallasSeleccionadas,
-    required List<MedidaPunto> medidas,
     required List<MaterialPlantilla> materiales,
   }) async {
     try {
-      // Paso 1: leer version actual para incrementar.
       final actual = await _client
           .from('plantilla_prenda')
           .select('version')
@@ -244,29 +199,19 @@ class PlantillaService {
           : int.tryParse(actual['version']?.toString() ?? '') ?? 1;
       final nuevaVersion = versionActual + 1;
 
-      // Paso 2: UPDATE plantilla_prenda.
       final updateResponse = await _client
           .from('plantilla_prenda')
           .update({
             'nombre': nombre,
             'id_tipo_prenda': idTipoPrenda,
             'especificaciones': especificaciones,
+            'precio_plantilla': precioPlantilla,
             'version': nuevaVersion,
           })
           .eq('id_plantilla', id)
           .select()
           .single();
 
-      // Paso 3: DELETE + INSERT en medida_ficha.
-      await _client.from('medida_ficha').delete().eq('id_plantilla', id);
-      final filasMedidas = <Map<String, dynamic>>[
-        for (final medida in medidas) ...medida.aFilasSQL(id),
-      ];
-      if (filasMedidas.isNotEmpty) {
-        await _client.from('medida_ficha').insert(filasMedidas);
-      }
-
-      // Paso 4: DELETE + INSERT en receta_material.
       await _client.from('receta_material').delete().eq('id_plantilla', id);
       final filasMateriales = [
         for (final m in materiales)
@@ -282,7 +227,7 @@ class PlantillaService {
 
       return PlantillaModel.fromJson(updateResponse).copyWith(
         tallasSeleccionadas: tallasSeleccionadas,
-        medidas: medidas,
+        //medidas: medidas,
         materiales: materiales,
       );
     } catch (e) {

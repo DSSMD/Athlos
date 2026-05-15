@@ -224,7 +224,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
                         'Error al cargar categorías. Revise su conexión.');
                   }
                   return DropdownButtonFormField<int>(
-                    value: _idCategoria,
+                    initialValue: _idCategoria,
                     isExpanded: true,
                     hint: const Text('Seleccioná una categoría'),
                     items: snap.data!
@@ -670,7 +670,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
       ]);
     }
     return DropdownButtonFormField<int>(
-      value: _idUnidad,
+      initialValue: _idUnidad,
       isExpanded: true,
       hint: const Text('Seleccioná una unidad'),
       items: _unidades

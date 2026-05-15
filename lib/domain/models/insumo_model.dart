@@ -12,6 +12,7 @@
 // - id_insumo (uuid PK)               → id
 // - nombre   (text)                   → nombre
 // - activo   (bool)                   → activo
+// - costo_unitario (numeric)          → costoUnitario
 // - unidad_medida (FK).abreviatura    → unidad (ej "m", "kg", "u")
 //
 // El JOIN se hace en la query del service:
@@ -25,12 +26,14 @@ class InsumoModel {
     required this.nombre,
     this.unidad = '',
     this.activo = true,
+    this.costoUnitario = 0.0,
   });
 
   final String id;
   final String nombre;
   final String unidad; // abreviatura del catálogo unidad_medida
   final bool activo;
+  final double costoUnitario;
 
   // ─── SERIALIZACIÓN ────────────────────────────────────────────────────────
 
@@ -45,6 +48,7 @@ class InsumoModel {
       nombre: (json['nombre'] ?? '') as String,
       unidad: unidad,
       activo: (json['activo'] as bool?) ?? true,
+      costoUnitario: double.tryParse(json['costo_unitario']?.toString() ?? '0') ?? 0.0,
     );
   }
 
@@ -63,5 +67,5 @@ class InsumoModel {
 
   @override
   String toString() =>
-      'InsumoModel(id: $id, nombre: $nombre, unidad: $unidad)';
+      'InsumoModel(id: $id, nombre: $nombre, unidad: $unidad, costoUnitario: $costoUnitario)';
 }

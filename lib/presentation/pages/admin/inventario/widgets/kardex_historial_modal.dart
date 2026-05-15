@@ -201,7 +201,7 @@ class KardexHistorialModal extends ConsumerWidget {
         Expanded(
           child: ListView.separated(
             itemCount: movimientos.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const Divider(height: 1, color: AppColors.border),
             itemBuilder: (_, i) => _MovimientoRow(movimiento: movimientos[i]),
           ),

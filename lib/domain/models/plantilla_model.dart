@@ -27,10 +27,9 @@
 // ============================================================================
 
 import 'material_plantilla_model.dart';
-import 'medida_punto_model.dart';
 import 'tipo_prenda_model.dart';
 
-// DECISIÓN: medidas, materiales y tallasSeleccionadas son listas, no Maps.
+// DECISIÓN: materiales y tallasSeleccionadas son listas, no Maps.
 // RAZÓN: el orden importa para la UI (orden en que el usuario las agregó).
 // CAMBIAR: si se necesita acceso por id, usar helpers `firstWhere` en runtime.
 class PlantillaModel {
@@ -42,8 +41,8 @@ class PlantillaModel {
     required this.createdAt,
     this.activa = true,
     this.especificaciones = '',
+    this.precioPlantilla = 0.0,
     this.tallasSeleccionadas = const [],
-    this.medidas = const [],
     this.materiales = const [],
   });
 
@@ -53,11 +52,11 @@ class PlantillaModel {
   final String especificaciones;
   final int version;
   final bool activa;
+  final double precioPlantilla;
   final DateTime createdAt;
 
-  // Hijas — se cargan en queries separadas (medida_ficha, receta_material).
+  // Hijas — se cargan en queries separadas (receta_material).
   final List<int> tallasSeleccionadas; // ids de tallas
-  final List<MedidaPunto> medidas;
   final List<MaterialPlantilla> materiales;
 
   // ─── COPYWITH ─────────────────────────────────────────────────────────────
@@ -69,9 +68,9 @@ class PlantillaModel {
     String? especificaciones,
     int? version,
     bool? activa,
+    double? precioPlantilla,
     DateTime? createdAt,
     List<int>? tallasSeleccionadas,
-    List<MedidaPunto>? medidas,
     List<MaterialPlantilla>? materiales,
   }) {
     return PlantillaModel(
@@ -81,9 +80,9 @@ class PlantillaModel {
       especificaciones: especificaciones ?? this.especificaciones,
       version: version ?? this.version,
       activa: activa ?? this.activa,
+      precioPlantilla: precioPlantilla ?? this.precioPlantilla,
       createdAt: createdAt ?? this.createdAt,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
-      medidas: medidas ?? this.medidas,
       materiales: materiales ?? this.materiales,
     );
   }
@@ -91,7 +90,7 @@ class PlantillaModel {
   // ─── SERIALIZACIÓN ────────────────────────────────────────────────────────
 
   /// Construye un PlantillaModel desde una fila de `plantilla_prenda`.
-  /// Las hijas (medidas, materiales, tallas) quedan vacías — se cargan
+  /// Las hijas (materiales, tallas) quedan vacías — se cargan
   /// por separado vía `obtenerPlantillaCompleta(id)`.
   factory PlantillaModel.fromJson(Map<String, dynamic> json) {
     final rawTipo = json['id_tipo_prenda'];
@@ -108,6 +107,7 @@ class PlantillaModel {
           ? rawVersion
           : int.tryParse(rawVersion?.toString() ?? '') ?? 1,
       activa: (json['activo'] as bool?) ?? true,
+      precioPlantilla: double.tryParse(json['precio_plantilla']?.toString() ?? '0') ?? 0.0,
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
@@ -124,6 +124,7 @@ class PlantillaModel {
       'id_tipo_prenda': idTipoPrenda,
       'especificaciones': especificaciones,
       'activo': activa,
+      'precio_plantilla': precioPlantilla,
     };
   }
 
