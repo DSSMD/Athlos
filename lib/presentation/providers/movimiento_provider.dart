@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/movimiento_service.dart';
 import '../../domain/models/inventario_model.dart';
 import '../../domain/models/movimiento_model.dart';
-import 'inventario_provider.dart';
+import 'insumo_provider.dart';
 
 final movimientoServiceProvider = Provider<MovimientoService>((ref) {
   return MovimientoService();

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/movimiento_model.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';

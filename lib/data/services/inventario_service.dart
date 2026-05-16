@@ -131,6 +131,7 @@ class InventarioService {
         'stock_actual': 0,   // inicia en 0; el trigger lo actualiza en el primer ingreso
         'stock_minimo': stockMinimo,
         'id_unidad': idUnidad,
+        'activo': true,      // 👈 Fuerza que sea activo para que aparezca en catálogos
         // costo_unitario omitido: el trigger de Costo Promedio Ponderado lo calcula
         // automáticamente al insertar el primer movimiento_insumo de entrada.
         if (atributosTecnicosJson != null && atributosTecnicosJson.isNotEmpty)

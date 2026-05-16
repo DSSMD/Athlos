@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/presentation/pages/admin/inventario/widgets/insumo_detalle_modal.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
