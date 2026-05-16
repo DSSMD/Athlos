@@ -46,21 +46,26 @@ class InsumoDetalleModal extends StatelessWidget {
               ),
               const Divider(),
               const SizedBox(height: AppSpacing.sm),
-              Text('Categoría: ${item.nombreCategoria}', style: AppTypography.body),
+              Text(
+                'Categoría: ${item.nombreCategoria}',
+                style: AppTypography.body,
+              ),
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   Expanded(
                     child: _InfoBox(
                       title: 'Stock Actual',
-                      value: '${item.stockActual.toStringAsFixed(2)} ${item.unidad}',
+                      value:
+                          '${item.stockActual.toStringAsFixed(2)} ${item.unidad}',
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: _InfoBox(
                       title: 'Stock Mínimo',
-                      value: '${item.stockMinimo.toStringAsFixed(2)} ${item.unidad}',
+                      value:
+                          '${item.stockMinimo.toStringAsFixed(2)} ${item.unidad}',
                     ),
                   ),
                 ],
@@ -89,9 +94,14 @@ class InsumoDetalleModal extends StatelessWidget {
                   Navigator.of(context).pop();
                   showKardexHistorialModal(context, item);
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red, // <- Define el fondo rojo
+                  foregroundColor: Colors
+                      .white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
                 icon: const Icon(Icons.history),
                 label: const Text('Ver Historial de Movimientos'),
-              )
+              ),
             ],
           ),
         ),
@@ -117,9 +127,15 @@ class _InfoBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.caption.copyWith(color: AppColors.textMuted)),
+          Text(
+            title,
+            style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
