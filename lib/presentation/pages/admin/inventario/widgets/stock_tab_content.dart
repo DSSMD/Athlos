@@ -393,7 +393,7 @@ class _DesktopItemsTable extends StatelessWidget {
                 children: const [
                   _HeaderCell(label: 'CÓDIGO', flex: _kColCodigo),
                   SizedBox(width: _kColGap),
-                  _HeaderCell(label: 'INSUMO', flex: _kColInsumo),
+                  _HeaderCell(label: 'INSUMO', flex: _kColInsumo,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(label: 'CATEGORÍA', flex: _kColCategoria),
                   SizedBox(width: _kColGap),
@@ -403,7 +403,7 @@ class _DesktopItemsTable extends StatelessWidget {
                     align: TextAlign.center,
                   ),
                   SizedBox(width: _kColGapWide),
-                  _HeaderCell(label: 'NIVEL', flex: _kColNivel),
+                  _HeaderCell(label: 'NIVEL', flex: _kColNivel,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(
                     label: 'MÍNIMO',
@@ -411,7 +411,7 @@ class _DesktopItemsTable extends StatelessWidget {
                     align: TextAlign.center,
                   ),
                   SizedBox(width: _kColGap),
-                  _HeaderCell(label: 'UNIDAD', flex: _kColUnidad),
+                  _HeaderCell(label: 'UNIDAD', flex: _kColUnidad,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(
                     label: 'COSTO\nUNIT.',
@@ -430,9 +430,13 @@ class _DesktopItemsTable extends StatelessWidget {
                     flex: _kColEstado,
                     align: TextAlign.center,
                   ),
+                   SizedBox(width: _kColGap),
+                  _HeaderCell(
+                    label: 'ACCIONES',
+                    flex: _kColEstado,
+                    align: TextAlign.center,
+                  ),
                   SizedBox(width: _kColGap),
-                  // Columna de acciones sin título (Historial / Activar).
-                  Expanded(flex: _kColEditar, child: SizedBox.shrink()),
                 ],
               ),
             ),
