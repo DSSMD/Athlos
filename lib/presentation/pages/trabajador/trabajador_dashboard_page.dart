@@ -181,7 +181,7 @@ class _TrabajoCard extends StatelessWidget {
                   trabajo.estado,
                   style: AppTypography.caption.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: trabajo.estado.toUpperCase() == 'PENDIENTE'
+                    color: trabajo.estado.toUpperCase() == 'Trabajo:'
                         ? AppColors.primary500
                         : Colors.orange,
                   ),

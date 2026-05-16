@@ -123,16 +123,28 @@ class LoteDetalleDialog extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment
+            .start, // Por si salta de línea, quede alineado arriba
         children: [
+          // 1. Etiqueta (Ej. 'Orden de producción')
           Text(
             label,
             style: AppTypography.small.copyWith(color: AppColors.textSecondary),
           ),
-          Text(
-            value,
-            style: AppTypography.small.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
+
+          const SizedBox(width: 16), // Un pequeño margen de seguridad
+          // 2. Valor (Ej. el UUID) envuelto en Expanded para que NO se salga
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right, // Lo mantenemos pegado a la derecha
+              style: AppTypography.small.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              // 👇 AQUÍ LA MAGIA CONTRA EL DESBORDAMIENTO:
+              overflow: TextOverflow.ellipsis, // Le pone "..." si es muy largo
+              maxLines: 1, // Obliga a que sea de una sola línea
             ),
           ),
         ],

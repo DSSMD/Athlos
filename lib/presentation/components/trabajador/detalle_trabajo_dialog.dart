@@ -66,6 +66,11 @@ class _DetalleTrabajoDialogState extends ConsumerState<DetalleTrabajoDialog> {
   @override
   Widget build(BuildContext context) {
     final estadoActual = widget.trabajo.estado.toUpperCase();
+    // 👇 MAGIA DE UX: Centralizamos la lógica de cuándo encender los botones
+    // Aceptamos tanto ASIGNADO como PENDIENTE por si en la base de datos cambia
+    final bool puedeIniciar =
+        estadoActual == 'ASIGNADO' || estadoActual == 'PENDIENTE';
+    final bool puedeTerminar = estadoActual == 'EN PROCESO';
 
     return Dialog(
       backgroundColor: AppColors.brandWhite,
@@ -154,18 +159,18 @@ class _DetalleTrabajoDialogState extends ConsumerState<DetalleTrabajoDialog> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        // Botón Iniciar
-                        onPressed: () => _cambiarEstado(
-                          'en proceso',
-                        ), // El servicio detectará esto y usará el ID 2
+                        // Usamos nuestra variable booleana limpia
+                        onPressed: puedeIniciar
+                            ? () => _cambiarEstado('en proceso')
+                            : null,
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             vertical: AppSpacing.md,
                           ),
                           side: BorderSide(
-                            color: estadoActual == 'PENDIENTE'
+                            color: puedeIniciar
                                 ? AppColors.primary500
-                                : Colors.grey,
+                                : Colors.grey.withOpacity(0.3),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
@@ -174,7 +179,7 @@ class _DetalleTrabajoDialogState extends ConsumerState<DetalleTrabajoDialog> {
                         child: Text(
                           'Iniciar trabajo',
                           style: TextStyle(
-                            color: estadoActual == 'PENDIENTE'
+                            color: puedeIniciar
                                 ? AppColors.primary500
                                 : Colors.grey,
                             fontWeight: FontWeight.bold,
@@ -185,11 +190,12 @@ class _DetalleTrabajoDialogState extends ConsumerState<DetalleTrabajoDialog> {
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: estadoActual == 'EN PROCESO'
+                        // Usamos nuestra otra variable booleana
+                        onPressed: puedeTerminar
                             ? () => _cambiarEstado('terminado')
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: estadoActual == 'EN PROCESO'
+                          backgroundColor: puedeTerminar
                               ? AppColors.primary500
                               : Colors.grey.shade300,
                           elevation: 0,
@@ -203,9 +209,9 @@ class _DetalleTrabajoDialogState extends ConsumerState<DetalleTrabajoDialog> {
                         child: Text(
                           'Terminado',
                           style: TextStyle(
-                            color: estadoActual == 'EN PROCESO'
+                            color: puedeTerminar
                                 ? Colors.white
-                                : Colors.grey.shade600,
+                                : Colors.grey.shade500,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

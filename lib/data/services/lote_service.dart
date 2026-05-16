@@ -70,7 +70,12 @@ class LoteService {
           cliente:id_cliente (nom_cliente)
         ),
         plantilla_prenda:id_plantilla (nombre), 
-        areas:id_area_actual (nombre_area)
+        areas:id_area_actual (nombre_area),
+        desglose:id_desglose (
+          tallas:id_talla (
+            nombre_talla
+          )
+        )
       ''')
           .order('id_lote', ascending: false);
 

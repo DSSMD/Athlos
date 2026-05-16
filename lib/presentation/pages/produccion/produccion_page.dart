@@ -347,11 +347,6 @@ class _LoteListRow extends StatelessWidget {
                     'Asignar trabajador',
                   ),
                   _buildMenuItem(
-                    'reasignar',
-                    Icons.sync_alt_rounded,
-                    'Reasignar',
-                  ),
-                  _buildMenuItem(
                     'historial',
                     Icons.history_rounded,
                     'Ver historial',

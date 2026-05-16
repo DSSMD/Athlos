@@ -33,9 +33,31 @@ class LoteModel {
     final idEstado = json['id_estado_lote']?.toString();
     // Mapeo seguro de tallas (en caso de que venga anidado o vacío)
     // Esto dependerá de cómo hagamos el join de las tallas en el service
+    // 👇 SOLAMENTE REEMPLAZAMOS LA LÓGICA DE TALLAS 👇
     List<String> tallasList = [];
-    if (json['tallas'] != null && json['tallas'] is List) {
-      tallasList = List<String>.from(json['tallas'].map((x) => x.toString()));
+    final desgloseData = json['desglose'];
+
+    if (desgloseData != null) {
+      // Caso 1: Si viene como un objeto único (Map)
+      if (desgloseData is Map<String, dynamic>) {
+        final tallaMap = desgloseData['tallas'];
+        if (tallaMap != null && tallaMap is Map<String, dynamic>) {
+          final String? tallaNombre = tallaMap['nombre_talla']?.toString();
+          if (tallaNombre != null) tallasList.add(tallaNombre);
+        }
+      }
+      // Caso 2: Si viene como una lista de varios desgloses (List)
+      else if (desgloseData is List) {
+        for (var item in desgloseData) {
+          if (item is Map<String, dynamic>) {
+            final tallaMap = item['tallas'];
+            if (tallaMap != null && tallaMap is Map<String, dynamic>) {
+              final String? tallaNombre = tallaMap['nombre_talla']?.toString();
+              if (tallaNombre != null) tallasList.add(tallaNombre);
+            }
+          }
+        }
+      }
     }
     String traducirEstado(String? id) {
       switch (id) {
