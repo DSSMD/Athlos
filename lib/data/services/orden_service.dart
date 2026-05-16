@@ -1,9 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'package:supabase_flutter/supabase_flutter.dart';
-//import 'package:flutter/foundation.dart';
-//import 'dart:io';
-//import 'package:http/http.dart' as http;
+import 'package:workspace/domain/models/detalle_orden_model.dart';
 import 'package:workspace/domain/models/orden_model.dart';
 import 'package:workspace/presentation/components/ordenes/orden_draft.dart';
 
@@ -13,21 +9,31 @@ class OrdenService {
   OrdenService(this._supabase);
 
   // =================================================================
-  // LECTURA DE ÓRDENES (Actualizado con Deep Joins)
+  // LECTURA: LISTA DE ÓRDENES (esquema nuevo)
   // =================================================================
+  /// Devuelve la lista de órdenes con sus detalles desplegados.
+  /// NO incluye composicion_interna de los conjuntos (es caro y solo se
+  /// necesita en el detalle); para la vista de detalle individual, usar
+  /// obtenerDetalleOrden(numOrden).
   Future<List<OrdenModel>> obtenerOrdenes() async {
     try {
       final response = await _supabase
           .from('orden')
           .select('''
-        num_orden, id_cliente, id_estado, id_estado_pago,
-        fecha_orden, fecha_entrega, costo_total, notas_adicionales,
-        cliente (nom_cliente, apellido_cliente, num_telefono, ci_cliente, email, direccion),
-        estado_orden (nombre_estado),
-        estado_pago (nombre_estado),
-        ficha_tecnica (imagen_modelo, tipo_prenda (nombre_prenda)), 
-        desglose_tallas (id_tipo_prenda, cantidad, precio_unitario, tallas (nombre_talla), tipo_prenda (nombre_prenda)) 
-      ''')
+            num_orden, id_cliente, id_estado, id_estado_pago,
+            fecha_orden, fecha_entrega, costo_total, notas_adicionales,
+            tiempo_procesamiento_estimado, imagen_modelo,
+            cliente (nom_cliente, apellido_cliente, num_telefono, ci_cliente, email, direccion),
+            estado_orden (nombre_estado),
+            estado_pago (nombre_estado),
+            detalle_orden (
+              id_detalle, id_conjunto, id_plantilla,
+              cantidad_total, precio_unitario, subtotal,
+              conjunto (nombre),
+              plantilla_prenda (nombre, tipo_prenda (nombre_prenda)),
+              detalle_orden_talla (id_desglose, id_talla, cantidad, tallas (nombre_talla))
+            )
+          ''')
           .order('fecha_orden', ascending: false);
 
       return (response as List<dynamic>)
@@ -39,8 +45,47 @@ class OrdenService {
   }
 
   // =================================================================
-  // ACTUALIZACIÓN DE ESTADO DE ORDEN (Nuevo Método)
+  // LECTURA: DETALLE DE UNA ORDEN (esquema nuevo)
   // =================================================================
+  /// Devuelve una orden específica con detalles desplegados INCLUYENDO
+  /// composicion_interna para los conjuntos (qué plantillas componen cada
+  /// conjunto, desde la tabla conjunto_plantilla).
+  Future<OrdenModel> obtenerDetalleOrden(String numOrden) async {
+    try {
+      final response = await _supabase
+          .from('orden')
+          .select('''
+            num_orden, id_cliente, id_estado, id_estado_pago,
+            fecha_orden, fecha_entrega, costo_total, notas_adicionales,
+            tiempo_procesamiento_estimado, imagen_modelo,
+            cliente (nom_cliente, apellido_cliente, num_telefono, ci_cliente, email, direccion),
+            estado_orden (nombre_estado),
+            estado_pago (nombre_estado),
+            detalle_orden (
+              id_detalle, id_conjunto, id_plantilla,
+              cantidad_total, precio_unitario, subtotal,
+              conjunto (
+                nombre,
+                conjunto_plantilla (cantidad_por_conjunto, plantilla_prenda (nombre))
+              ),
+              plantilla_prenda (nombre, tipo_prenda (nombre_prenda)),
+              detalle_orden_talla (id_desglose, id_talla, cantidad, tallas (nombre_talla))
+            )
+          ''')
+          .eq('num_orden', numOrden)
+          .single();
+
+      return OrdenModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Error al obtener el detalle de la orden: $e');
+    }
+  }
+
+  // =================================================================
+  // ACTUALIZACIÓN DE ESTADO DE ORDEN
+  // =================================================================
+  /// La tabla `orden` no cambió en el schema nuevo. Este método se
+  /// mantiene tal cual.
   Future<void> actualizarEstadoOrden(String numOrden, int nuevoIdEstado) async {
     try {
       await _supabase
@@ -53,8 +98,10 @@ class OrdenService {
   }
 
   // =================================================================
-  // ACTUALIZACIÓN DE ESTADO DE PAGO (Nuevo Método)
+  // ACTUALIZACIÓN DE ESTADO DE PAGO
   // =================================================================
+  /// La tabla `orden` no cambió en el schema nuevo. Este método se
+  /// mantiene tal cual.
   Future<void> actualizarEstadoPago(
     String numOrden,
     int nuevoIdEstadoPago,
@@ -70,385 +117,115 @@ class OrdenService {
   }
 
   // =================================================================
-  // CREACIÓN DE ORDEN DESDE DRAFT (Nivel Industrial)
+  // CREACIÓN DE ORDEN DESDE DRAFT
   // =================================================================
-  Future<void> crearOrdenDesdeDraft(OrdenDraft draft) async {
+  /// Crea una orden con sus detalles y tallas vía la RPC plpgsql
+  /// `crear_orden_completa`. Transaccional del lado BD: si cualquier paso
+  /// falla, se rollback el bloque entero.
+  ///
+  /// Retorna el `num_orden` (UUID como String) de la orden recién creada
+  /// para que el caller pueda navegar al detalle si quiere.
+  ///
+  /// Lanza Exception con mensaje útil en caso de error de validación,
+  /// FK violation, o cualquier error de Supabase.
+  Future<String> crearOrdenDesdeDraft(OrdenDraft draft) async {
+    // 1. Construir el payload de items
+    final itemsPayload = draft.items.map((item) {
+      return {
+        'id_conjunto': item.tipoItem == TipoItem.conjunto
+            ? item.idConjunto
+            : null,
+        'id_plantilla': item.tipoItem == TipoItem.plantilla
+            ? item.idPlantilla
+            : null,
+        'precio_unitario': item.precioUnitario,
+        'tallas': item.tallas
+            .map((t) => {'id_talla': t.idTalla, 'cantidad': t.cantidad})
+            .toList(),
+      };
+    }).toList();
+
+    // 2. Postgres `date` espera 'YYYY-MM-DD'
+    final fecha = draft.fechaEntrega;
+    if (fecha == null) {
+      throw Exception('La fecha de entrega es requerida');
+    }
+    final fechaStr =
+        '${fecha.year.toString().padLeft(4, '0')}-'
+        '${fecha.month.toString().padLeft(2, '0')}-'
+        '${fecha.day.toString().padLeft(2, '0')}';
+
+    // 3. notas_adicionales: enviar null si descripción está vacía
+    final descTrim = draft.descripcion.trim();
+    final notas = descTrim.isNotEmpty ? descTrim : null;
+
+    // 4. Llamar a la RPC
     try {
-      // 1. Validaciones de cimientos
-      if (draft.idCliente == null) {
-        throw Exception('El cliente es obligatorio');
-      }
-      if (draft.fechaEntrega == null) {
-        throw Exception('La fecha es obligatoria');
-      }
-      if (draft.productos.isEmpty) {
-        throw Exception('Debe agregar al menos un producto con su talla');
-      }
+      final result = await _supabase.rpc(
+        'crear_orden_completa',
+        params: {
+          'p_fecha_entrega': fechaStr,
+          'p_items': itemsPayload,
+          'p_id_cliente': draft.idCliente,
+          'p_notas_adicionales': notas,
+          'p_imagen_modelo': null,
+        },
+      );
 
-      // ---------------------------------------------------------
-      // Costo Total: usamos el subtotal ya calculado por la UI
-      // (calcularPreciosSugeridos ya aplicó: materiales + mano de obra + margen)
-      // Esto garantiza que lo que el usuario ve = lo que se guarda.
-      // ---------------------------------------------------------
-      final double costoTotalCalculado = draft.subtotal;
-
-      // Unimos notas y prioridad
-      String notasCompletas =
-          'Prioridad: ${draft.prioridad.name.toUpperCase()}\n';
-      if (draft.descripcion.isNotEmpty) {
-        notasCompletas += 'Notas: ${draft.descripcion}\n';
-      }
-
-      // ---------------------------------------------------------
-      // PASO 1.5: Subir Imagen al Storage (Bucket: fichas_tecnicas)
-      // ---------------------------------------------------------
-      String? urlImagen;
-      if (draft.imagenBytes != null) {
-        // Generamos un nombre único usando la fecha actual
-        final fileName = draft.imagenNombre ?? 'modelo.jpg';
-
-        // Apuntamos a la carpeta 'modelos' dentro del bucket
-        final path =
-            'modelos/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-
-        // Subimos los bytes al bucket 'fichas_tecnicas'
-        await _supabase.storage
-            .from('fichas_tecnicas')
-            .uploadBinary(path, draft.imagenBytes!);
-
-        // Obtenemos la URL pública para guardarla en la base de datos
-        urlImagen = _supabase.storage
-            .from('fichas_tecnicas')
-            .getPublicUrl(path);
-      }
-
-      // ---------------------------------------------------------
-      // PASO 2: Creación de la Cabecera (Tabla 'orden')
-      // ---------------------------------------------------------
-      final ordenResponse = await _supabase
-          .from('orden')
-          .insert({
-            'id_cliente': draft.idCliente,
-            'id_estado': 1,
-            'id_estado_pago': draft.anticipo > 0 ? 2 : 1,
-            'fecha_entrega': draft.fechaEntrega?.toIso8601String(),
-            'costo_total': costoTotalCalculado, // <--- ¡YA NO ES CERO! 🔥
-            'notas_adicionales': notasCompletas,
-          })
-          .select('num_orden')
-          .single();
-
-      final String numOrdenId = ordenResponse['num_orden'];
-
-      // ---------------------------------------------------------
-      // PASO 3: Definición del Producto (Tabla 'ficha_tecnica')
-      // ---------------------------------------------------------
-      // Como ahora podemos agregar múltiples prendas (Polera, Pantalón),
-      // extraemos los IDs únicos de las prendas que seleccionó el usuario
-      final prendasUnicas = draft.productos
-          .map((p) => p.idTipoPrenda)
-          .toSet()
-          .whereType<int>(); // Filtra nulos por seguridad
-
-      List<Map<String, dynamic>> fichasAInsertar = [];
-      for (var idPrenda in prendasUnicas) {
-        fichasAInsertar.add({
-          'num_orden': numOrdenId,
-          'id_tipo_prenda': idPrenda,
-          'imagen_modelo':
-              urlImagen, // <--- AQUÍ VINCULAMOS LA URL DE LA IMAGEN
-          'especificaciones': 'Prenda generada desde la orden de venta',
-        });
-      }
-
-      // Hacemos un Insert múltiple si hay prendas
-      if (fichasAInsertar.isNotEmpty) {
-        await _supabase.from('ficha_tecnica').insert(fichasAInsertar);
-      }
-
-      // ---------------------------------------------------------
-      // PASO 4: Escandallo de Cantidades (Tabla 'desglose_tallas')
-      // ---------------------------------------------------------
-      List<Map<String, dynamic>> tallasAInsertar = [];
-
-      for (var producto in draft.productos) {
-        tallasAInsertar.add({
-          'num_orden': numOrdenId,
-          'id_tipo_prenda': producto.idTipoPrenda,
-          'id_talla': producto.idTalla,
-          'cantidad': producto.cantidad,
-          'precio_unitario':
-              producto.precioUnitario,
-        });
-      }
-
-      // Insert Múltiple masivo para todas las tallas
-      if (tallasAInsertar.isNotEmpty) {
-        await _supabase.from('desglose_tallas').insert(tallasAInsertar);
-      }
-
-      // --- PASO EXTRA: Si hay anticipo, lo registramos en pago_cliente ---
-      if (draft.anticipo > 0) {
-        await _supabase.from('pago_cliente').insert({
-          'id_cliente': draft.idCliente,
-          'id_orden': numOrdenId,
-          'monto': draft.anticipo,
-          'metodo_pago': draft.metodoPago,
-        });
-      }
-
-      // EL PASO 5 SE EJECUTARÁ AUTOMÁTICAMENTE GRACIAS A TU TRIGGER EN BD 🔥
-    } catch (e) {
-      throw Exception('Error al guardar la orden en BD: $e');
+      return result.toString();
+    } on PostgrestException catch (e) {
+      throw Exception('Error al crear orden: ${e.message}');
     }
   }
 
   // =================================================================
-  // AGREGAR ÍTEMS A UNA ORDEN EXISTENTE (Solo INSERT, no destruye nada)
+  // AGREGAR ÍTEMS A UNA ORDEN EXISTENTE — STUB (pendiente)
   // =================================================================
-  /// Agrega nuevos ítems (filas en desglose_tallas) a una orden ya creada
-  /// y recalcula el costo_total sumando el costo de los nuevos ítems.
-  ///
-  /// Sigue el mismo patrón INSERT de crearOrdenDesdeDraft (PASO 4).
+  /// Pendiente de implementación. Mismas dependencias que
+  /// crearOrdenDesdeDraft. Se reescribirá para insertar nuevos
+  /// detalle_orden + detalle_orden_talla y recalcular costo_total.
   Future<void> agregarItemsAOrden({
     required String numOrden,
     required List<Map<String, dynamic>> nuevosItems,
   }) async {
-    try {
-      if (nuevosItems.isEmpty) {
-        throw Exception('Debe agregar al menos un ítem');
-      }
-
-      // ─── PASO 1 y 2: Calcular precio unitario y armar INSERT en desglose_tallas ───
-      List<Map<String, dynamic>> tallasAInsertar = [];
-      double costoAdicional = 0;
-
-      for (var item in nuevosItems) {
-        final int idTipoPrenda = item['id_tipo_prenda'];
-        final int cantidad = item['cantidad'];
-
-        double costoMateriales = await _obtenerCostoMaterialesPorTipo(idTipoPrenda);
-
-        double manoDeObra = 25.0;
-        double margenUtilidad = 1.4;
-        double precioUnitario = (costoMateriales + manoDeObra) * margenUtilidad;
-
-        costoAdicional += precioUnitario * cantidad;
-
-        tallasAInsertar.add({
-          'num_orden': numOrden,
-          'id_tipo_prenda': idTipoPrenda,
-          'id_talla': item['id_talla'],
-          'cantidad': cantidad,
-          'precio_unitario': precioUnitario,
-        });
-      }
-
-      await _supabase.from('desglose_tallas').insert(tallasAInsertar);
-
-      // ─── PASO 3: Obtener costo actual y sumarle lo nuevo ───
-      final ordenActual = await _supabase
-          .from('orden')
-          .select('costo_total')
-          .eq('num_orden', numOrden)
-          .single();
-
-      final double costoActual = (ordenActual['costo_total'] as num).toDouble();
-      final double nuevoCostoTotal = costoActual + costoAdicional;
-
-      await _supabase
-          .from('orden')
-          .update({'costo_total': nuevoCostoTotal})
-          .eq('num_orden', numOrden);
-    } catch (e) {
-      throw Exception('Error al agregar ítems a la orden: $e');
-    }
+    throw UnimplementedError(
+      'agregarItemsAOrden está pendiente de migración al schema nuevo. '
+      'Se implementa junto con crearOrdenDesdeDraft cuando estén disponibles '
+      'los campos de precio en BD y la RPC.',
+    );
   }
 
   // =================================================================
-  // FUNCIÓN AUXILIAR: Obtener Costo Total de Materiales por Tipo de Prenda
+  // CÁLCULO DE MATERIALES — OUT OF SCOPE (rebanada vertical siguiente)
   // =================================================================
-  Future<double> _obtenerCostoMaterialesPorTipo(int idTipoPrenda) async {
-    try {
-      // Buscamos la receta de CUALQUIER ficha técnica que sea de este tipo
-      // (asumimos que la receta es estándar para el tipo de prenda)
-      final response = await _supabase
-          .from('receta_material')
-          .select('cantidad_estandar, insumo:id_insumo(costo_unitario)')
-          .eq('ficha_tecnica.id_tipo_prenda', idTipoPrenda);
-
-      // ignore: unnecessary_null_comparison
-      if (response == null || (response as List).isEmpty) return 0.0;
-
-      double total = 0;
-      for (var row in response) {
-        double cant = (row['cantidad_estandar'] as num).toDouble();
-        double costo = (row['insumo']['costo_unitario'] as num).toDouble();
-        total += (cant * costo);
-      }
-      return total;
-    } catch (e) {
-      return 0.0;
-    }
-  }
-
-  // =================================================================
-  // CÁLCULO DE MATERIALES REQUERIDOS (Nueva Función para Calculadora)
-  // =================================================================
+  /// El cálculo de materiales depende de iterar las plantillas del draft
+  /// (incluyendo las que vienen dentro de conjuntos vía conjunto_plantilla)
+  /// y consultar receta_material por cada una. Es trabajo de varios días
+  /// y está listado como out-of-scope para esta rebanada — se aborda en
+  /// una rebanada vertical siguiente. Por ahora devuelve lista vacía para
+  /// no romper la UI que aún consume este método.
+  @Deprecated(
+    'Reescritura pendiente para schema nuevo. Out of scope en esta rebanada.',
+  )
   Future<List<OrdenMaterialRequerido>> calcularMaterialesNecesarios(
     List<dynamic> productosDraft,
   ) async {
-    try {
-      print('--- INICIANDO CALCULADORA (VERSIÓN TOP-DOWN) ---');
-
-      final idsPrendas = productosDraft
-          .map((p) => p.idTipoPrenda)
-          .where((id) => id != null)
-          .toSet()
-          .toList();
-
-      if (idsPrendas.isEmpty) return [];
-
-      // 1. Consulta TOP-DOWN: Pedimos la ficha y anidamos sus hijos (receta -> insumo)
-      final response = await _supabase
-          .from('ficha_tecnica')
-          .select('''
-            id_tipo_prenda,
-            receta_material (
-              cantidad_estandar,
-              insumo ( nombre, stock_actual, unidad_medida (abreviatura) )
-            )
-          ''')
-          .filter(
-            'id_tipo_prenda',
-            'in',
-            idsPrendas,
-          ); // Filtro directo a la tabla principal
-
-      print(
-        'Respuesta BD: ${response.length} fichas técnicas encontradas para estos IDs.',
-      );
-
-      Map<String, OrdenMaterialRequerido> consolidado = {};
-      Set<int> prendasYaProcesadas = {};
-
-      // 2. Procesamos la respuesta
-      for (var ficha in response) {
-        final idTipoPrenda = ficha['id_tipo_prenda'] as int;
-
-        // Extraemos la lista de recetas (si no tiene, devuelve lista vacía)
-        final recetas = ficha['receta_material'] as List<dynamic>? ?? [];
-
-        // Si esta ficha específica está vacía (quizás es una orden sin procesar), la ignoramos
-        if (recetas.isEmpty) continue;
-
-        // Si ya encontramos una plantilla con materiales para esta prenda, saltamos las demás
-        if (prendasYaProcesadas.contains(idTipoPrenda)) continue;
-        prendasYaProcesadas.add(idTipoPrenda);
-
-        print(
-          '✅ Ficha válida encontrada para prenda ID $idTipoPrenda con ${recetas.length} materiales.',
-        );
-
-        // Buscamos cuántas prendas de este tipo pide el usuario en el formulario
-        final cantidadPedida = productosDraft
-            .where((p) => p.idTipoPrenda == idTipoPrenda)
-            .fold(0, (prev, p) => prev + (p.cantidad as int));
-
-        // 3. Sumamos los materiales al consolidado global
-        for (var row in recetas) {
-          final insumo = row['insumo'] ?? {};
-          final nombre = insumo['nombre'] ?? 'Insumo desconocido';
-          final stock = (insumo['stock_actual'] ?? 0 as num).toDouble();
-          final unidad = insumo['unidad_medida']?['abreviatura'] ?? 'u.';
-          final cantEstandar = (row['cantidad_estandar'] ?? 0 as num)
-              .toDouble();
-
-          final requeridoTotal = cantEstandar * cantidadPedida;
-
-          if (consolidado.containsKey(nombre)) {
-            final actual = consolidado[nombre]!;
-            consolidado[nombre] = actual.copyWith(
-              requerido: actual.requerido + requeridoTotal,
-            );
-          } else {
-            consolidado[nombre] = OrdenMaterialRequerido(
-              material: nombre,
-              requerido: requeridoTotal,
-              stockActual: stock,
-              unidad: unidad,
-            );
-          }
-        }
-      }
-
-      if (consolidado.isEmpty) {
-        print(
-          '⚠️ AVISO: Las fichas se encontraron, pero ninguna tenía materiales asignados en "receta_material".',
-        );
-      } else {
-        print(
-          'Cálculo final exitoso: ${consolidado.length} materiales requeridos.',
-        );
-      }
-
-      return consolidado.values.toList();
-    } catch (e, stacktrace) {
-      print('🚨 ERROR EN CALCULADORA: $e');
-      print(stacktrace);
-      return [];
-    }
+    return [];
   }
 
   // =================================================================
-  // CÁLCULO DE PRECIOS SUGERIDOS (Nueva Función para Calculadora)
+  // CÁLCULO DE PRECIOS SUGERIDOS — OUT OF SCOPE
   // =================================================================
+  /// Mismo razonamiento que calcularMaterialesNecesarios. En el schema
+  /// nuevo, el precio sale directo de plantilla_prenda.precio_plantilla
+  /// y conjunto.precio_conjunto (no se calcula desde insumos en el front).
+  /// Por ahora devuelve los productos sin cambios para no romper la UI.
+  @Deprecated(
+    'Reescritura pendiente para schema nuevo. Out of scope en esta rebanada.',
+  )
   Future<List<OrdenProductoItem>> calcularPreciosSugeridos(
     List<OrdenProductoItem> productosDraft,
   ) async {
-    List<OrdenProductoItem> productosActualizados = [];
-
-    for (var p in productosDraft) {
-      if (p.idTipoPrenda == null) {
-        productosActualizados.add(p);
-        continue;
-      }
-
-      try {
-        final response = await _supabase
-            .from('ficha_tecnica')
-            .select(
-              'receta_material(cantidad_estandar, insumo(costo_unitario))',
-            )
-            .eq('id_tipo_prenda', p.idTipoPrenda!)
-            .limit(1)
-            .maybeSingle();
-
-        double costoMateriales = 0;
-
-        if (response != null && response['receta_material'] != null) {
-          for (var rm in (response['receta_material'] as List)) {
-            double cant = (rm['cantidad_estandar'] ?? 0).toDouble();
-            double costoUnitario = (rm['insumo']?['costo_unitario'] ?? 0)
-                .toDouble();
-            costoMateriales += (cant * costoUnitario);
-          }
-        }
-
-        double manoDeObra = 25.0;
-        double margenGanancia = 1.40;
-
-        // Precio sugerido por unidad
-        double precioSugerido = (costoMateriales + manoDeObra) * margenGanancia;
-
-        // Actualizamos el producto con su nuevo precio unitario
-        productosActualizados.add(p.copyWith(precioUnitario: precioSugerido));
-      } catch (e) {
-        print('Error calculando precio para prenda ${p.idTipoPrenda}: $e');
-        productosActualizados.add(p);
-      }
-    }
-
-    return productosActualizados;
+    return productosDraft;
   }
 }
