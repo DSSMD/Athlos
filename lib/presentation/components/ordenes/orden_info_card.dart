@@ -108,7 +108,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     }
   }
 
-
   String _fechaDisplay() {
     final f = widget.draft.fechaEntrega;
     if (f == null) return 'dd/mm/yyyy';
@@ -150,29 +149,7 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
   // HEADER
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _header() {
-    return Row(
-      children: [
-        Text('Información del pedido', style: AppTypography.h3),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.info.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
-          child: Text(
-            'Actualizado',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.info,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
+    return Text('Información del pedido', style: AppTypography.h3);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -426,12 +403,12 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _bannerTipoCambio() {
     if (widget.draft.moneda != OrdenMoneda.dolares ||
-        widget.draft.productos.isEmpty) {
+        widget.draft.items.isEmpty) {
       return const SizedBox.shrink();
     }
 
     // Calculamos el total real de la orden en Bs (sumatoria de subtotales)
-    final totalBs = widget.draft.subtotal;
+    final totalBs = widget.draft.subtotalItems;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
