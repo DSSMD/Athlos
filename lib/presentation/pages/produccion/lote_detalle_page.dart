@@ -40,7 +40,8 @@ class LoteDetalleDialog extends StatelessWidget {
                       size: 20,
                       color: AppColors.textSecondary,
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    // 👇 CORREGIDO: Retorna true al cerrar desde la X
+                    onPressed: () => Navigator.pop(context, true),
                   ),
                 ],
               ),
@@ -100,7 +101,8 @@ class LoteDetalleDialog extends StatelessWidget {
                       vertical: AppSpacing.md,
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  // 👇 CORREGIDO: Retorna true al cerrar desde el botón de abajo
+                  onPressed: () => Navigator.pop(context, true),
                   child: Text(
                     'Entendido',
                     style: AppTypography.small.copyWith(
@@ -123,28 +125,23 @@ class LoteDetalleDialog extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment
-            .start, // Por si salta de línea, quede alineado arriba
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Etiqueta (Ej. 'Orden de producción')
           Text(
             label,
             style: AppTypography.small.copyWith(color: AppColors.textSecondary),
           ),
-
-          const SizedBox(width: 16), // Un pequeño margen de seguridad
-          // 2. Valor (Ej. el UUID) envuelto en Expanded para que NO se salga
+          const SizedBox(width: 16),
           Expanded(
             child: Text(
               value,
-              textAlign: TextAlign.right, // Lo mantenemos pegado a la derecha
+              textAlign: TextAlign.right,
               style: AppTypography.small.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
-              // 👇 AQUÍ LA MAGIA CONTRA EL DESBORDAMIENTO:
-              overflow: TextOverflow.ellipsis, // Le pone "..." si es muy largo
-              maxLines: 1, // Obliga a que sea de una sola línea
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -157,9 +154,7 @@ class LoteDetalleDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(
-          0.05,
-        ), // Fondo muy suave del color del estado
+        color: accentColor.withOpacity(0.05),
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: accentColor.withOpacity(0.1)),
       ),
@@ -169,7 +164,7 @@ class LoteDetalleDialog extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: AppTypography.caption.copyWith(
-              fontSize: 10, // Letra muy pequeña para el label
+              fontSize: 10,
               letterSpacing: 1.1,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.bold,
@@ -191,7 +186,7 @@ class LoteDetalleDialog extends StatelessWidget {
                 child: Text(
                   value,
                   style: AppTypography.body.copyWith(
-                    fontSize: 13, // Letra más equilibrada
+                    fontSize: 13,
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),

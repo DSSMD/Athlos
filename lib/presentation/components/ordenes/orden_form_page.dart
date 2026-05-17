@@ -25,6 +25,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/orden_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../providers/lote_provider.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
@@ -79,7 +80,7 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
 
       final servicio = ref.read(ordenServiceProvider);
       await servicio.crearOrdenDesdeDraft(_draft);
-
+      ref.invalidate(lotesListProvider);
       ref.read(ordenesProvider.notifier).refreshOrdenes();
 
       if (mounted) {
