@@ -28,12 +28,16 @@ class StickyTopbar extends StatelessWidget {
     required this.onSearchChanged,
     required this.newButtonLabelDesktop,
     required this.onNewPressed,
+    this.newButtonColor,
+    this.newTextColor,
   });
 
   final String title;
   final String searchHint;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
+  final Color? newButtonColor;
+  final Color? newTextColor;
 
   /// Label completo para desktop (ej: "Nuevo usuario")
   final String newButtonLabelDesktop;
@@ -68,6 +72,10 @@ class StickyTopbar extends StatelessWidget {
             onPressed: onNewPressed,
             icon: const Icon(Icons.add, size: 18),
             label: Text(newButtonLabelDesktop),
+            style: FilledButton.styleFrom(
+              backgroundColor: newButtonColor,
+              foregroundColor: newTextColor,
+            ),
           ),
         ],
       ),

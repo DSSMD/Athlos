@@ -107,7 +107,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     );
   }
 
-  void _exportar() {
+  /*void _exportar() {
     // TODO(SCRUM-69): implementar exportación a Excel/CSV. Pendiente de
     // confirmación de Denshelmer sobre formato y campos a exportar.
     ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +116,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
         duration: Duration(seconds: 2),
       ),
     );
-  }
+  }*/
 
   // ─────────────────────────────────────────────────────────── BUILD ──
 
@@ -186,6 +186,8 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             onSearchChanged: (_) => setState(() => _currentPage = 1),
             newButtonLabelDesktop: 'Nuevo cliente',
             onNewPressed: _abrirCrear,
+            newButtonColor: AppColors.primary500,
+            newTextColor: Colors.white,
           ),
         Expanded(
           child: SingleChildScrollView(
@@ -218,7 +220,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                       _currentPage = 1;
                     }),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  /*const SizedBox(height: AppSpacing.md),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
@@ -226,7 +228,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                       icon: const Icon(Icons.file_download_outlined, size: 18),
                       label: const Text('Exportar'),
                     ),
-                  ),
+                  ),*/
                 ] else
                   Row(
                     children: [
@@ -251,7 +253,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                           }),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
+                      /*const SizedBox(width: AppSpacing.md),
                       OutlinedButton.icon(
                         onPressed: _exportar,
                         icon: const Icon(
@@ -259,7 +261,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                           size: 18,
                         ),
                         label: const Text('Exportar'),
-                      ),
+                      ),*/
                     ],
                   ),
 
