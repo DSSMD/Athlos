@@ -15,7 +15,6 @@
 //   - toggleActivo     : UPDATE activo en conjunto
 //
 // NOTA: las operaciones múltiples no son transaccionales a nivel cliente.
-// TODO Backend Mel: crear función RPC en PostgreSQL para crear/actualizar
 // conjunto con sus plantillas en una sola transacción atómica.
 // ============================================================================
 
