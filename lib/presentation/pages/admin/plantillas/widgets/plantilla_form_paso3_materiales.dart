@@ -269,7 +269,7 @@ class _MaterialRowState extends State<_MaterialRow> {
     final costoParcial = widget.material.cantidad * costoUnitario;
     
     final costoText = Text(
-      '\$${costoParcial.toStringAsFixed(2)}',
+      '${costoParcial.toStringAsFixed(2)} Bs.',
       style: AppTypography.small.copyWith(
         color: AppColors.success,
         fontWeight: FontWeight.w600,
@@ -400,7 +400,7 @@ class _FooterCostoTotal extends StatelessWidget {
             ),
           ),
           Text(
-            '\$${total.toStringAsFixed(2)}',
+            '${total.toStringAsFixed(2)} Bs.',
             style: AppTypography.h3.copyWith(
               color: AppColors.success,
             ),

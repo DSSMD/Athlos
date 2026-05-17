@@ -81,6 +81,9 @@ class PlantillaService {
               id_receta,
               id_insumo,
               cantidad_requerida
+            ),
+            medida_ficha (
+              id_talla
             )
           ''')
           .eq('id_plantilla', idPlantilla)
@@ -95,7 +98,16 @@ class PlantillaService {
           }).toList() ??
           [];
 
+      // Parsear tallas seleccionadas
+      final rawMedidas = res['medida_ficha'] as List?;
+      final tallas = rawMedidas?.map((r) {
+            final val = r['id_talla'];
+            return val is int ? val : int.tryParse(val?.toString() ?? '');
+          }).whereType<int>().toSet().toList() ??
+          [];
+
       return plantillaBase.copyWith(
+        tallasSeleccionadas: tallas,
         materiales: materiales,
       );
     } catch (e) {
@@ -155,6 +167,7 @@ class PlantillaService {
 
       final idPlantilla = insertResponse['id_plantilla'].toString();
 
+      // Insertar materiales
       final filasMateriales = [
         for (final m in materiales)
           {
@@ -167,9 +180,22 @@ class PlantillaService {
         await _client.from('receta_material').insert(filasMateriales);
       }
 
+      // Insertar tallas usando medida_ficha con valores por defecto
+      final filasMedidas = [
+        for (final idTalla in tallasSeleccionadas)
+          {
+            'id_plantilla': idPlantilla,
+            'id_talla': idTalla,
+            'nombre_medida': 'Base',
+            'valor': 0.0,
+          },
+      ];
+      if (filasMedidas.isNotEmpty) {
+        await _client.from('medida_ficha').insert(filasMedidas);
+      }
+
       return PlantillaModel.fromJson(insertResponse).copyWith(
         tallasSeleccionadas: tallasSeleccionadas,
-        //medidas: medidas,
         materiales: materiales,
       );
     } catch (e) {
@@ -212,6 +238,7 @@ class PlantillaService {
           .select()
           .single();
 
+      // Actualizar materiales
       await _client.from('receta_material').delete().eq('id_plantilla', id);
       final filasMateriales = [
         for (final m in materiales)
@@ -225,9 +252,23 @@ class PlantillaService {
         await _client.from('receta_material').insert(filasMateriales);
       }
 
+      // Actualizar tallas
+      await _client.from('medida_ficha').delete().eq('id_plantilla', id);
+      final filasMedidas = [
+        for (final idTalla in tallasSeleccionadas)
+          {
+            'id_plantilla': id,
+            'id_talla': idTalla,
+            'nombre_medida': 'Base',
+            'valor': 0.0,
+          },
+      ];
+      if (filasMedidas.isNotEmpty) {
+        await _client.from('medida_ficha').insert(filasMedidas);
+      }
+
       return PlantillaModel.fromJson(updateResponse).copyWith(
         tallasSeleccionadas: tallasSeleccionadas,
-        //medidas: medidas,
         materiales: materiales,
       );
     } catch (e) {

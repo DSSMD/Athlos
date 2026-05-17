@@ -463,7 +463,7 @@ class _MaterialesResumen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '\$${total.toStringAsFixed(2)}',
+                      '${total.toStringAsFixed(2)} Bs.',
                       style: AppTypography.small.copyWith(
                         color: AppColors.success,
                         fontWeight: FontWeight.w600,
@@ -538,7 +538,7 @@ class _MaterialRow extends StatelessWidget {
           SizedBox(
             width: 80,
             child: Text(
-              '\$${costoParcial.toStringAsFixed(2)}',
+              '${costoParcial.toStringAsFixed(2)} Bs.',
               textAlign: TextAlign.right,
               style: AppTypography.small.copyWith(
                 color: AppColors.success,

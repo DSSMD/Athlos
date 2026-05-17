@@ -39,6 +39,7 @@ import '../../../widgets/shared/search_input.dart';
 import '../../../widgets/users/kpi_card.dart';
 
 import 'widgets/plantilla_form_page.dart';
+import 'widgets/plantilla_detalle_dialog.dart';
 
 class PlantillasPage extends ConsumerStatefulWidget {
   const PlantillasPage({super.key});
@@ -125,6 +126,31 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
         context,
         mode: 'editar',
         initialPlantilla: completa,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar plantilla: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _abriendoEditor = false);
+    }
+  }
+
+  Future<void> _onVer(PlantillaModel p) async {
+    if (_abriendoEditor) return;
+    setState(() => _abriendoEditor = true);
+    try {
+      final completa = await ref
+          .read(plantillaProvider.notifier)
+          .obtenerPlantillaCompleta(p.id);
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => PlantillaDetalleDialog(plantilla: completa),
       );
     } catch (e) {
       if (!mounted) return;
@@ -316,6 +342,7 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
                   _MobileList(
                     plantillas: paginated,
                     tiposPrenda: tiposPrenda,
+                    onVer: _onVer,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
                     accionesDeshabilitadas: _abriendoEditor,
@@ -324,6 +351,7 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
                   _DesktopTable(
                     plantillas: paginated,
                     tiposPrenda: tiposPrenda,
+                    onVer: _onVer,
                     onEditar: _onEditar,
                     onToggleActiva: _onToggleActiva,
                     accionesDeshabilitadas: _abriendoEditor,
@@ -440,6 +468,7 @@ class _DesktopTable extends StatelessWidget {
   const _DesktopTable({
     required this.plantillas,
     required this.tiposPrenda,
+    required this.onVer,
     required this.onEditar,
     required this.onToggleActiva,
     required this.accionesDeshabilitadas,
@@ -447,6 +476,7 @@ class _DesktopTable extends StatelessWidget {
 
   final List<PlantillaModel> plantillas;
   final List<TipoPrendaModel> tiposPrenda;
+  final void Function(PlantillaModel) onVer;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
   final bool accionesDeshabilitadas;
@@ -484,6 +514,9 @@ class _DesktopTable extends StatelessWidget {
             _DesktopRow(
               plantilla: plantillas[i],
               tiposPrenda: tiposPrenda,
+              onVer: accionesDeshabilitadas
+                  ? null
+                  : () => onVer(plantillas[i]),
               onEditar: accionesDeshabilitadas
                   ? null
                   : () => onEditar(plantillas[i]),
@@ -532,12 +565,14 @@ class _DesktopRow extends StatelessWidget {
   const _DesktopRow({
     required this.plantilla,
     required this.tiposPrenda,
+    required this.onVer,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final PlantillaModel plantilla;
   final List<TipoPrendaModel> tiposPrenda;
+  final VoidCallback? onVer;
   final VoidCallback? onEditar;
   final VoidCallback? onToggleActiva;
 
@@ -590,10 +625,21 @@ class _DesktopRow extends StatelessWidget {
                 icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
                 tooltip: 'Acciones',
                 onSelected: (value) {
+                  if (value == 'ver' && onVer != null) onVer!();
                   if (value == 'editar' && onEditar != null) onEditar!();
                   if (value == 'estado' && onToggleActiva != null) onToggleActiva!();
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'ver',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 18),
+                        SizedBox(width: 8),
+                        Text('Ver Detalles'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'editar',
                     child: Row(
@@ -642,6 +688,7 @@ class _MobileList extends StatelessWidget {
   const _MobileList({
     required this.plantillas,
     required this.tiposPrenda,
+    required this.onVer,
     required this.onEditar,
     required this.onToggleActiva,
     required this.accionesDeshabilitadas,
@@ -649,6 +696,7 @@ class _MobileList extends StatelessWidget {
 
   final List<PlantillaModel> plantillas;
   final List<TipoPrendaModel> tiposPrenda;
+  final void Function(PlantillaModel) onVer;
   final void Function(PlantillaModel) onEditar;
   final void Function(PlantillaModel) onToggleActiva;
   final bool accionesDeshabilitadas;
@@ -661,6 +709,9 @@ class _MobileList extends StatelessWidget {
           _MobileCard(
             plantilla: plantillas[i],
             tiposPrenda: tiposPrenda,
+            onVer: accionesDeshabilitadas
+                ? null
+                : () => onVer(plantillas[i]),
             onEditar: accionesDeshabilitadas
                 ? null
                 : () => onEditar(plantillas[i]),
@@ -679,12 +730,14 @@ class _MobileCard extends StatelessWidget {
   const _MobileCard({
     required this.plantilla,
     required this.tiposPrenda,
+    required this.onVer,
     required this.onEditar,
     required this.onToggleActiva,
   });
 
   final PlantillaModel plantilla;
   final List<TipoPrendaModel> tiposPrenda;
+  final VoidCallback? onVer;
   final VoidCallback? onEditar;
   final VoidCallback? onToggleActiva;
 
@@ -733,10 +786,21 @@ class _MobileCard extends StatelessWidget {
                 icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
                 tooltip: 'Acciones',
                 onSelected: (value) {
+                  if (value == 'ver' && onVer != null) onVer!();
                   if (value == 'editar' && onEditar != null) onEditar!();
                   if (value == 'estado' && onToggleActiva != null) onToggleActiva!();
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'ver',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 18),
+                        SizedBox(width: 8),
+                        Text('Ver Detalles'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'editar',
                     child: Row(
