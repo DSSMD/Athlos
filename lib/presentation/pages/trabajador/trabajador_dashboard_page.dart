@@ -52,7 +52,7 @@ class TrabajadorDashboardPage extends ConsumerWidget {
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         itemCount: misTrabajos.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.md),
                         itemBuilder: (context, index) {
                           return _TrabajoCard(

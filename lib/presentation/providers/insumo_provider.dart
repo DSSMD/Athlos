@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/inventario_service.dart';
 import '../../domain/models/inventario_model.dart';
-import 'catalogos_provider.dart';
 
 // 1. Servicio
 final inventarioServiceProvider = Provider<InventarioService>((ref) {
@@ -44,7 +43,7 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     ref.invalidateSelf();
     
     // 3. Invalidamos el catálogo para que el dropdown de Plantillas se actualice
-    ref.invalidate(insumosProvider);
+    ref.invalidate(inventarioProvider);
   }
 
   /// MOCK — crea un insumo a través del service y lo agrega al state local.
@@ -70,7 +69,7 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     state = AsyncValue.data([...actuales, nuevo]);
     
     // Invalidamos el catálogo para que el nuevo insumo aparezca en Plantillas
-    ref.invalidate(insumosProvider);
+    ref.invalidate(inventarioProvider);
     
     return nuevo;
   }

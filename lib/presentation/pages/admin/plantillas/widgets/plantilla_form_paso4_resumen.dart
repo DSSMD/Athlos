@@ -33,12 +33,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/insumo_model.dart';
+import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/material_plantilla_model.dart';
 import '../../../../../domain/models/plantilla_model.dart';
 import '../../../../../domain/models/talla_model.dart';
 import '../../../../../domain/models/tipo_prenda_model.dart';
 import '../../../../providers/catalogos_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/plantilla_form_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -80,7 +81,7 @@ class PlantillaFormPaso4Resumen extends ConsumerWidget {
     final state = ref.watch(plantillaFormStateProvider);
     final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
     final tallasAsync = ref.watch(tallasProvider);
-    final insumosAsync = ref.watch(insumosProvider);
+    final insumosAsync = ref.watch(inventarioProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -399,7 +400,7 @@ class _MaterialesResumen extends StatelessWidget {
     required this.insumosAsync,
   });
   final List<MaterialPlantilla> materiales;
-  final AsyncValue<List<InsumoModel>> insumosAsync;
+  final AsyncValue<List<InventarioItemModel>> insumosAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +484,7 @@ class _MaterialesResumen extends StatelessWidget {
 class _MaterialRow extends StatelessWidget {
   const _MaterialRow({required this.material, required this.catalogoInsumos});
   final MaterialPlantilla material;
-  final List<InsumoModel> catalogoInsumos;
+  final List<InventarioItemModel> catalogoInsumos;
 
   @override
   Widget build(BuildContext context) {

@@ -94,7 +94,9 @@ class _PlantillaFormPaso1InfoState
     final state = ref.watch(plantillaFormStateProvider);
     final notifier = ref.read(plantillaFormStateProvider.notifier);
     final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
-    final categoriasAsync = ref.watch(categoriasPrendaProvider);
+    final categoriasAsync = tiposPrendaAsync.whenData(
+      (tipos) => tipos.map((t) => t.categoria).toSet().toList()..sort(),
+    );
 
     // Sincroniza controllers cuando el state cambia desde afuera (ej.
     // inicialización por postFrameCallback en modo editar). Compara

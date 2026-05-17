@@ -23,6 +23,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/presentation/providers/insumo_provider.dart';
 
 import '../../../../../domain/models/plantilla_model.dart';
 import '../../../../providers/catalogos_provider.dart';
@@ -338,7 +339,7 @@ class _PlantillaFormScaffoldState
     setState(() => _guardando = true);
 
     try {
-      final insumos = ref.read(insumosProvider).value ?? [];
+      final insumos = ref.read(inventarioProvider).value ?? [];
       double precioTotal = 0.0;
       for (final m in state.materiales) {
         final insumo = insumos.where((i) => i.id == m.idInsumo).firstOrNull;

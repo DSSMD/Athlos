@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/presentation/providers/insumo_provider.dart';
 
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -19,7 +20,7 @@ class PlantillaDetalleDialog extends ConsumerWidget {
     // Escuchar catálogos para resolver IDs a Nombres
     final tiposPrendaAsync = ref.watch(tiposPrendaProvider);
     final tallasAsync = ref.watch(tallasProvider);
-    final insumosAsync = ref.watch(insumosProvider);
+    final insumosAsync = ref.watch(inventarioProvider);
 
     return Dialog(
       backgroundColor: AppColors.brandWhite,

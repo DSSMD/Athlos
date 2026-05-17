@@ -245,7 +245,7 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
             items: conjuntos
                 .map(
                   (c) => DropdownMenuItem<String>(
-                    value: c.idConjunto,
+                    value: c.id,
                     child: Text(c.nombre),
                   ),
                 )
@@ -255,7 +255,7 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
               setState(() {
                 _idItemSel = val;
                 _nombreItemSel = conjuntos
-                    .firstWhere((c) => c.idConjunto == val)
+                    .firstWhere((c) => c.id == val)
                     .nombre;
               });
             },
@@ -280,11 +280,9 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
             items: plantillas
                 .map(
                   (p) => DropdownMenuItem<String>(
-                    value: p.idPlantilla,
+                    value: p.id,
                     child: Text(
-                      p.nombreTipoPrenda != null
-                          ? '${p.nombre} (${p.nombreTipoPrenda})'
-                          : p.nombre,
+                      '${p.nombre} (${p.nombreTipoPrenda})',
                     ),
                   ),
                 )
@@ -294,7 +292,7 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
               setState(() {
                 _idItemSel = val;
                 _nombreItemSel = plantillas
-                    .firstWhere((p) => p.idPlantilla == val)
+                    .firstWhere((p) => p.id == val)
                     .nombre;
               });
             },
@@ -327,8 +325,8 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
                 items: tallas
                     .map(
                       (t) => DropdownMenuItem<int>(
-                        value: t['id_talla'] as int,
-                        child: Text(t['nombre_talla'].toString()),
+                        value: t.id,
+                        child: Text(t.nombre),
                       ),
                     )
                     .toList(),
@@ -337,10 +335,7 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
                   setState(() {
                     row.idTalla = val;
                     row.nombreTalla =
-                        tallas.firstWhere(
-                              (t) => t['id_talla'] == val,
-                            )['nombre_talla']
-                            as String;
+                        tallas.firstWhere((t) => t.id == val).nombre;
                   });
                 },
               ),

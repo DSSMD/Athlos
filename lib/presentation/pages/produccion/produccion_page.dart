@@ -40,7 +40,6 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
     return Column(
       children: [
         StickyTopbar(
-          isMobile: isMobile,
           title: 'Directorio de Órdenes',
           searchHint: 'Buscar por Orden o Cliente...',
           searchController: _searchController,

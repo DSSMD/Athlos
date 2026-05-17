@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 import 'search_input.dart';
 
 class StickyTopbar extends StatelessWidget {
@@ -39,8 +40,8 @@ class StickyTopbar extends StatelessWidget {
   final VoidCallback? onNewPressed;
 
   // Propiedad auxiliar para saber si debemos mostrar el botón
-  bool get _showButton => onNewPressed != null && 
-      (isMobile ? newButtonLabelMobile != null : newButtonLabelDesktop != null);
+  bool _showButton(BuildContext context) => onNewPressed != null && 
+      (context.isMobile ? newButtonLabelMobile != null : newButtonLabelDesktop != null);
 
   @override
   Widget build(BuildContext context) {
@@ -53,11 +54,11 @@ class StickyTopbar extends StatelessWidget {
         horizontal: AppSpacing.xl2,
         vertical: AppSpacing.xl,
       ),
-      child: isMobile ? _buildMobile() : _buildDesktop(),
+      child: context.isMobile ? _buildMobile(context) : _buildDesktop(context),
     );
   }
 
-  Widget _buildMobile() {
+  Widget _buildMobile(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -65,7 +66,7 @@ class StickyTopbar extends StatelessWidget {
           children: [
             Expanded(child: Text(title, style: AppTypography.h1)),
             // Solo renderiza el botón si las propiedades existen
-            if (_showButton)
+            if (_showButton(context))
               ElevatedButton.icon(
                 onPressed: onNewPressed,
                 icon: const Icon(Icons.add, size: 18),
@@ -83,7 +84,7 @@ class StickyTopbar extends StatelessWidget {
     );
   }
 
-  Widget _buildDesktop() {
+  Widget _buildDesktop(BuildContext context) {
     return Row(
       children: [
         Text(title, style: AppTypography.h1),
@@ -97,7 +98,7 @@ class StickyTopbar extends StatelessWidget {
           ),
         ),
         // Solo renderiza el espacio y el botón si existen
-        if (_showButton) ...[
+        if (_showButton(context)) ...[
           const SizedBox(width: AppSpacing.md),
           ElevatedButton.icon(
             onPressed: onNewPressed,

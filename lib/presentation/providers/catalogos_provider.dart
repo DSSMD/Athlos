@@ -11,9 +11,9 @@
 // ============================================================================
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/catalogo_service.dart';
-import '../../domain/models/insumo_model.dart';
 import '../../domain/models/talla_model.dart';
 import '../../domain/models/tipo_prenda_model.dart';
 import '../../domain/models/conjunto_model.dart';
@@ -30,20 +30,21 @@ final tiposPrendaProvider = FutureProvider<List<TipoPrendaModel>>((ref) async {
 
 // (Añade esto al final de tu catalogos_provider.dart)
 // Nota: Puedes usar un modelo genérico o Map<String, dynamic> como hicimos al principio si quieres ir rápido.
-final tallasProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final tallasProvider = FutureProvider<List<TallaModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase
       .from('tallas')
-      .select('id_talla, nombre_talla')
-      .order(
-        'id_talla',
-      ); // Ordenamos por ID para que salga S, M, L, XL en orden
-  return List<Map<String, dynamic>>.from(response);
+      .select('id_talla, nombre_talla, descripcion')
+      .order('id_talla');
+
+  return (response as List<dynamic>)
+      .map((row) => TallaModel.fromJson(row as Map<String, dynamic>))
+      .toList();
 });
 
 // Lista de conjuntos activos del catálogo (para el dropdown del form de orden).
 // Consulta directa a Supabase usando el modelo tipado Conjunto.
-final conjuntosProvider = FutureProvider<List<Conjunto>>((ref) async {
+final conjuntosProvider = FutureProvider<List<ConjuntoModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase
       .from('conjunto')
@@ -51,13 +52,13 @@ final conjuntosProvider = FutureProvider<List<Conjunto>>((ref) async {
       .eq('activo', true)
       .order('nombre');
   return (response as List<dynamic>)
-      .map((row) => Conjunto.fromJson(row as Map<String, dynamic>))
+      .map((row) => ConjuntoModel.fromJson(row as Map<String, dynamic>))
       .toList();
 });
 
 // Lista de plantillas activas del catálogo (para el dropdown del form de orden).
 // Incluye join con tipo_prenda para poblar nombreTipoPrenda en el modelo.
-final plantillasProvider = FutureProvider<List<Plantilla>>((ref) async {
+final plantillasProvider = FutureProvider<List<PlantillaModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase
       .from('plantilla_prenda')
@@ -69,6 +70,6 @@ final plantillasProvider = FutureProvider<List<Plantilla>>((ref) async {
       .eq('activo', true)
       .order('nombre');
   return (response as List<dynamic>)
-      .map((row) => Plantilla.fromJson(row as Map<String, dynamic>))
+      .map((row) => PlantillaModel.fromJson(row as Map<String, dynamic>))
       .toList();
 });

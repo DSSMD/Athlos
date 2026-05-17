@@ -520,7 +520,7 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiposAsync = ref.watch(tiposPrendaProvider);
-    final categoriasAsync = ref.watch(categoriasPrendaProvider);
+    final categoriasAsync = tiposAsync.whenData((tipos) => tipos.map((t) => t.categoria).toSet().toList()..sort());
     final plantillasAsync = ref.watch(plantillaProvider);
 
     return Column(
@@ -539,7 +539,7 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
         // ── Filtro por categoría ──
         categoriasAsync.when(
           data: (cats) => DropdownButtonFormField<String?>(
-            value: categoriaFiltro,
+            initialValue: categoriaFiltro,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Categoría',
@@ -567,7 +567,7 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
                 ? tipos.where((t) => t.categoria == categoriaFiltro).toList()
                 : tipos;
             return DropdownButtonFormField<int?>(
-              value: tipoFiltro,
+              initialValue: tipoFiltro,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Tipo de prenda',

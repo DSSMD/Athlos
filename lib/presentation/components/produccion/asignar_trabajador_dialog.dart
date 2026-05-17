@@ -138,7 +138,7 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
                       ),
                     )
                   : DropdownButtonFormField<String>(
-                      value: _trabajadorSeleccionado,
+                      initialValue: _trabajadorSeleccionado,
                       dropdownColor: AppColors.brandWhite,
                       icon: const Icon(
                         Icons.keyboard_arrow_down_rounded,

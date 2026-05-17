@@ -22,11 +22,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../domain/models/insumo_model.dart';
+import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/material_plantilla_model.dart';
 
-import '../../../../providers/catalogos_provider.dart';
+
 import '../../../../providers/plantilla_form_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -39,7 +40,7 @@ class PlantillaFormPaso3Materiales extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(plantillaFormStateProvider);
     final notifier = ref.read(plantillaFormStateProvider.notifier);
-    final insumosAsync = ref.watch(insumosProvider);
+    final insumosAsync = ref.watch(inventarioProvider);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return insumosAsync.when(
@@ -150,7 +151,7 @@ class _MaterialRow extends StatefulWidget {
   });
 
   final MaterialPlantilla material;
-  final List<InsumoModel> insumos;
+  final List<InventarioItemModel> insumos;
   final Set<String> seleccionadosOtros;
   final bool isMobile;
   final ValueChanged<String> onChangeInsumo;
@@ -371,7 +372,7 @@ class _FooterCostoTotal extends StatelessWidget {
   });
 
   final List<MaterialPlantilla> materiales;
-  final List<InsumoModel> insumos;
+  final List<InventarioItemModel> insumos;
 
   @override
   Widget build(BuildContext context) {
