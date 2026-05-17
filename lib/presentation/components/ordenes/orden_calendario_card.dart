@@ -74,19 +74,22 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
 
   List<_EntregaReal> _buildEntregas(List<OrdenModel> ordenes) {
     return ordenes
-        .where((o) =>
-            o.fechaEntrega.month == _mesVisible.month &&
-            o.fechaEntrega.year == _mesVisible.year)
+        .where(
+          (o) =>
+              o.fechaEntrega.month == _mesVisible.month &&
+              o.fechaEntrega.year == _mesVisible.year,
+        )
         .map((o) {
-      final codigoCorto = o.numOrden.length > 8
-          ? o.numOrden.substring(0, 8).toUpperCase()
-          : o.numOrden.toUpperCase();
-      return _EntregaReal(
-        fecha: o.fechaEntrega,
-        numOrden: codigoCorto,
-        estado: _mapEstado(o.idEstado),
-      );
-    }).toList()
+          final codigoCorto = o.numOrden.length > 8
+              ? o.numOrden.substring(0, 8).toUpperCase()
+              : o.numOrden.toUpperCase();
+          return _EntregaReal(
+            fecha: o.fechaEntrega,
+            numOrden: codigoCorto,
+            estado: _mapEstado(o.idEstado),
+          );
+        })
+        .toList()
       ..sort((a, b) => a.fecha.compareTo(b.fecha));
   }
 

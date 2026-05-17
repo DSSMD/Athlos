@@ -1,0 +1,110 @@
+// lib/domain/models/inventario_item_model.dart
+import 'dart:convert';
+
+enum StockState { ok, alerta, bajo, critico }
+
+
+
+class InventarioItemModel {
+  const InventarioItemModel({
+    required this.id,
+    required this.nombre,
+    required this.nombreCategoria, 
+    required this.stockActual,
+    required this.stockMinimo,
+    required this.unidad,
+    required this.costoUnitario,
+    required this.activo,
+    this.atributosTecnicosJson,
+  });
+
+  final String id;
+  final String nombre;
+  final String nombreCategoria; 
+  final double stockActual;
+  final double stockMinimo;
+  final String unidad;
+  final double costoUnitario;
+  final String? atributosTecnicosJson;
+  final bool activo;
+
+  /// Código presentacional generado desde el UUID — no persiste en BD.
+  String get codigo => id.substring(0, 8).toUpperCase();
+
+  /// True si el insumo tiene atributos técnicos jsonb definidos.
+  bool get dimensionable => atributosTecnicosJson != null;
+
+  double get valorTotal => stockActual * costoUnitario;
+
+  double get nivelPorcentaje =>
+      stockMinimo == 0 ? 100.0 : (stockActual / stockMinimo) * 100;
+
+  StockState get estado {
+    final n = nivelPorcentaje;
+    if (n < 25) return StockState.critico;
+    if (n < 50) return StockState.bajo;
+    if (n < 100) return StockState.alerta;
+    return StockState.ok;
+  }
+
+  factory InventarioItemModel.fromJson(Map<String, dynamic> json) {
+    // Extraemos el nombre de la unidad del objeto anidado
+    // Supabase devuelve la relación como un objeto o una lista
+    final unidadData = json['unidad_medida'];
+    String nombreUnidad = 'N/A';
+
+    // 2. Extraemos el texto "nom_unidad"
+    if (unidadData != null) {
+      if (unidadData is Map) {
+        nombreUnidad = unidadData['nom_unidad']?.toString() ?? 'N/A';
+      } else if (unidadData is List && unidadData.isNotEmpty) {
+        nombreUnidad = unidadData[0]['nom_unidad']?.toString() ?? 'N/A';
+      }
+    }
+
+    final catData = json['categoria_insumo'];
+    String nombreCategoria = 'Sin categoría';
+
+    if (catData != null) {
+      if (catData is Map) {
+        nombreCategoria =
+            catData['nombre_categoria']?.toString() ?? 'Sin categoría';
+      } else if (catData is List && catData.isNotEmpty) {
+        nombreCategoria =
+            catData[0]['nombre_categoria']?.toString() ?? 'Sin categoría';
+      }
+    }
+    return InventarioItemModel(
+      id: json['id_insumo'] ?? '',
+      nombre: (json['nombre'] ?? '') as String,
+      stockActual: json['stock_actual'] != null
+          ? double.tryParse(json['stock_actual'].toString()) ?? 0.0
+          : 0.0,
+      stockMinimo: json['stock_minimo'] != null
+          ? double.tryParse(json['stock_minimo'].toString()) ?? 0.0
+          : 0.0,
+      unidad: nombreUnidad,
+      costoUnitario: json['costo_unitario'] != null
+          ? double.tryParse(json['costo_unitario'].toString()) ?? 0.0
+          : 0.0,
+      atributosTecnicosJson: json['atributos_tecnicos'] != null
+          ? jsonEncode(json['atributos_tecnicos'])
+          : null,
+      activo: (json['activo'] as bool?) ?? true,
+      nombreCategoria: nombreCategoria,
+    );
+  }
+
+  /// Serializa solo los campos modificables, alineados con las columnas reales
+  /// de la tabla `insumo`. No incluye id_insumo (auto UUID) ni activo (default).
+  Map<String, dynamic> toJson() {
+    return {
+      'nombre': nombre,
+      'stock_actual': stockActual,
+      'stock_minimo': stockMinimo,
+      'costo_unitario': costoUnitario,
+      if (atributosTecnicosJson != null)
+        'atributos_tecnicos': jsonDecode(atributosTecnicosJson!),
+    };
+  }
+}

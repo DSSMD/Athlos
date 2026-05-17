@@ -10,11 +10,15 @@ import 'package:workspace/presentation/providers/orden_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../../theme/breakpoints.dart';
 
 // Widgets compartidos (reutilizables entre módulos)
+import '../../widgets/shared/compact_new_button.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/filter_chips.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
 
 // Widgets específicos de usuarios (KpiCard — se comparte sin mover por ahora)
@@ -90,138 +94,149 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
         child: Text('Error: $error', style: const TextStyle(color: Colors.red)),
       ),
       data: (listaDeOrdenesReales) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 900;
+        // Migrated to AppBreakpoints.mobile (1100). Was previously: 900.
+        final isMobile = context.isMobile;
 
-            // Filtrado
-            final filteredOrders = listaDeOrdenesReales.where((o) {
-              if (_selectedFilter == 0) return true;
-              return o.idEstado == _selectedFilter;
-            }).toList();
+        // Filtrado
+        final filteredOrders = listaDeOrdenesReales.where((o) {
+          if (_selectedFilter == 0) return true;
+          return o.idEstado == _selectedFilter;
+        }).toList();
 
-            // Paginación
-            final totalItems = filteredOrders.length;
-            final totalPages = totalItems == 0
-                ? 1
-                : (totalItems / _itemsPerPage).ceil();
+        // Paginación
+        final totalItems = filteredOrders.length;
+        final totalPages = totalItems == 0
+            ? 1
+            : (totalItems / _itemsPerPage).ceil();
 
-            final paginatedOrders = isMobile
-                ? filteredOrders.take(_currentPage * _itemsPerPage).toList()
-                : filteredOrders
-                      .skip((_currentPage - 1) * _itemsPerPage)
-                      .take(_itemsPerPage)
-                      .toList();
+        final paginatedOrders = isMobile
+            ? filteredOrders.take(_currentPage * _itemsPerPage).toList()
+            : filteredOrders
+                  .skip((_currentPage - 1) * _itemsPerPage)
+                  .take(_itemsPerPage)
+                  .toList();
 
-            return Column(
-              children: [
-                StickyTopbar(
-                  isMobile: isMobile,
-                  title: 'Órdenes',
-                  searchHint: 'Buscar orden, cliente...',
-                  searchController: _searchController,
-                  onSearchChanged: (_) => setState(() => _currentPage = 1),
-                  newButtonLabelMobile: 'Nueva',
-                  newButtonLabelDesktop: 'Nueva orden',
-                  onNewPressed: () {
+        return Column(
+          children: [
+            if (isMobile)
+              MobileScreenHeader(
+                title: 'Órdenes',
+                trailing: CompactNewButton(
+                  label: 'Nueva',
+                  onPressed: () {
                     setState(() => _creandoOrden = true);
                   },
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(
-                      isMobile ? AppSpacing.lg : AppSpacing.xl2,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _KpiRow(
-                          isMobile: isMobile,
-                          pendientes: listaDeOrdenesReales
-                              .where((o) => o.idEstado == 1)
-                              .length,
-                          enProduccion: listaDeOrdenesReales
-                              .where((o) => o.idEstado == 2)
-                              .length,
-                          totalVentas: listaDeOrdenesReales
-                              .fold<double>(0, (sum, o) => sum + o.costoTotal)
-                              .toInt(),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-
-                        FilterChips(
-                          labels: const [
-                            'Todas',
-                            'Pendientes',
-                            'Producción',
-                            'Entregadas',
-                            'Canceladas',
-                          ],
-                          counts: [
-                            listaDeOrdenesReales.length,
-                            listaDeOrdenesReales
-                                .where((o) => o.idEstado == 1)
-                                .length,
-                            listaDeOrdenesReales
-                                .where((o) => o.idEstado == 2)
-                                .length,
-                            listaDeOrdenesReales
-                                .where((o) => o.idEstado == 3)
-                                .length,
-                            listaDeOrdenesReales
-                                .where((o) => o.idEstado == 4)
-                                .length,
-                          ],
-                          selected: _selectedFilter,
-                          onChanged: (i) => setState(() {
-                            _selectedFilter = i;
-                            _currentPage = 1;
-                          }),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        if (paginatedOrders.isEmpty)
-                          const EmptyState(
-                            icon: Icons.inbox_outlined,
-                            title: 'No se encontraron órdenes',
-                            subtitle:
-                                'Probá con otro filtro o creá una nueva orden.',
-                          )
-                        else if (isMobile)
-                          _MobileList(
-                            orders: paginatedOrders,
-                            onVerPressed: _abrirDetalle,
-                          )
-                        else
-                          _DesktopTable(
-                            orders: paginatedOrders,
-                            onVerPressed: _abrirDetalle,
-                          ),
-
-                        const SizedBox(height: AppSpacing.xl),
-
-                        if (isMobile)
-                          LoadMoreButton(
-                            hasMore: _currentPage < totalPages,
-                            onPressed: () => setState(() => _currentPage++),
-                          )
-                        else
-                          DesktopPagination(
-                            currentPage: _currentPage,
-                            totalPages: totalPages,
-                            totalItems: totalItems,
-                            itemsPerPage: _itemsPerPage,
-                            onPageChanged: (page) =>
-                                setState(() => _currentPage = page),
-                            recordsLabel: 'órdenes',
-                          ),
-                      ],
-                    ),
-                  ),
+                bottom: SearchInput(
+                  hintText: 'Buscar orden, cliente...',
+                  controller: _searchController,
+                  onChanged: (_) => setState(() => _currentPage = 1),
                 ),
-              ],
-            );
-          },
+              )
+            else
+              StickyTopbar(
+                title: 'Órdenes',
+                searchHint: 'Buscar orden, cliente...',
+                searchController: _searchController,
+                onSearchChanged: (_) => setState(() => _currentPage = 1),
+                newButtonLabelDesktop: 'Nueva orden',
+                onNewPressed: () {
+                  setState(() => _creandoOrden = true);
+                },
+              ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(
+                  isMobile ? AppSpacing.lg : AppSpacing.xl2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _KpiRow(
+                      isMobile: isMobile,
+                      pendientes: listaDeOrdenesReales
+                          .where((o) => o.idEstado == 1)
+                          .length,
+                      enProduccion: listaDeOrdenesReales
+                          .where((o) => o.idEstado == 2)
+                          .length,
+                      totalVentas: listaDeOrdenesReales
+                          .fold<double>(0, (sum, o) => sum + o.costoTotal)
+                          .toInt(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    FilterChips(
+                      labels: const [
+                        'Todas',
+                        'Pendientes',
+                        'Producción',
+                        'Entregadas',
+                        'Canceladas',
+                      ],
+                      counts: [
+                        listaDeOrdenesReales.length,
+                        listaDeOrdenesReales
+                            .where((o) => o.idEstado == 1)
+                            .length,
+                        listaDeOrdenesReales
+                            .where((o) => o.idEstado == 2)
+                            .length,
+                        listaDeOrdenesReales
+                            .where((o) => o.idEstado == 3)
+                            .length,
+                        listaDeOrdenesReales
+                            .where((o) => o.idEstado == 4)
+                            .length,
+                      ],
+                      selected: _selectedFilter,
+                      onChanged: (i) => setState(() {
+                        _selectedFilter = i;
+                        _currentPage = 1;
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    if (paginatedOrders.isEmpty)
+                      const EmptyState(
+                        icon: Icons.inbox_outlined,
+                        title: 'No se encontraron órdenes',
+                        subtitle:
+                            'Probá con otro filtro o creá una nueva orden.',
+                      )
+                    else if (isMobile)
+                      _MobileList(
+                        orders: paginatedOrders,
+                        onVerPressed: _abrirDetalle,
+                      )
+                    else
+                      _DesktopTable(
+                        orders: paginatedOrders,
+                        onVerPressed: _abrirDetalle,
+                      ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    if (isMobile)
+                      LoadMoreButton(
+                        hasMore: _currentPage < totalPages,
+                        onPressed: () => setState(() => _currentPage++),
+                      )
+                    else
+                      DesktopPagination(
+                        currentPage: _currentPage,
+                        totalPages: totalPages,
+                        totalItems: totalItems,
+                        itemsPerPage: _itemsPerPage,
+                        onPageChanged: (page) =>
+                            setState(() => _currentPage = page),
+                        recordsLabel: 'órdenes',
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -704,3 +719,4 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+

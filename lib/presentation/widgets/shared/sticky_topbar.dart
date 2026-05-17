@@ -1,4 +1,15 @@
-// lib/presentation/widgets/shared/sticky_topbar.dart
+// ============================================================================
+// sticky_topbar.dart
+// Ubicación: lib/presentation/widgets/shared/sticky_topbar.dart
+// Descripción: Barra superior sticky para pantallas de listado en DESKTOP
+// (Usuarios, Clientes, Órdenes, etc.). Contiene título + buscador + botón
+// "nuevo".
+//
+// IMPORTANTE: este widget es solo desktop. El header mobile lo unifica
+// `MobileScreenHeader` (con search/tabs vía su `bottom` slot) — esa es la
+// convención del design system. Si necesitás un header mobile, usá
+// MobileScreenHeader, NO este.
+// ============================================================================
 
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
@@ -9,7 +20,6 @@ import 'search_input.dart';
 class StickyTopbar extends StatelessWidget {
   const StickyTopbar({
     super.key,
-    required this.isMobile,
     required this.title,
     required this.searchHint,
     required this.searchController,
@@ -19,7 +29,6 @@ class StickyTopbar extends StatelessWidget {
     this.onNewPressed,
   });
 
-  final bool isMobile;
   final String title;
   final String searchHint;
   final TextEditingController searchController;
@@ -40,9 +49,9 @@ class StickyTopbar extends StatelessWidget {
         color: AppColors.background,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? AppSpacing.lg : AppSpacing.xl2,
-        vertical: isMobile ? AppSpacing.lg : AppSpacing.xl,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl2,
+        vertical: AppSpacing.xl,
       ),
       child: isMobile ? _buildMobile() : _buildDesktop(),
     );

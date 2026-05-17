@@ -157,3 +157,31 @@ class OrdenModel {
     );
   }
 }
+
+/// Método copyWith útil para cuando queramos cambiar solo el estado de la orden en la UI
+/*OrdenModel copyWith({
+    String? numOrden,
+    String? clienteNombre,
+    DateTime? fechaOrden,
+    DateTime? fechaEntrega,
+    double? costoTotal,
+    String? estadoOrden,
+    String? estadoPago,
+    String? producto,
+    int? cantidad,
+  }) {
+    return OrdenModel(
+      numOrden: numOrden ?? this.numOrden,
+      clienteNombre: clienteNombre ?? this.clienteNombre,
+      fechaOrden: fechaOrden ?? this.fechaOrden,
+      fechaEntrega: fechaEntrega ?? this.fechaEntrega,
+      costoTotal: costoTotal ?? this.costoTotal,
+      estadoOrden: estadoOrden ?? this.estadoOrden,
+      estadoPago: estadoPago ?? this.estadoPago,
+      producto: producto ?? this.producto,
+      cantidad: cantidad ?? this.cantidad,
+      idCliente: idCliente ?? this.idCliente,
+      idEstado: idEstado ?? this.idEstado,
+      idEstadoPago: idEstadoPago ?? this.idEstadoPago,
+    );
+  }*/

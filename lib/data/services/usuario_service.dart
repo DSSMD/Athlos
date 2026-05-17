@@ -41,7 +41,7 @@ class UsuarioService {
       final session = _supabase.auth.currentSession;
       // Le "gritamos" a la función en la nube de Supabase que haga el trabajo
       final response = await _supabase.functions.invoke(
-        'admin_crear_usuario', 
+        'admin_crear_usuario',
         headers: {
           if (session != null) 'Authorization': 'Bearer ${session.accessToken}',
         },
@@ -58,8 +58,8 @@ class UsuarioService {
       if (response.status != 200 && response.status != 201) {
         throw Exception('Error del servidor: ${response.data}');
       }
-      } on FunctionException catch (e) {
-      // Si el error viene de Supabase (ej: ya existe el correo), 
+    } on FunctionException {
+      // Si el error viene de Supabase (ej: ya existe el correo),
       // lo pasamos tal cual hacia la interfaz visual.
       rethrow;
     } catch (e) {

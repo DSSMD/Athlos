@@ -1,19 +1,31 @@
+// ============================================================================
+// lib/presentation/providers/catalogos_provider.dart
+// ============================================================================
+// Providers de catálogos compartidos (tipos de prenda, tallas).
+//
+// DECISIÓN: FutureProvider SIN autoDispose.
+// RAZÓN: catálogos se cachean para toda la sesión, evita llamadas redundantes
+// cada vez que se abre un dropdown.
+// CAMBIAR: si necesitan refresh manual (admin agregó un tipo y quiere verlo
+// sin recargar), usar ref.invalidate(tiposPrendaProvider) desde la UI.
+// ============================================================================
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../data/services/catalogo_service.dart';
+import '../../domain/models/insumo_model.dart';
+import '../../domain/models/talla_model.dart';
 import '../../domain/models/tipo_prenda_model.dart';
 import '../../domain/models/conjunto_model.dart';
 import '../../domain/models/plantilla_model.dart';
 
-// 1. Proveedor del servicio
 final catalogoServiceProvider = Provider<CatalogoService>((ref) {
   return CatalogoService();
 });
 
-// 2. Proveedor de la lista (FutureProvider porque es de solo lectura)
 final tiposPrendaProvider = FutureProvider<List<TipoPrendaModel>>((ref) async {
   final service = ref.read(catalogoServiceProvider);
-  return await service.obtenerTiposPrenda();
+  return service.obtenerTiposPrenda();
 });
 
 // (Añade esto al final de tu catalogos_provider.dart)
