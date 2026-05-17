@@ -1,9 +1,16 @@
+import 'detalle_orden_model.dart';
+
+/// LEGACY: ítem aplanado del esquema viejo (desglose_tallas).
+/// Mantenido en el modelo para no romper la UI que aún lo consume.
+/// En el flujo nuevo (fromJson), esta lista queda vacía — la UI debe migrar
+/// a `detalleOrden` (la estructura nueva).
 class TallaDetalle {
   final int idTipoPrenda;
   final String nombrePrenda;
   final String nombreTalla;
   final int cantidad;
   final double precioUnitario;
+
   TallaDetalle({
     required this.idTipoPrenda,
     required this.nombrePrenda,
@@ -16,7 +23,7 @@ class TallaDetalle {
 class OrdenModel {
   final String numOrden;
 
-  // Información del Cliente
+  // ───── Información del Cliente ─────
   final String idCliente;
   final String? clienteCi;
   final String clienteNombre;
@@ -24,23 +31,42 @@ class OrdenModel {
   final String? clienteEmail;
   final String? clienteDireccion;
 
-  // Estados
+  // ───── Estados ─────
   final int idEstado;
   final String estadoOrden;
-  final int idEstadoPago;
+  final int? idEstadoPago;
   final String estadoPago;
 
+  // ───── Fechas y costos ─────
   final DateTime fechaOrden;
   final DateTime fechaEntrega;
+  final double? tiempoProcesamientoEstimado;
   final double costoTotal;
+
+  // ───── Resumen denormalizado (LEGACY: derivado en fromJson para listas) ─────
+  /// LEGACY: resumen de productos para listas (ej: "Deportivo (10), Polera (8)").
+  /// Se calcula derivado de detalleOrden en fromJson.
   final String producto;
+
+  /// LEGACY: cantidad total a través de todos los items.
+  /// Se calcula derivado de detalleOrden en fromJson.
   final int cantidad;
 
-  // Lista de tallas y notas
+  // ───── Items (esquema nuevo) ─────
+  /// Items de la orden mapeados desde detalle_orden con sus tallas y
+  /// composiciones internas (para conjuntos).
+  final List<DetalleOrden> detalleOrden;
+
+  // ───── LEGACY (esquema viejo, queda vacío en flujo nuevo) ─────
+  /// LEGACY: lista plana de tallas del esquema viejo (desglose_tallas).
+  /// Queda vacía en el flujo nuevo; la UI debe migrar a `detalleOrden`.
   final List<TallaDetalle> desgloseTallas;
+
+  // ───── Notas e imagen ─────
   final String notasAdicionales;
 
-  // Imagen de la Ficha Técnica
+  /// Imagen del modelo: ahora viene directo de la columna orden.imagen_modelo
+  /// (antes venía de ficha_tecnica.imagen_modelo, tabla ya inexistente).
   final String? imagenModelo;
 
   OrdenModel({
@@ -50,14 +76,16 @@ class OrdenModel {
     this.clienteTelefono,
     required this.idEstado,
     required this.estadoOrden,
-    required this.idEstadoPago,
+    this.idEstadoPago,
     required this.estadoPago,
     required this.fechaOrden,
     required this.fechaEntrega,
+    this.tiempoProcesamientoEstimado,
     required this.costoTotal,
     required this.producto,
     required this.cantidad,
-    required this.desgloseTallas,
+    this.detalleOrden = const [],
+    this.desgloseTallas = const [],
     this.imagenModelo,
     this.notasAdicionales = '',
     this.clienteEmail,
@@ -66,71 +94,38 @@ class OrdenModel {
   });
 
   factory OrdenModel.fromJson(Map<String, dynamic> json) {
-    // Manejo de Cliente
+    // ─── Cliente ───
     final cliente = json['cliente'] as Map<String, dynamic>?;
     final nombre = cliente?['nom_cliente'] ?? '';
     final apellido = cliente?['apellido_cliente'] ?? '';
 
-    // Manejo de Estados
+    // ─── Estados ───
     final eOrden = json['estado_orden'] as Map<String, dynamic>?;
     final ePago = json['estado_pago'] as Map<String, dynamic>?;
 
-    String productoNombre = 'Sin especificar';
-    String? img;
+    // ─── Items (esquema nuevo) ───
+    // Cuando el service esté reescrito a la nueva query, este array vendrá
+    // poblado con los detalle_orden + sus tallas + composicion_interna.
+    final detalleRaw = json['detalle_orden'] as List<dynamic>? ?? [];
+    final List<DetalleOrden> detalleParsed = detalleRaw
+        .map((d) => DetalleOrden.fromJson(d as Map<String, dynamic>))
+        .toList();
 
-    // Extraemos la imagen de la primera ficha técnica (si la hay)
-    if (json['ficha_tecnica'] != null &&
-        (json['ficha_tecnica'] as List).isNotEmpty) {
-      final ficha = json['ficha_tecnica'][0];
-      final tipo = ficha['tipo_prenda'];
-      productoNombre = tipo?['nombre_prenda'] ?? 'Prenda';
-      img = ficha['imagen_modelo'];
-    }
+    // ─── Resumen derivado (para campos legacy producto y cantidad) ───
+    final int totalCant = detalleParsed.fold(
+      0,
+      (sum, d) => sum + d.tallas.fold(0, (s, t) => s + t.cantidad),
+    );
 
-    int totalCant = 0;
-    List<TallaDetalle> tallasReales = [];
-
-    Map<String, int> conteoProductos = {};
-
-    // Manejo de Tallas
-    if (json['desglose_tallas'] != null) {
-      for (var t in (json['desglose_tallas'] as List)) {
-        int cant = (t['cantidad'] as num).toInt();
-        totalCant += cant;
-
-        int idTipoPrenda = (t['id_tipo_prenda'] as int?) ?? 0;
-        String nombrePrenda = t['tipo_prenda']?['nombre_prenda'] ?? 'Prenda';
-
-        tallasReales.add(
-          TallaDetalle(
-            idTipoPrenda: idTipoPrenda,
-            nombrePrenda: nombrePrenda,
-            nombreTalla: t['tallas']?['nombre_talla'] ?? '?',
-            cantidad: cant,
-            precioUnitario: (t['precio_unitario'] as num).toDouble(),
-          ),
-        );
-
-        conteoProductos[nombrePrenda] =
-            (conteoProductos[nombrePrenda] ?? 0) + cant;
-      }
-    }
-
-    String resumenProductos = productoNombre;
-
-    if (conteoProductos.isNotEmpty) {
-      // Convertimos el mapa en una lista de textos: ["Camisa (2)", "Short (3)"]
-      List<String> listaResumen = conteoProductos.entries
-          .map((e) => '${e.key} (${e.value})')
+    String resumen = 'Sin productos';
+    if (detalleParsed.isNotEmpty) {
+      final lista = detalleParsed
+          .map((d) => '${d.nombreItem} (${d.cantidadTotal})')
           .toList();
-
-      // Lógica para no saturar la fila
-      if (listaResumen.length <= 2) {
-        resumenProductos = listaResumen.join(', ');
+      if (lista.length <= 2) {
+        resumen = lista.join(', ');
       } else {
-        // Si son 3 o más, mostramos los dos primeros y un indicativo
-        resumenProductos =
-            '${listaResumen[0]}, ${listaResumen[1]} y ${listaResumen.length - 2} más...';
+        resumen = '${lista[0]}, ${lista[1]} y ${lista.length - 2} más...';
       }
     }
 
@@ -141,21 +136,23 @@ class OrdenModel {
       clienteTelefono: cliente?['num_telefono'],
       clienteEmail: cliente?['email'],
       clienteDireccion: cliente?['direccion'],
-      clienteCi: cliente?['ci'],
+      // FIX: el schema de Supabase tiene la columna ci_cliente, no ci.
+      // Antes leía cliente?['ci'] y siempre devolvía null.
+      clienteCi: cliente?['ci_cliente'],
       idEstado: json['id_estado'] ?? 0,
       estadoOrden: eOrden?['nombre_estado'] ?? 'Desconocido',
-      idEstadoPago: json['id_estado_pago'] ?? 0,
+      idEstadoPago: (json['id_estado_pago'] as num?)?.toInt(),
       estadoPago: ePago?['nombre_estado'] ?? 'Pendiente',
       fechaOrden: DateTime.parse(json['fecha_orden']),
       fechaEntrega: DateTime.parse(json['fecha_entrega']),
-      costoTotal: (json['costo_total'] as num).toDouble(),
-
-      // 👈 Inyectamos el resumen inteligente aquí:
-      producto: resumenProductos,
-
+      tiempoProcesamientoEstimado:
+          (json['tiempo_procesamiento_estimado'] as num?)?.toDouble(),
+      costoTotal: (json['costo_total'] as num?)?.toDouble() ?? 0.0,
+      producto: resumen,
       cantidad: totalCant,
-      desgloseTallas: tallasReales,
-      imagenModelo: img,
+      detalleOrden: detalleParsed,
+      desgloseTallas: const [], // LEGACY: vacío en el flujo nuevo
+      imagenModelo: json['imagen_modelo'] as String?,
       notasAdicionales: json['notas_adicionales'] ?? '',
     );
   }

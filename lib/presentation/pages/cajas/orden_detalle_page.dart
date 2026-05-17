@@ -35,16 +35,22 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
   void initState() {
     super.initState();
 
-    // ✅ 1. Llenamos la tabla directamente con la PRENDA, TALLA y su PRECIO EXACTO congelado
-    _items = widget.orden.desgloseTallas.map((talla) {
-      return OrdenItem(
-        nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
-        cantidad: talla.cantidad,
-        precioUnitario: talla.precioUnitario,
-      );
+    // Construir items visuales desde detalleOrden (esquema nuevo).
+    // Cada talla de cada detalle = una fila visual con prefix del nombre del ítem
+    // (sea conjunto o plantilla suelta).
+    _items = widget.orden.detalleOrden.expand((detalle) {
+      return detalle.tallas.map((talla) {
+        return OrdenItem(
+          nombre: '${detalle.nombreItem} - Talla ${talla.nombreTalla}',
+          cantidad: talla.cantidad,
+          precioUnitario: detalle.precioUnitario,
+        );
+      });
     }).toList();
 
-    // 🛡️ 2. Fallback de emergencia (Solo si una orden vieja no tiene tallas guardadas)
+    // Fallback de emergencia: si la orden no tiene detalleOrden poblado
+    // (caso degenerado de datos legacy o orden incompleta), mostramos un
+    // solo ítem agregado con el total general.
     if (_items.isEmpty) {
       _items = [
         OrdenItem(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
+import 'package:workspace/presentation/pages/trabajador/trabajador_dashboard_page.dart';
 import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
 import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
@@ -16,6 +17,7 @@ import '../../presentation/layouts/main_layout.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
+import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
@@ -106,7 +108,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _buildPlaceholder('Dashboard'), // 0. Dashboard
             const OrdenPage(),              // 1. Órdenes
             const InventarioPage(),         // 2. Inventario
-            _buildPlaceholder('Producción'),// 3. Producción
+            const ProduccionPage(),// 3. Producción
             const PlantillasPage(),         // 4. Plantillas
             const ConjuntosPage(),          // 5. Conjuntos 💡 (La página real)
             const ClientesPage(),           // 6. Clientes
@@ -127,9 +129,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: [
-            _buildPlaceholder('Dashboard Taller'), // 0. Dashboard
+            const TrabajadorDashboardPage(), // 0. Dashboard
             const InventarioPage(), // 1. Inventario
-            _buildPlaceholder('Producción'), // 2. Producción
+            const ProduccionPage(), // 2. Producción
           ],
           railDestinations: _buildRailFromRole('2'),
           bottomNavItems: _buildBottomFromRole('2'),
