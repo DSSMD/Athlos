@@ -1,9 +1,9 @@
 // lib/presentation/pages/conjuntos/widgets/conjunto_row.dart
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import  '../theme/app_typography.dart';
-import '../../../../domain/models/conjunto_model.dart';
+import '../../../../theme/app_colors.dart';
+import '../../../../theme/app_spacing.dart';
+import  '../../../../theme/app_typography.dart';
+import '../../../../../domain/models/conjunto_model.dart';
 
 class ConjuntoRow extends StatelessWidget {
   final ConjuntoModel conjunto;
@@ -55,7 +55,7 @@ class ConjuntoRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              '${conjunto.precio.toStringAsFixed(2)} Bs.',
+              '${conjunto.precioTotal.toStringAsFixed(2)} Bs.',
               style: AppTypography.body.copyWith(color: AppColors.textPrimary),
             ),
           ),
@@ -87,39 +87,58 @@ class ConjuntoRow extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                offset: const Offset(0, 40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  side: const BorderSide(color: AppColors.border),
-                ),
-                color: AppColors.brandWhite,
+                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                tooltip: 'Acciones',
                 onSelected: (value) {
                   if (value == 'ver') onView();
                   if (value == 'editar') onEdit();
-                  if (value == 'eliminar') onDelete();
+                  if (value == 'estado') onDelete(); // Reutilizamos onDelete como toggle de estado (Soft Delete)
                 },
                 itemBuilder: (context) => [
-                  _buildMenuItem('ver', Icons.visibility_outlined, 'Ver detalle'),
-                  _buildMenuItem('editar', Icons.edit_outlined, 'Editar'),
-                  _buildMenuItem('eliminar', Icons.delete_outline_rounded, 'Eliminar'),
+                  const PopupMenuItem(
+                    value: 'ver',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 18),
+                        SizedBox(width: 8),
+                        Text('Ver Detalles'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'editar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Editar'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'estado',
+                    child: Row(
+                      children: [
+                        Icon(
+                          conjunto.activo ? Icons.block : Icons.check_circle_outline,
+                          size: 18,
+                          color: conjunto.activo ? AppColors.error : AppColors.success,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          conjunto.activo ? 'Desactivar' : 'Activar',
+                          style: TextStyle(
+                            color: conjunto.activo ? AppColors.error : AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String label) {
-    return PopupMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: AppSpacing.md),
-          Text(label, style: AppTypography.small.copyWith(color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -137,7 +156,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(

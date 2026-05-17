@@ -73,6 +73,7 @@ class InventarioService {
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
+      print('🚨 ERROR AL CARGAR UNIDADES DROPDOWN: $e');
       throw Exception('Error al cargar opciones de unidades');
     }
   }

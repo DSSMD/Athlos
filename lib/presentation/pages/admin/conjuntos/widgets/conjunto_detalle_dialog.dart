@@ -1,10 +1,10 @@
 // lib/presentation/pages/conjuntos/widgets/conjunto_detalle_dialog.dart
 
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
-import  '../../theme/app_spacing.dart';
-import '../../theme/app_typography.dart';
-import '../../../../domain/models/conjunto_model.dart';
+import '../../../../theme/app_colors.dart';
+import  '../../../../theme/app_spacing.dart';
+import '../../../../theme/app_typography.dart';
+import '../../../../../domain/models/conjunto_model.dart';
 
 class ConjuntoDetalleDialog extends StatelessWidget {
   final ConjuntoModel conjunto;
@@ -51,7 +51,7 @@ class ConjuntoDetalleDialog extends StatelessWidget {
               
               Row(
                 children: [
-                  Expanded(child: _buildInfoSection('PRECIO TOTAL', '${conjunto.precio.toStringAsFixed(2)} Bs.', isHighlight: true)),
+                  Expanded(child: _buildInfoSection('PRECIO TOTAL', '${conjunto.precioTotal.toStringAsFixed(2)} Bs.', isHighlight: true)),
                   Expanded(child: _buildInfoSection('CREADO EL', '${conjunto.fechaCreacion.day}/${conjunto.fechaCreacion.month}/${conjunto.fechaCreacion.year}')),
                 ],
               ),
@@ -74,13 +74,13 @@ class ConjuntoDetalleDialog extends StatelessWidget {
                   : ListView.separated(
                       shrinkWrap: true,
                       itemCount: conjunto.plantillas.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final item = conjunto.plantillas[index];
                         return _PlantillaDetailCard(
                           nombre: item.nombrePlantilla,
                           cantidad: item.cantidad,
-                          precioUnit: item.precioUnitario,
+                          precioUnit: item.precioPlantilla,
                           subtotal: item.subtotal,
                         );
                       },
@@ -131,7 +131,7 @@ class ConjuntoDetalleDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.textSecondary.withOpacity(0.05),
+        color: AppColors.textSecondary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Center(
@@ -170,7 +170,7 @@ class _PlantillaDetailCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: AppColors.primary500.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.primary500.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Text('$cantidad', style: TextStyle(color: AppColors.primary500, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -200,7 +200,7 @@ class _StatusChip extends StatelessWidget {
     final color = activo ? const Color(0xFF10B981) : const Color(0xFFEF4444);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
       child: Text(
         activo ? 'ACTIVO' : 'INACTIVO',
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),

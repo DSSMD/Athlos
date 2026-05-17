@@ -1,21 +1,25 @@
+// lib/presentation/pages/admin/conjuntos/conjuntos_page.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // NECESARIO para detectar la tecla ESC
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_typography.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_spacing.dart';
+import '../../../theme/app_typography.dart';
 
-import '../../widgets/shared/sticky_topbar.dart';
-import '../../widgets/shared/filter_chips.dart';
-import '../../widgets/shared/pagination.dart';
-import '../../widgets/shared/empty_state.dart';
-import '../../widgets/users/kpi_card.dart';
+import '../../../widgets/shared/sticky_topbar.dart';
+import '../../../widgets/shared/filter_chips.dart';
+import '../../../widgets/shared/pagination.dart';
+import '../../../widgets/shared/empty_state.dart';
+import '../../../widgets/users/kpi_card.dart';
 
-import '../../../domain/models/conjunto_model.dart';
-import '../../widgets/conjunto_row.dart';
-import '../../components/conjuntos/conjunto_detalle_dialog.dart';
-import '../../components/conjuntos/conjunto_form_dialog.dart';
+import 'widgets/conjunto_row.dart';
+import 'widgets/conjunto_detalle_dialog.dart';
+import 'widgets/conjunto_form_dialog.dart';
+
+import '../../../../domain/models/conjunto_model.dart';
+import '../../../../presentation/providers/conjunto_provider.dart';
 
 class ConjuntosPage extends ConsumerStatefulWidget {
   const ConjuntosPage({super.key});
@@ -30,7 +34,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
 
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
-  
+
   int _selectedFilter = 0;
 
   @override
@@ -55,25 +59,22 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
 
     return resultado.where((c) {
       return c.nombre.toLowerCase().contains(query) ||
-             c.descripcion.toLowerCase().contains(query);
+          c.descripcion.toLowerCase().contains(query);
     }).toList();
   }
 
   // ─────────────────────────────────────────────────────────── ACCIONES ──
 
-  // Función envoltorio para cerrar con ESC
   void _mostrarDialogoConEsc(Widget dialog) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => CallbackShortcuts(
         bindings: <ShortcutActivator, VoidCallback>{
-          const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.pop(context),
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              Navigator.pop(context),
         },
-        child: Focus(
-          autofocus: true,
-          child: dialog,
-        ),
+        child: Focus(autofocus: true, child: dialog),
       ),
     );
   }
@@ -97,24 +98,52 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
         title: Text('¿Eliminar Conjunto?', style: AppTypography.h3),
-        content: Text('¿Estás seguro de eliminar "${conjunto.nombre}"? Esta acción no se puede deshacer.'),
+        content: Text(
+          '¿Estás seguro de eliminar "${conjunto.nombre}"? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, elevation: 0),
-            onPressed: () {
-              // TODO: BACKEND - Lógica para eliminar el conjunto
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              elevation: 0,
+            ),
+    onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('"${conjunto.nombre}" eliminado'), backgroundColor: AppColors.primary500)
-              );
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref
+                    .read(conjuntoProvider.notifier)
+                    .eliminarConjunto(conjunto.id);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('"${conjunto.nombre}" eliminado'),
+                    backgroundColor: AppColors.primary500,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error al eliminar: $e'),
+                    backgroundColor: Colors.red.shade700,
+                  ),
+                );
+              }
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -125,29 +154,47 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final asyncConjuntos = ref.watch(conjuntoProvider);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < _mobileBreakpoint;
-        
-        // TODO: BACKEND - Cambiar por ref.watch(conjuntosProvider)
-        final List<ConjuntoModel> conjuntosMock = [
-          ConjuntoModel(
-            id: '1',
-            nombre: 'Uniforme Escolar A',
-            descripcion: 'Combo Primaria',
-            precio: 120.0,
-            activo: true,
-            fechaCreacion: DateTime.now(),
-            plantillas: [],
+
+        return asyncConjuntos.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: AppSpacing.md),
+                Text('Error al cargar conjuntos', style: AppTypography.h3),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  error.toString(),
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton.icon(
+                  onPressed: () =>
+                      ref.read(conjuntoProvider.notifier).refresh(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
           ),
-        ];
-
-        final filteredConjuntos = _aplicarBusquedaYFiltro(conjuntosMock);
-
-        return _buildListado(
-          isMobile: isMobile,
-          filteredConjuntos: filteredConjuntos,
-          allConjuntos: conjuntosMock,
+          data: (allConjuntos) {
+            final filteredConjuntos = _aplicarBusquedaYFiltro(allConjuntos);
+            return _buildListado(
+              isMobile: isMobile,
+              filteredConjuntos: filteredConjuntos,
+              allConjuntos: allConjuntos,
+            );
+          },
         );
       },
     );
@@ -159,37 +206,49 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
     required List<ConjuntoModel> allConjuntos,
   }) {
     final totalItems = filteredConjuntos.length;
-    final totalPages = totalItems == 0 ? 1 : (totalItems / _itemsPerPage).ceil();
+    final totalPages = totalItems == 0
+        ? 1
+        : (totalItems / _itemsPerPage).ceil();
 
     final paginatedConjuntos = isMobile
         ? filteredConjuntos.take(_currentPage * _itemsPerPage).toList()
         : filteredConjuntos
-            .skip((_currentPage - 1) * _itemsPerPage)
-            .take(_itemsPerPage)
-            .toList();
+              .skip((_currentPage - 1) * _itemsPerPage)
+              .take(_itemsPerPage)
+              .toList();
 
     final activosCount = allConjuntos.where((c) => c.activo).length;
     final inactivosCount = allConjuntos.where((c) => !c.activo).length;
 
+    // Precio promedio calculado dinámicamente
+    final precioPromedio = allConjuntos.isEmpty
+        ? 0.0
+        : allConjuntos.fold<double>(
+                0.0, (sum, c) => sum + c.precioTotal) /
+            allConjuntos.length;
+
     return Column(
       children: [
-        StickyTopbar(
-          isMobile: isMobile,
-          title: 'Conjuntos',
-          searchHint: 'Buscar por nombre o descripción...',
-          searchController: _searchController,
-          onSearchChanged: (_) => setState(() => _currentPage = 1),
-          newButtonLabelMobile: 'Nuevo',
-          newButtonLabelDesktop: 'Nuevo conjunto',
-          onNewPressed: _abrirCrear,
-        ),
+        if (!isMobile)
+          StickyTopbar(
+            title: 'Conjuntos',
+            searchHint: 'Buscar por nombre o descripción...',
+            searchController: _searchController,
+            onSearchChanged: (_) => setState(() => _currentPage = 1),
+            newButtonLabelDesktop: 'Nuevo conjunto',
+            onNewPressed: _abrirCrear,
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _KpiRow(isMobile: isMobile, allConjuntos: allConjuntos),
+                _KpiRow(
+                  isMobile: isMobile,
+                  allConjuntos: allConjuntos,
+                  precioPromedio: precioPromedio,
+                ),
                 const SizedBox(height: AppSpacing.xl),
 
                 FilterChips(
@@ -212,7 +271,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
                   )
                 else if (isMobile)
                   _MobileList(
-                    conjuntos: paginatedConjuntos, 
+                    conjuntos: paginatedConjuntos,
                     onView: _abrirDetalle,
                     onEdit: _abrirEditar,
                   )
@@ -221,7 +280,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
                     conjuntos: paginatedConjuntos,
                     onView: _abrirDetalle,
                     onEdit: _abrirEditar,
-                    onDelete: _confirmarEliminacion, // CONECTADO AQUÍ
+                    onDelete: _confirmarEliminacion,
                   ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -237,7 +296,8 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
                     totalPages: totalPages,
                     totalItems: totalItems,
                     itemsPerPage: _itemsPerPage,
-                    onPageChanged: (page) => setState(() => _currentPage = page),
+                    onPageChanged: (page) =>
+                        setState(() => _currentPage = page),
                     recordsLabel: 'conjuntos',
                   ),
               ],
@@ -252,28 +312,64 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
 // ─────────────────────────────────────────────────────────────── KPI ROW ──
 
 class _KpiRow extends StatelessWidget {
-  const _KpiRow({required this.isMobile, required this.allConjuntos});
+  const _KpiRow({
+    required this.isMobile,
+    required this.allConjuntos,
+    required this.precioPromedio,
+  });
   final bool isMobile;
   final List<ConjuntoModel> allConjuntos;
+  final double precioPromedio;
 
   @override
   Widget build(BuildContext context) {
     final total = allConjuntos.length;
     final activos = allConjuntos.where((c) => c.activo).length;
-    
+
     final kpis = [
-      KpiCard(value: '$total', label: 'Total conjuntos', description: 'Registrados'),
-      KpiCard(value: '$activos', label: 'Activos', description: 'En catálogo', valueColor: AppColors.success),
-      const KpiCard(value: '15', label: 'Nuevos este mes', description: 'Tendencia', valueColor: AppColors.info),
-      const KpiCard(value: 'Bs. 145.0', label: 'Precio promedio', description: 'Estimado', valueColor: AppColors.warning),
+      KpiCard(
+        value: '$total',
+        label: 'Total conjuntos',
+        description: 'Registrados',
+      ),
+      KpiCard(
+        value: '$activos',
+        label: 'Activos',
+        description: 'En catálogo',
+        valueColor: AppColors.success,
+      ),
+      KpiCard(
+        value: '${allConjuntos.fold<int>(0, (sum, c) => sum + c.plantillas.length)}',
+        label: 'Plantillas totales',
+        description: 'En todos los conjuntos',
+        valueColor: AppColors.info,
+      ),
+      KpiCard(
+        value: 'Bs. ${precioPromedio.toStringAsFixed(2)}',
+        label: 'Precio promedio',
+        description: 'Calculado automático',
+        valueColor: AppColors.warning,
+      ),
     ];
 
     if (isMobile) {
       return Column(
         children: [
-          Row(children: [Expanded(child: kpis[0]), const SizedBox(width: AppSpacing.sm), Expanded(child: kpis[1])]),
+          Row(
+            children: [
+              Expanded(child: kpis[0]),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: kpis[1]),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Row(children: [Expanded(child: kpis[2]), const SizedBox(width: AppSpacing.sm), Expanded(child: kpis[3])]),
+          Row(
+            children: [
+              Expanded(child: kpis[2]),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: kpis[3]),
+            ],
+          ),
         ],
       );
     }
@@ -293,16 +389,16 @@ class _KpiRow extends StatelessWidget {
 
 class _DesktopTable extends StatelessWidget {
   const _DesktopTable({
-    required this.conjuntos, 
-    required this.onView, 
+    required this.conjuntos,
+    required this.onView,
     required this.onEdit,
-    required this.onDelete, // REQUERIDO AHORA
+    required this.onDelete,
   });
 
   final List<ConjuntoModel> conjuntos;
   final void Function(ConjuntoModel) onView;
   final void Function(ConjuntoModel) onEdit;
-  final void Function(ConjuntoModel) onDelete; // DEFINIDO
+  final void Function(ConjuntoModel) onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +429,7 @@ class _DesktopTable extends StatelessWidget {
               conjunto: conjuntos[i],
               onView: () => onView(conjuntos[i]),
               onEdit: () => onEdit(conjuntos[i]),
-              onDelete: () => onDelete(conjuntos[i]), // PASADO AL WIDGET HIJO
+              onDelete: () => onDelete(conjuntos[i]),
             ),
             if (i < conjuntos.length - 1) const Divider(height: 1),
           ],
@@ -344,14 +440,24 @@ class _DesktopTable extends StatelessWidget {
 
   Widget _col(String label, int flex) => Expanded(
     flex: flex,
-    child: Text(label, style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+    child: Text(
+      label,
+      style: AppTypography.caption.copyWith(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textMuted,
+      ),
+    ),
   );
 }
 
 // ────────────────────────────────────────────────────────── MOBILE LIST ──
 
 class _MobileList extends StatelessWidget {
-  const _MobileList({required this.conjuntos, required this.onView, required this.onEdit});
+  const _MobileList({
+    required this.conjuntos,
+    required this.onView,
+    required this.onEdit,
+  });
   final List<ConjuntoModel> conjuntos;
   final void Function(ConjuntoModel) onView;
   final void Function(ConjuntoModel) onEdit;
@@ -365,7 +471,9 @@ class _MobileList extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
             child: ListTile(
               title: Text(conjunto.nombre),
-              subtitle: Text('${conjunto.precio} Bs.'),
+              subtitle: Text(
+                '${conjunto.precioTotal.toStringAsFixed(2)} Bs. · ${conjunto.plantillas.length} plantillas',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => onView(conjunto),
             ),

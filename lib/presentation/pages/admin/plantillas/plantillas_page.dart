@@ -584,28 +584,48 @@ class _DesktopRow extends StatelessWidget {
           // Acciones
           Expanded(
             flex: 2,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  onPressed: onEditar,
-                  tooltip: 'Editar',
-                  color: AppColors.textSecondary,
-                ),
-                TextButton(
-                  onPressed: onToggleActiva,
-                  child: Text(
-                    plantilla.activa ? 'Desactivar' : 'Activar',
-                    style: AppTypography.small.copyWith(
-                      color: plantilla.activa
-                          ? AppColors.error
-                          : AppColors.success,
-                      fontWeight: FontWeight.w600,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                tooltip: 'Acciones',
+                onSelected: (value) {
+                  if (value == 'editar' && onEditar != null) onEditar!();
+                  if (value == 'estado' && onToggleActiva != null) onToggleActiva!();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'editar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Editar'),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'estado',
+                    child: Row(
+                      children: [
+                        Icon(
+                          plantilla.activa ? Icons.block : Icons.check_circle_outline,
+                          size: 18,
+                          color: plantilla.activa ? AppColors.error : AppColors.success,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          plantilla.activa ? 'Desactivar' : 'Activar',
+                          style: TextStyle(
+                            color: plantilla.activa ? AppColors.error : AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -708,34 +728,46 @@ class _MobileCard extends StatelessWidget {
               _TipoBadge(label: plantilla.nombreTipoPrenda(tiposPrenda)),
               const SizedBox(width: AppSpacing.md),
               _EstadoIndicator(activa: plantilla.activa),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onEditar,
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('Editar'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onToggleActiva,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: plantilla.activa
-                        ? AppColors.error
-                        : AppColors.success,
-                    side: BorderSide(
-                      color: plantilla.activa
-                          ? AppColors.error
-                          : AppColors.success,
+              const Spacer(),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                tooltip: 'Acciones',
+                onSelected: (value) {
+                  if (value == 'editar' && onEditar != null) onEditar!();
+                  if (value == 'estado' && onToggleActiva != null) onToggleActiva!();
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'editar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Editar'),
+                      ],
                     ),
                   ),
-                  child: Text(plantilla.activa ? 'Desactivar' : 'Activar'),
-                ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'estado',
+                    child: Row(
+                      children: [
+                        Icon(
+                          plantilla.activa ? Icons.block : Icons.check_circle_outline,
+                          size: 18,
+                          color: plantilla.activa ? AppColors.error : AppColors.success,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          plantilla.activa ? 'Desactivar' : 'Activar',
+                          style: TextStyle(
+                            color: plantilla.activa ? AppColors.error : AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -9,7 +9,7 @@ import '../../../../providers/insumo_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
-import '../../../../widgets/users/kpi_card.dart';
+//import '../../../../widgets/users/kpi_card.dart';
 import 'kardex_historial_modal.dart';
 
 class StockTabContent extends ConsumerWidget {

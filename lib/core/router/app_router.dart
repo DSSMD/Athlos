@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
 import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
-import 'package:workspace/presentation/pages/conjuntos/conjuntos_page.dart';
+import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
 
 // Importamos el cerebro y tus providers
@@ -98,24 +98,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
-      // ────────── ROL 1: ADMINISTRADOR (10 Páginas) ──────────
+      // ────────── ROL 1: ADMINISTRADOR (12 Páginas en total, índices 0 al 11) ──────────
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
           pages: [
             _buildPlaceholder('Dashboard'), // 0. Dashboard
-            const OrdenPage(), // 1. Órdenes
-            const InventarioPage(), // 2. Inventario
-            _buildPlaceholder(
-              'Producción',
-            ), // 3. Producción (Reemplazado por placeholder)
-            const PlantillasPage(), // 4. Plantillas (DEMO)
-            const ClientesPage(), // 5. Clientes
-            _buildPlaceholder('Pagos'), // 6. Pagos
-            _buildPlaceholder('Balance'), // 7. Balance
-            const UsuariosPage(), // 8. Usuarios
-            const ConjuntosPage(), // 9. Config
-            _buildPlaceholder('Avisos'), // 10. Notificaciones
+            const OrdenPage(),              // 1. Órdenes
+            const InventarioPage(),         // 2. Inventario
+            _buildPlaceholder('Producción'),// 3. Producción
+            const PlantillasPage(),         // 4. Plantillas
+            const ConjuntosPage(),          // 5. Conjuntos 💡 (La página real)
+            const ClientesPage(),           // 6. Clientes
+            _buildPlaceholder('Pagos'),     // 7. Pagos
+            _buildPlaceholder('Balance'),   // 8. Balance
+            const UsuariosPage(),           // 9. Usuarios
+            _buildPlaceholder('Configuración'), // 10. Configuración 💡 (Un placeholder por ahora)
+            _buildPlaceholder('Avisos'),    // 11. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),

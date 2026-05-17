@@ -66,12 +66,19 @@ class SidebarMenuConfig {
     section: SidebarSection.operaciones,
   );
 
+  static const itemConjuntos = SidebarItem(
+    icon: Icons.view_comfy_outlined,
+    selectedIcon: Icons.view_comfy,
+    label: 'Conjuntos',
+    section: SidebarSection.operaciones,
+  );
+
   // ─── COMERCIAL ──────────────────────────────────────────────────
   static const itemOrdenes = SidebarItem(
     icon: Icons.assignment_outlined,
     selectedIcon: Icons.assignment,
     label: 'Órdenes',
-    section: SidebarSection.comercial, // 👈 Órdenes ahora es comercial
+    section: SidebarSection.comercial,
     badge: 12,
   );
 
@@ -123,11 +130,18 @@ class SidebarMenuConfig {
 
   static Map<String, List<SidebarItem>> get itemsPorRol => {
     '1': [
-      // ADMIN: 11 ítems (Ve todo). Plantillas se inserta en Operaciones,
-      // después de Producción, lo que corre los índices subsiguientes en +1.
-      itemDashboard, itemOrdenes, itemInventario, itemProduccion,
-      itemPlantillas, itemClientes, itemPagos, itemBalance,
-      itemUsuarios, itemConfiguracion, itemNotificaciones,
+      itemDashboard,      // 0
+      itemOrdenes,        // 1
+      itemInventario,     // 2
+      itemProduccion,     // 3
+      itemPlantillas,     // 4
+      itemConjuntos,      // 5 💡 NUEVO ÍTEM INDEPENDIENTE
+      itemClientes,       // 6
+      itemPagos,          // 7
+      itemBalance,        // 8
+      itemUsuarios,       // 9
+      itemConfiguracion,  // 10 💡 SE MANTIENE AQUÍ AL FINAL
+      itemNotificaciones, // 11
     ],
     '2': [
       // PRODUCCIÓN: 3 ítems (Órdenes fue removido de aquí)
