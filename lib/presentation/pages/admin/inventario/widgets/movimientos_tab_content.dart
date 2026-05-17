@@ -48,7 +48,7 @@ class _MovimientosBody extends ConsumerStatefulWidget {
 }
 
 class _MovimientosBodyState extends ConsumerState<_MovimientosBody> {
-  static const int _itemsPerPage = 8;
+  static const int _itemsPerPage = 10;
   int _currentPage = 1;
 
   void _resetPage() => setState(() => _currentPage = 1);
