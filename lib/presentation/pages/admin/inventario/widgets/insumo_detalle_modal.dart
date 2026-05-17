@@ -95,7 +95,7 @@ class InsumoDetalleModal extends StatelessWidget {
                   showKardexHistorialModal(context, item);
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red, // <- Define el fondo rojo
+                  backgroundColor: AppColors.primary500, // <- Define el fondo rojo
                   foregroundColor: Colors
                       .white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
                 ),

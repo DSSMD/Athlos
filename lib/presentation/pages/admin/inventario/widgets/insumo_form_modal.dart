@@ -496,6 +496,9 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
           TextButton(
             onPressed:
                 _saving ? null : () => Navigator.of(context).pop(),
+                style: FilledButton.styleFrom(
+                  foregroundColor: AppColors.primary500, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
             child: const Text('Cancelar'),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -503,6 +506,11 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
             onPressed: _saving
                 ? null
                 : (_paso == 0 ? _goToStep2 : _confirmarYGuardar),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500, // <- Define el fondo rojo
+                  foregroundColor: Colors
+                      .white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
             child: _saving
                 ? const SizedBox(
                     width: 18, height: 18,
@@ -556,9 +564,16 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
+              style: FilledButton.styleFrom(
+                  foregroundColor: AppColors.primary500, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
               child: const Text('Revisar')),
           FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500, // <- Define el fondo rojo
+                  foregroundColor: Colors.white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
               child: const Text('Confirmar')),
         ],
       ),
