@@ -132,37 +132,59 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
     );
   }
 
-  // ─── LAYOUT DESKTOP ───
+  // ─── LAYOUT DESKTOP REDISEÑADO ───
   Widget _buildDesktop() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
-            ],
-          ),
+        // FILA 1: Información General, Fechas y Prioridad
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
+            ),
+            const SizedBox(width: AppSpacing.xl),
+            Expanded(
+              flex: 1,
+              child: Column(
+                children: [
+                  OrdenCalendarioCard(draft: _draft),
+                  const SizedBox(height: AppSpacing.lg),
+                  OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: AppSpacing.xl),
-        Expanded(
-          flex: 1,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OrdenResumenCard(draft: _draft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenCalendarioCard(draft: _draft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
-            ],
-          ),
+
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+          child: Divider(color: AppColors.border),
+        ),
+
+        // FILA 2: Detalle de Productos y Finanzas
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
+            ),
+            const SizedBox(width: AppSpacing.xl),
+            Expanded(
+              flex: 1,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  OrdenResumenCard(draft: _draft),
+                  const SizedBox(height: AppSpacing.lg),
+                  OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

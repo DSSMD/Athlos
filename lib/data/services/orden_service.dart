@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:workspace/domain/models/detalle_orden_model.dart';
 import 'package:workspace/domain/models/orden_model.dart';
@@ -128,7 +129,7 @@ class OrdenService {
   ///
   /// Lanza Exception con mensaje útil en caso de error de validación,
   /// FK violation, o cualquier error de Supabase.
-  Future<String> crearOrdenDesdeDraft(OrdenDraft draft) async {
+  /*Future<String> crearOrdenDesdeDraft(OrdenDraft draft) async {
     // 1. Construir el payload de items
     final itemsPayload = draft.items.map((item) {
       return {
@@ -175,6 +176,66 @@ class OrdenService {
       return result.toString();
     } on PostgrestException catch (e) {
       throw Exception('Error al crear orden: ${e.message}');
+    }
+  }*/
+
+  Future<void> crearOrdenDesdeDraft(OrdenDraft draft) async {
+    // 1. Validaciones de seguridad antes de enviar al backend
+    if (draft.idCliente == null) throw Exception('El cliente es obligatorio');
+    if (draft.fechaEntrega == null) {
+      throw Exception('La fecha de entrega es obligatoria');
+    }
+    if (draft.items.isEmpty) {
+      throw Exception('La orden debe tener al menos un ítem');
+    }
+
+    // 2. Mapeo del payload exacto como lo espera tu función RPC en PostgreSQL
+    final params = {
+      'p_id_cliente': draft.idCliente,
+      // Formateamos la fecha a YYYY-MM-DD para evitar problemas de timestamp
+      'p_fecha_entrega': draft.fechaEntrega!.toIso8601String().split('T')[0],
+
+      // Si en el futuro agregas estos campos al OrdenDraft, los cambias aquí
+      'p_notas_adicionales': null,
+      'p_imagen_modelo': null,
+
+      // Enviamos el enum convertido a texto ('normal', 'alta', 'urgente')
+      'p_prioridad': draft.prioridad.name,
+
+      // Inyectores financieros
+      'p_anticipo': draft.anticipo,
+      'p_metodo_pago': draft.metodoPago,
+
+      // Lista de ítems
+      'p_items': draft.items.map((item) {
+        return {
+          // Por el "atajo", id_conjunto viajará como null y se usará id_plantilla
+          'id_conjunto': item.idConjunto,
+          'id_plantilla': item.idPlantilla,
+          'precio_unitario': item.precioUnitario,
+          'tallas': item.tallas
+              .where(
+                (t) => t.cantidad > 0,
+              ) // Filtramos tallas vacías por seguridad
+              .map((t) => {'id_talla': t.idTalla, 'cantidad': t.cantidad})
+              .toList(),
+        };
+      }).toList(),
+    };
+
+    try {
+      // 3. Llamada al RPC de Supabase
+      final response = await Supabase.instance.client.rpc(
+        'crear_orden_completa',
+        params: params,
+      );
+
+      debugPrint('Orden creada con éxito. ID: $response');
+    } catch (e) {
+      debugPrint('Error al crear la orden desde el service: $e');
+      // Relanzamos el error para que el try-catch de OrdenFormPage
+      // lo atrape y muestre el SnackBar rojo
+      rethrow;
     }
   }
 

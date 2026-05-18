@@ -54,12 +54,12 @@ class OrdenProductosCard extends StatelessWidget {
 
   // ─── Acciones ───
   Future<void> _agregarItem(BuildContext context) async {
-    final nuevo = await showDialog<OrdenItemDraft>(
+    final nuevos = await showDialog<List<OrdenItemDraft>>(
       context: context,
       builder: (_) => const AgregarItemDialog(),
     );
-    if (nuevo != null) {
-      onChanged(draft.copyWith(items: [...draft.items, nuevo]));
+    if (nuevos != null && nuevos.isNotEmpty) {
+      onChanged(draft.copyWith(items: [...draft.items, ...nuevos]));
     }
   }
 

@@ -44,6 +44,7 @@ class PlantillaModel {
     this.precioPlantilla = 0.0,
     this.tallasSeleccionadas = const [],
     this.materiales = const [],
+    this.nombreTipoPrendaJoin,
   });
 
   final String id; // uuid
@@ -54,6 +55,7 @@ class PlantillaModel {
   final bool activa;
   final double precioPlantilla;
   final DateTime createdAt;
+  final String? nombreTipoPrendaJoin;
 
   // Hijas — se cargan en queries separadas (receta_material).
   final List<int> tallasSeleccionadas; // ids de tallas
@@ -72,6 +74,7 @@ class PlantillaModel {
     DateTime? createdAt,
     List<int>? tallasSeleccionadas,
     List<MaterialPlantilla>? materiales,
+    String? nombreTipoPrendaJoin,
   }) {
     return PlantillaModel(
       id: id ?? this.id,
@@ -84,6 +87,7 @@ class PlantillaModel {
       createdAt: createdAt ?? this.createdAt,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
       materiales: materiales ?? this.materiales,
+      nombreTipoPrendaJoin: nombreTipoPrendaJoin ?? this.nombreTipoPrendaJoin,
     );
   }
 
@@ -95,6 +99,7 @@ class PlantillaModel {
   factory PlantillaModel.fromJson(Map<String, dynamic> json) {
     final rawTipo = json['id_tipo_prenda'];
     final rawVersion = json['version'];
+    final tipoData = json['tipo_prenda'] as Map<String, dynamic>?;
 
     return PlantillaModel(
       id: (json['id_plantilla'] ?? '').toString(),
@@ -111,6 +116,7 @@ class PlantillaModel {
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
+      nombreTipoPrendaJoin: tipoData?['nombre_prenda'] as String?,
     );
   }
 
