@@ -44,12 +44,14 @@ class OrdenResumenCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cálculos en Bolivianos internamente
     final subtotal = draft.subtotalItems;
-    final descuento = subtotal * descuentoFijo;
-    final total = subtotal - descuento;
 
-    // Si la UI está en USD el equivalente en Bs es el total puro
+    // Aquí usamos el descuento real del draft. Si lo implementas luego, cámbialo a:
+    // final descuento = draft.descuento ?? 0.0;
+    // Por ahora, lo mantenemos en 0 para que no altere tus números hasta que agregues el input.
+    final descuento = 0.0;
+
+    final total = subtotal - descuento;
     final equivalenteBs = draft.moneda == OrdenMoneda.dolares ? total : null;
 
     return Container(
@@ -66,6 +68,7 @@ class OrdenResumenCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           _filaMoneda(),
           const SizedBox(height: AppSpacing.md),
+
           if (draft.items.isEmpty)
             _empty()
           else ...[
@@ -75,13 +78,22 @@ class OrdenResumenCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
 
             _filaTotal('Subtotal', draft.formatPrecio(subtotal)),
-            const SizedBox(height: AppSpacing.sm),
-            _filaDescuento(descuento),
+
+            // Solo mostramos la fila de descuento si es mayor a 0
+            if (descuento > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _filaDescuento(descuento),
+            ],
+
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
 
-            _filaTotal('Total', draft.formatPrecio(total), destacado: true),
+            _filaTotal(
+              'Total de la Orden',
+              draft.formatPrecio(total),
+              destacado: true,
+            ),
 
             if (equivalenteBs != null) ...[
               const SizedBox(height: AppSpacing.sm),

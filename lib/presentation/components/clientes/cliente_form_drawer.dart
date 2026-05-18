@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/core/utils/app_validators.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -110,8 +111,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
   late final TextEditingController _nitCiCtrl;
   late final TextEditingController _razonSocialCtrl;
   late final TextEditingController _representanteCtrl;
-  late final TextEditingController _telefonoCtrl;
-  late final TextEditingController _telefonoSecCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _direccionCtrl;
   late final TextEditingController _limiteCtrl;
@@ -136,6 +135,10 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
 
   String? _flashingField;
 
+  // Variables para guardar el número con el código de país (Ej: +59177712345)
+  String _telefonoCompleto = '';
+  String _telefonoSecCompleto = '';
+
   @override
   void initState() {
     super.initState();
@@ -149,8 +152,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
         : '';
     _representanteCtrl = TextEditingController(text: nombreCompleto);
 
-    _telefonoCtrl = TextEditingController(text: c?.numTelefono ?? '');
-    _telefonoSecCtrl = TextEditingController(text: c?.numTelefono2 ?? '');
     _emailCtrl = TextEditingController(text: c?.email ?? '');
     _direccionCtrl = TextEditingController(text: c?.direccion ?? '');
     _limiteCtrl = TextEditingController(
@@ -162,6 +163,9 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
       text: c != null ? c.diasPlazoPago.toString() : '30',
     );
     _notasCtrl = TextEditingController(text: c?.notas ?? '');
+
+    _telefonoCompleto = widget.initialCliente?.numTelefono ?? '';
+    _telefonoSecCompleto = widget.initialCliente?.numTelefono2 ?? '';
 
     _tipoCliente = c?.tipoEnum ?? TipoCliente.empresa;
     _permiteCredito = c?.permiteCredito ?? false;
@@ -184,8 +188,6 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
     _nitCiCtrl.dispose();
     _razonSocialCtrl.dispose();
     _representanteCtrl.dispose();
-    _telefonoCtrl.dispose();
-    _telefonoSecCtrl.dispose();
     _emailCtrl.dispose();
     _direccionCtrl.dispose();
     _limiteCtrl.dispose();
@@ -199,61 +201,47 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
     final errors = <String, String?>{};
 
     // 1. Representante/Nombre — requerido
-    if (_representanteCtrl.text.trim().isEmpty) {
-      errors['representante'] = 'El representante/nombre es requerido';
-    }
+    errors['representante'] = AppValidators.validarRequerido(
+      _representanteCtrl.text,
+      'representante/nombre',
+    );
 
     // 2. Razón social — requerida si tipo es Empresa
-    if (_tipoCliente == TipoCliente.empresa &&
-        _razonSocialCtrl.text.trim().isEmpty) {
-      errors['razonSocial'] = 'La razón social es requerida para empresas';
+    if (_tipoCliente == TipoCliente.empresa) {
+      errors['razonSocial'] = AppValidators.validarRequerido(
+        _razonSocialCtrl.text,
+        'razón social',
+      );
     }
 
-    // 3. Teléfono — requerido + mínimo 8 dígitos
-    final telefono = _telefonoCtrl.text.trim();
-    if (telefono.isEmpty) {
+    // 3. Teléfono — requerido (El formato exacto lo valida el IntlPhoneField visualmente)
+    if (_telefonoCompleto.trim().isEmpty) {
       errors['telefono'] = 'El teléfono es requerido';
-    } else if (telefono.replaceAll(RegExp(r'\s+'), '').length < 8) {
-      errors['telefono'] = 'El número parece ser muy corto';
     }
 
-    // 4. NIT/CI — si se llena, solo números o guiones
-    final ci = _nitCiCtrl.text.trim();
-    if (ci.isNotEmpty && !RegExp(r'^[0-9\-]+$').hasMatch(ci)) {
-      errors['nitCi'] = 'El NIT/CI debe contener solo números o guiones';
+    // 4. NIT/CI — (Si es obligatorio, agrégale validarRequerido primero)
+    if (_nitCiCtrl.text.trim().isNotEmpty) {
+      errors['nitCi'] = AppValidators.validarCI(_nitCiCtrl.text);
+    } else {
+      errors['nitCi'] = 'El NIT/CI es requerido';
     }
 
-    // 5. Email — si se llena, formato válido
-    final email = _emailCtrl.text.trim();
-    if (email.isNotEmpty &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+').hasMatch(email)) {
-      errors['email'] = 'Email inválido';
+    // 5. Email — opcional pero con formato estricto
+    if (_emailCtrl.text.trim().isNotEmpty) {
+      errors['email'] = AppValidators.validarEmail(_emailCtrl.text);
     }
 
-    // 6. Si crédito activo: límite y días deben ser > 0
+    // 6. Si crédito activo: usar los validadores financieros
     if (_permiteCredito) {
-      final limite = double.tryParse(_limiteCtrl.text) ?? 0.0;
-      if (limite <= 0) {
-        errors['limite'] = 'El límite de crédito debe ser mayor a 0';
-      }
-      final dias = int.tryParse(_diasCtrl.text) ?? 0;
-      if (dias <= 0) {
-        errors['dias'] = 'Los días de plazo deben ser mayor a 0';
-      }
+      errors['limite'] = AppValidators.validarLimiteCredito(_limiteCtrl.text);
+      errors['dias'] = AppValidators.validarDiasPlazo(_diasCtrl.text);
     }
+
+    // Limpiamos los nulos del mapa para quedarnos solo con los errores reales
+    errors.removeWhere((key, value) => value == null);
 
     setState(() => _errors = errors);
     return errors.isEmpty;
-  }
-
-  // ───────────────────────────────────────── FORMATEO DE TELÉFONO ──
-  String _formatearTelefono(String numero) {
-    String tel = numero.trim();
-    if (tel.isEmpty) return '';
-    tel = tel.replaceAll(RegExp(r'\s+'), '');
-    if (tel.startsWith('+591')) return tel;
-    if (tel.startsWith('591')) return '+$tel';
-    return '+591 $tel';
   }
 
   // ───────────────────────────────────── GUARDADO REAL EN BD ──
@@ -297,8 +285,10 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
       apellidoCliente: apellido,
       razonSocial: isEmpresa ? razonLimpia : '',
       email: emailLimpio,
-      numTelefono: _formatearTelefono(_telefonoCtrl.text),
-      numTelefono2: _formatearTelefono(_telefonoSecCtrl.text),
+      numTelefono: _telefonoCompleto.isNotEmpty ? _telefonoCompleto : null,
+      numTelefono2: _telefonoSecCompleto.isNotEmpty
+          ? _telefonoSecCompleto
+          : null,
       direccion: dirLimpia,
       idTipoCliente: isEmpresa ? 1 : 2,
       permiteCredito: _permiteCredito,
@@ -559,14 +549,18 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
           isFlashing: _flashingField == 'telefono' || _flashingField == 'email',
           child: ClienteContactCard(
             key: _telefonoKey,
-            telefonoController: _telefonoCtrl,
-            telefonoSecController: _telefonoSecCtrl,
+
+            initialTelefono: widget.initialCliente?.numTelefono,
+            initialTelefonoSec: widget.initialCliente?.numTelefono2,
+
             emailController: _emailCtrl,
             direccionController: _direccionCtrl,
             errors: _errors,
+
+            onTelefonoCompletoChanged: (val) => _telefonoCompleto = val,
+            onTelefonoSecCompletoChanged: (val) => _telefonoSecCompleto = val,
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
 
         // 3. CRÉDITO
         _FlashWrap(

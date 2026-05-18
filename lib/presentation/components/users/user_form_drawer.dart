@@ -7,6 +7,7 @@
 // lib/presentation/components/user_form_drawer.dart
 
 import 'package:flutter/material.dart';
+import 'package:riverpod/src/framework.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -108,15 +109,22 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
   final Set<String> _permisos = {};
   final _formKey = GlobalKey<FormState>();
 
-  // Esta lista es solo para mostrar en el formulario, no se guarda en la BD.
+  final _tarifaController = TextEditingController();
+  int? _selectedAreaId;
+
+  // TODO: agregar permisos posteriormente
   static const _allPermisos = [
-    'Órdenes',
+    'Usuarios',
     'Inventario',
-    'Clientes',
-    'Pagos',
-    'Balance',
+    'Ventas',
     'Producción',
+    'Reportes',
+    'Caja',
+    'Clientes',
+    'Consulta',
+    'Dashboard',
   ];
+
   bool _isSaving = false;
 
   @override
@@ -124,13 +132,22 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
     super.initState();
     final u = widget.initialUser;
 
-    // Precargar nombre/apellido desde u.name
     String nombre = '';
     String apellido = '';
+
     if (u != null) {
       final parts = u.name.split(' ');
       nombre = parts.isNotEmpty ? parts.first : '';
       apellido = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+      // 💡 CORRECCIÓN: Usamos la nueva extensión de UserRole
+      _permisos.addAll(u.role.defaultPermissions);
+
+      if (u.isTrabajador) {
+        _selectedAreaId = u.idArea?.toInt();
+
+        _tarifaController.text = u.tarifaPagoBase?.toStringAsFixed(2) ?? '0.00';
+      }
     }
 
     _nombreCtrl = TextEditingController(text: nombre);
@@ -175,7 +192,16 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
     try {
       final notifier = ref.read(usuariosProvider.notifier);
 
+      final bool requiresLabourData =
+          (_rol == UserRole.produccion || _rol == UserRole.cajas);
+
+      final int? finalAreaId = requiresLabourData ? _selectedAreaId : null;
+      final double? finalTarifa = requiresLabourData
+          ? double.tryParse(_tarifaController.text)
+          : null;
+
       if (_isEditing) {
+        // ACTUALIZAR
         await notifier.actualizarUsuario(
           widget.initialUser!.id,
           nombre: _nombreCtrl.text.trim(),
@@ -185,8 +211,12 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
               : _telefonoCtrl.text.trim(),
           rol: _rol!,
           activo: _activo,
+          idArea: finalAreaId,
+          tarifaPagoBase: finalTarifa,
+          // TODO (Permisos): Enviar la lista de permisos seleccionados: permisos: _permisos.toList(),
         );
       } else {
+        // CREAR
         await notifier.crearUsuario(
           nombre: _nombreCtrl.text.trim(),
           apellido: _apellidoCtrl.text.trim(),
@@ -196,6 +226,8 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
           rol: _rol!,
+          idArea: finalAreaId,
+          tarifaPagoBase: finalTarifa,
         );
       }
 
@@ -215,6 +247,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
       // 1. Mensaje por defecto por si falla otra cosa
       String mensajeError =
           'Ocurrió un error inesperado al guardar el usuario.';
+
       // 2. Interceptamos el error exacto de Supabase
       if (e.toString().contains('already been registered')) {
         mensajeError =
@@ -223,6 +256,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
         // Mantenemos el error original para otros casos
         mensajeError = e.toString().replaceAll('Exception: ', '');
       }
+
       // 3. Mostramos la notificación flotante con el estilo Athlos
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -257,26 +291,15 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
     }
   }
 
-  void _onRoleChanged(UserRole? role) {
+  // TODO: Agregar lógica para actualizar permisos dinámicamente si el rol cambia (opcional pero mejora UX)
+  void _onRoleChanged(UserRole? newRole) {
+    if (newRole == null) return;
+
     setState(() {
-      _rol = role;
+      _rol = newRole;
       _permisos.clear();
-      switch (role) {
-        case UserRole.administrador:
-          _permisos.addAll(_allPermisos);
-          break;
-        case UserRole.produccion:
-          _permisos.addAll(['Producción', 'Inventario']);
-          break;
-        case UserRole.cajas:
-          _permisos.addAll(['Órdenes', 'Clientes', 'Pagos']);
-          break;
-        case UserRole.invitado:
-          _permisos.addAll(['Consulta']);
-          break;
-        case null:
-          break;
-      }
+      // 💡 Directo, elegante y centralizado
+      _permisos.addAll(newRole.defaultPermissions);
     });
   }
 
@@ -454,6 +477,138 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
 
             const SizedBox(height: AppSpacing.xl),
 
+            // ════════════════════════════════════════════════════════════════
+            // NUEVO: SECCIÓN DINÁMICA DE RECURSOS HUMANOS
+            // Solo aparece si el rol seleccionado es Producción o Cajas
+            // ════════════════════════════════════════════════════════════════
+            if (_rol == UserRole.produccion || _rol == UserRole.cajas) ...[
+              _Section(
+                title: 'Datos Laborales',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Área asignada',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ref
+                        .watch(areasProvider)
+                        .when(
+                          loading: () => const SizedBox(
+                            height: 50,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          error: (err, stack) => Text(
+                            'Error al cargar áreas',
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
+                          data: (areas) {
+                            // 1. FILTRADO: Filtramos la lista según el rol seleccionado
+                            final areasFiltradas = areas.where((area) {
+                              if (_rol == UserRole.produccion) {
+                                // IDs 1, 2, 3 son de Producción
+                                return area['id_area'] == 1 ||
+                                    area['id_area'] == 2 ||
+                                    area['id_area'] == 3;
+                              } else if (_rol == UserRole.cajas) {
+                                // ID 4 es de Ventas/Cajas
+                                return area['id_area'] == 4;
+                              }
+                              return false;
+                            }).toList();
+
+                            // 2. RECUPERACIÓN SEGURA: Verificamos si el ID
+                            // existe dentro de la lista YA FILTRADA
+                            final bool areaExists = areasFiltradas.any(
+                              (a) => a['id_area'] == _selectedAreaId,
+                            );
+
+                            final int? safeAreaId = areaExists
+                                ? _selectedAreaId
+                                : null;
+
+                            return DropdownButtonFormField<int>(
+                              initialValue:
+                                  safeAreaId, // <-- Usamos la variable segura
+                              decoration: InputDecoration(
+                                hintText: 'Seleccione un área',
+                                filled: true,
+                                fillColor: AppColors.neutral100,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.md,
+                                  ),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              // 3. RENDERIZADO: Pintamos solo las áreas filtradas
+                              items: areasFiltradas.map((area) {
+                                return DropdownMenuItem<int>(
+                                  value: area['id_area'] as int,
+                                  child: Text(area['nombre_area'] as String),
+                                );
+                              }).toList(),
+                              onChanged: (val) =>
+                                  setState(() => _selectedAreaId = val),
+                              validator: (val) {
+                                if (val == null) {
+                                  return 'Por favor seleccione un área';
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                        ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    Text(
+                      'Tarifa de pago base (Bs.)',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    CustomTextField(
+                      controller: _tarifaController,
+                      hint: '0.00',
+                      // Ocultamos la label original de tu CustomTextField para usar el Text de arriba
+                      label: '',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Ingrese la tarifa base';
+                        }
+
+                        if (val.contains(',')) {
+                          return 'Use punto (.) para decimales, no coma';
+                        }
+                        final numero = double.tryParse(val.trim());
+                        if (numero == null) {
+                          return 'Ingrese un número válido';
+                        }
+                        if (numero < 0) {
+                          return 'La tarifa no puede ser negativa';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+            // ════════════════════════════════════════════════════════════════
             // --- SECCIÓN: PERMISOS (ESTÉTICO EN ESTE SPRINT) ---
             _Section(
               title: 'Permisos',

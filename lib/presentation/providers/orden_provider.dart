@@ -18,6 +18,20 @@ final ordenesProvider =
       return OrdenesNotifier();
     });
 
+final pagosOrdenProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      numOrden,
+    ) async {
+      final response = await Supabase.instance.client
+          .from('pago_cliente')
+          .select()
+          .eq('id_orden', numOrden)
+          .order('fecha_pago', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    });
+
 class OrdenesNotifier extends AsyncNotifier<List<OrdenModel>> {
   @override
   Future<List<OrdenModel>> build() async {

@@ -10,6 +10,7 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -38,6 +39,11 @@ class ClienteResumenView extends StatelessWidget {
 
           _ResumenFinancieroCard(cliente: cliente),
           const SizedBox(height: AppSpacing.lg),
+
+          if (cliente.notas != null && cliente.notas!.isNotEmpty) ...[
+            _NotasCard(notas: cliente.notas!),
+            const SizedBox(height: AppSpacing.lg),
+          ],
 
           const _UltimasOrdenesCard(),
           const SizedBox(height: AppSpacing.xl),
@@ -412,47 +418,106 @@ String _fmtDate(DateTime d) {
   return '$dd/$mm/${d.year}';
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// BOTÓN DE WHATSAPP (mini, al lado del teléfono principal)
+// ══════════════════════════════════════════════════════════════════════════════
+
 class _WhatsappMiniButton extends StatelessWidget {
   const _WhatsappMiniButton({required this.telefono});
+
   final String telefono;
+
+  Future<void> _abrirWhatsApp(BuildContext context) async {
+    // 1. Limpiamos el número: quitamos el '+' y cualquier espacio por seguridad
+    final numeroLimpio = telefono.replaceAll('+', '').replaceAll(' ', '');
+
+    // 2. Opcional: Mensaje predeterminado (puedes dejarlo vacío si quieres)
+    String mensaje = "Hola, nos comunicamos de Athlos...";
+    final url = Uri.parse(
+      'https://wa.me/$numeroLimpio?text=${Uri.encodeComponent(mensaje)}',
+    );
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'No se pudo abrir WhatsApp.';
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir WhatsApp: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // TODO(SCRUM-69): integrar API real de WhatsApp Web/Click-to-Chat.
-        // Por ahora notificamos visualmente.
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Redirigiendo a WhatsApp para $telefono...'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
+    // Usamos el color característico de WhatsApp para mayor intuición visual
+    const whatsappColor = Color(0xFF25D366);
+    const whatsappBgColor = Color(
+      0xFFE8F9EE,
+    ); // Un verde súper clarito para el fondo
+
+    return OutlinedButton.icon(
+      onPressed: () => _abrirWhatsApp(context),
+      icon: const Icon(
+        Icons.chat_outlined, // O usa tu icono preferido de FontAwesome
+        size: 16,
+        color: whatsappColor,
+      ),
+      label: Text(
+        'WhatsApp',
+        style: AppTypography.small.copyWith(
+          color: Colors.green.shade700,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: whatsappBgColor,
+        side: BorderSide(color: whatsappColor.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+          vertical: AppSpacing
+              .sm, // Padding reducido para que encaje bien al lado del texto
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            AppRadius.lg,
+          ), // Bordes redondeados modernos
+        ),
+        elevation: 0,
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// NOTAS INTERNAS (si existen, con fondo resaltado)
+// ══════════════════════════════════════════════════════════════════════════════
+class _NotasCard extends StatelessWidget {
+  const _NotasCard({required this.notas});
+  final String notas;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      title: 'Notas internas',
+      // Podrías ponerle un fondo amarillo pálido para que resalte
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.success,
+          color: AppColors.warningBg,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.chat, color: AppColors.brandWhite, size: 16),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              'WhatsApp',
-              style: AppTypography.caption.copyWith(
-                color: AppColors.brandWhite,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        child: Text(
+          notas,
+          style: AppTypography.body.copyWith(color: AppColors.textPrimary),
         ),
       ),
     );

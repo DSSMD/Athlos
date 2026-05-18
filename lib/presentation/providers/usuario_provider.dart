@@ -1,3 +1,5 @@
+// lib/presentation/providers/usuario_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/services/usuario_service.dart';
@@ -42,17 +44,17 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required String password,
     required String? telefono,
     required UserRole rol,
+    required int? idArea, 
+  required double? tarifaPagoBase,
   }) async {
     final service = ref.read(usuarioServiceProvider);
 
     // 1.  EL TRUCO: Guardamos la lista de usuarios que está actualmente en pantalla
     final estadoAnterior = state;
 
-    // Ponemos el estado en carga mientras trabaja
     state = const AsyncValue.loading();
 
     try {
-      // Intentamos crear el usuario
       await service.crearUsuario(
         nombre: nombre,
         apellido: apellido,
@@ -60,6 +62,8 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         password: password,
         telefono: telefono,
         rol: rol,
+        idArea: idArea,
+        tarifaPagoBase: tarifaPagoBase,
       );
 
       // Si sale bien, recargamos la lista desde la base de datos
@@ -86,6 +90,9 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required String? telefono,
     required UserRole rol,
     required bool activo,
+    int? idArea,
+    double? tarifaPagoBase,
+    // TODO (Permisos): Recibir required List<String> permisos, y pasarlos al Service.
   }) async {
     final service = ref.read(usuarioServiceProvider);
 
@@ -97,8 +104,9 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         telefono: telefono,
         rol: rol,
         activo: activo,
+        idArea: idArea,
+        tarifaPagoBase: tarifaPagoBase,
       );
-      // Tras actualizar, devolvemos la lista fresca
       return _fetchUsuarios();
     });
   }
@@ -110,18 +118,31 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     final service = ref.read(usuarioServiceProvider);
 
     state = await AsyncValue.guard(() async {
-      // Usamos el método de actualizar pero solo mandamos el cambio de 'activo'
       await service.actualizarUsuario(
         user.id,
-        nombre: user.name.split(' ').first, // Pequeño parseo para el service
+        nombre: user.name.split(' ').first,
         apellido: user.name.contains(' ') ? user.name.split(' ').last : '',
         telefono: user.phone,
         rol: user.role,
-        activo: !user.status.toString().contains(
-          'activo',
-        ), // Invertimos el estado
+        activo: !user.status.toString().contains('activo'),
+        idArea: user.idArea,
+        tarifaPagoBase: user.tarifaPagoBase,
       );
       return _fetchUsuarios();
     });
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROVEEDOR DE CATÁLOGO DE ÁREAS
+// ══════════════════════════════════════════════════════════════════════════
+final areasProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final supabase = Supabase.instance.client;
+  
+  final response = await supabase
+      .from('area_produccion')
+      .select('id_area, nombre_area')
+      .order('id_area', ascending: true);
+
+  return List<Map<String, dynamic>>.from(response);
+});

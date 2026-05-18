@@ -132,35 +132,54 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
     );
   }
 
-  // ─── LAYOUT DESKTOP ───
+  // ─── LAYOUT DESKTOP REDISEÑADO (Main & Sidebar Balanceado) ───
   Widget _buildDesktop() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // COLUMNA IZQUIERDA (flex: 3): Información, Finanzas y Tabla de Productos
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.xl),
+
+              // 👇 NUEVO: Resumen y Anticipo abajo de información en dos columnas
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: OrdenResumenCard(draft: _draft)),
+                  const SizedBox(
+                    width: AppSpacing.xl,
+                  ), // Espaciado entre columnas financieras
+                  Expanded(
+                    child: OrdenAnticipoCard(
+                      draft: _draft,
+                      onChanged: _updateDraft,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.xl),
+              OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: AppSpacing.xl2),
+
+        // COLUMNA DERECHA (flex: 2): Logística y Planificación (Sidebar)
         Expanded(
           flex: 2,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xl),
-        Expanded(
-          flex: 1,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OrdenResumenCard(draft: _draft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenCalendarioCard(draft: _draft),
+              OrdenCalendarioCard(draft: _draft, onChanged: _updateDraft),
               const SizedBox(height: AppSpacing.lg),
               OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
-              const SizedBox(height: AppSpacing.lg),
-              OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
             ],
           ),
         ),
@@ -179,7 +198,7 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
         const SizedBox(height: AppSpacing.lg),
         OrdenResumenCard(draft: _draft),
         const SizedBox(height: AppSpacing.lg),
-        OrdenCalendarioCard(draft: _draft),
+        OrdenCalendarioCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),
         OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),

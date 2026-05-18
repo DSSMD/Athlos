@@ -105,7 +105,7 @@ class ConjuntoService {
       }
 
       // 4) Re-leer para obtener el registro con el join completo
-      return _fetchById(idConjunto);
+      return obtenerConjuntoCompleto(idConjunto);
     } catch (e) {
       throw _traducirError(e);
     }
@@ -147,7 +147,7 @@ class ConjuntoService {
       }
 
       // 4) Re-leer con join completo
-      return _fetchById(id);
+      return obtenerConjuntoCompleto(id);
     } catch (e) {
       throw _traducirError(e);
     }
@@ -182,7 +182,7 @@ class ConjuntoService {
           .update({'activo': !estadoActual})
           .eq('id_conjunto', id);
 
-      return _fetchById(id);
+      return obtenerConjuntoCompleto(id);
     } catch (e) {
       throw Exception('Error al cambiar estado del conjunto: $e');
     }
@@ -191,8 +191,8 @@ class ConjuntoService {
   // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
 
   /// Lee un conjunto con join completo por id. Se usa después de
-  /// crear/actualizar para devolver el estado real de la BD.
-  Future<ConjuntoModel> _fetchById(String id) async {
+  /// crear/actualizar para devolver el estado real de la BD, o para UI.
+  Future<ConjuntoModel> obtenerConjuntoCompleto(String id) async {
     final response = await _client
         .from('conjunto')
         .select(_selectQuery)

@@ -1,3 +1,5 @@
+// lib/presentation/components/ordenes/orden_draft.dart
+
 import 'dart:typed_data';
 import '../../../domain/models/detalle_orden_model.dart';
 
@@ -179,6 +181,9 @@ class OrdenDraft {
   final Uint8List? imagenBytes;
   final String? imagenNombre;
 
+  // ───── Totales ─────
+  final double descuento;
+
   const OrdenDraft({
     this.idCliente,
     this.fechaEntrega,
@@ -197,6 +202,7 @@ class OrdenDraft {
     this.metodoPago = 'Transferencia',
     this.imagenBytes,
     this.imagenNombre,
+    this.descuento = 0.0,
   });
 
   factory OrdenDraft.empty() => const OrdenDraft();
@@ -219,6 +225,7 @@ class OrdenDraft {
     int? idTipoPrenda,
     Uint8List? imagenBytes,
     String? imagenNombre,
+    double? descuento,
   }) {
     return OrdenDraft(
       idCliente: idCliente ?? this.idCliente,
@@ -239,6 +246,7 @@ class OrdenDraft {
       idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
       imagenBytes: imagenBytes ?? this.imagenBytes,
       imagenNombre: imagenNombre ?? this.imagenNombre,
+      descuento: descuento ?? this.descuento,
     );
   }
 
@@ -261,6 +269,10 @@ class OrdenDraft {
   bool get esValidoItems {
     return idCliente != null && fechaEntrega != null && items.isNotEmpty;
   }
+
+  double get total => subtotalItems - descuento;
+
+  double get saldoPendiente => total - anticipo;
 
   String formatPrecio(double valorEnBs) {
     if (moneda == OrdenMoneda.dolares) {
