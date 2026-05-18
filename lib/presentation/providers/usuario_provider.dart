@@ -44,6 +44,8 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required String password,
     required String? telefono,
     required UserRole rol,
+    required int? idArea, 
+  required double? tarifaPagoBase,
   }) async {
     final service = ref.read(usuarioServiceProvider);
 

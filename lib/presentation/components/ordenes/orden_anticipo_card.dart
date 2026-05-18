@@ -222,8 +222,9 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
               )
               .toList(),
           onChanged: (v) {
-            if (v != null)
+            if (v != null) {
               widget.onChanged(widget.draft.copyWith(metodoPago: v));
+            }
           },
         ),
       ),

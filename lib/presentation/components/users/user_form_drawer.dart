@@ -533,7 +533,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                                 : null;
 
                             return DropdownButtonFormField<int>(
-                              value:
+                              initialValue:
                                   safeAreaId, // <-- Usamos la variable segura
                               decoration: InputDecoration(
                                 hintText: 'Seleccione un área',

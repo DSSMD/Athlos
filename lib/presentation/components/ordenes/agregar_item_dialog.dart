@@ -185,8 +185,9 @@ class _AgregarItemDialogState extends ConsumerState<AgregarItemDialog> {
     final List<OrdenItemDraft> itemsGenerados = [];
 
     for (final seccion in _secciones) {
-      if (seccion.cantidadTotal == 0)
+      if (seccion.cantidadTotal == 0) {
         continue; // Ignoramos si no se pidieron piezas de esta plantilla
+      }
 
       final tallas = seccion.tallaRows
           .where((r) => r.cantidad > 0 && r.idTalla != null)

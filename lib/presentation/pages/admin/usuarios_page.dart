@@ -35,7 +35,6 @@ import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
-import '../../widgets/users/role_badge.dart';
 
 import '../../../domain/models/usuario_model.dart';
 import '../../providers/usuario_provider.dart';

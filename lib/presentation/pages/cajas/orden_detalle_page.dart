@@ -295,7 +295,7 @@ class _PagosCard extends ConsumerWidget {
           final saldoPendiente = total - totalPagado;
           final estaPagado = saldoPendiente <= 0;
 
-          void _mostrarDialogoPago(
+          void mostrarDialogoPago(
             BuildContext context,
             WidgetRef ref,
             double saldoPendiente,
@@ -337,7 +337,7 @@ class _PagosCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         DropdownButtonFormField<String>(
-                          value: metodoSel,
+                          initialValue: metodoSel,
                           decoration: const InputDecoration(
                             labelText: 'Método',
                             border: OutlineInputBorder(),
@@ -481,7 +481,7 @@ class _PagosCard extends ConsumerWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () =>
-                        _mostrarDialogoPago(context, ref, saldoPendiente),
+                        mostrarDialogoPago(context, ref, saldoPendiente),
                     icon: const Icon(Icons.add_card),
                     label: const Text('Registrar Anticipo / Pago'),
                     style: ElevatedButton.styleFrom(
