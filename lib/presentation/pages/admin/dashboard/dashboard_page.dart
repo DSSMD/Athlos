@@ -26,7 +26,6 @@ import '../../../theme/app_typography.dart';
 import '../../../theme/breakpoints.dart';
 
 import '../../../widgets/shared/mobile_screen_header.dart';
-import '../../../widgets/shared/sticky_topbar.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -37,13 +36,6 @@ class DashboardPage extends ConsumerStatefulWidget {
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
   int _selectedTab = 0; // 0=General, 1=Ventas, 2=Producción
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,37 +44,40 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     return Column(
       children: [
         if (isMobile)
-          const MobileScreenHeader(title: 'Dashboard')
-        else
-          StickyTopbar(
+          MobileScreenHeader(
             title: 'Dashboard',
-            searchHint: 'Buscar...',
-            searchController: _searchController,
-            onSearchChanged: (_) {},
-          ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            bottom: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Resumen del mes — Marzo 2026',
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.brandWhite.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 _TabSelector(
                   selected: _selectedTab,
                   onChanged: (i) => setState(() => _selectedTab = i),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: switch (_selectedTab) {
-                    0 => _buildGeneralTab(
-                      isMobile,
-                      key: const ValueKey('general'),
-                    ),
-                    1 => _buildVentasTab(key: const ValueKey('ventas')),
-                    _ => _buildProduccionTab(key: const ValueKey('produccion')),
-                  },
-                ),
               ],
+            ),
+          )
+        else
+          _DashboardDesktopHeader(
+            selectedTab: _selectedTab,
+            onTabChanged: (i) => setState(() => _selectedTab = i),
+          ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: switch (_selectedTab) {
+                0 => _buildGeneralTab(isMobile, key: const ValueKey('general')),
+                1 => _buildVentasTab(key: const ValueKey('ventas')),
+                _ => _buildProduccionTab(key: const ValueKey('produccion')),
+              },
             ),
           ),
         ),
@@ -96,8 +91,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       key: key,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _MonthHeader(),
-        const SizedBox(height: AppSpacing.lg),
         _KpiRow(isMobile: isMobile),
         const SizedBox(height: AppSpacing.lg),
         _ChartsRow(isMobile: isMobile),
@@ -198,35 +191,42 @@ class _TabPill extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// HEADER "Resumen del mes — Marzo 2026"
+// HEADER DE DESKTOP — título + tabs en una sola fila (sin search ni botón)
+// El dashboard es pantalla de stats, no necesita el search del StickyTopbar
+// estándar. Replicamos el styling (border-bottom, padding) sin la lógica
+// de search/new que no aplica acá.
 // ═════════════════════════════════════════════════════════════════════════════
-class _MonthHeader extends StatelessWidget {
-  const _MonthHeader();
+class _DashboardDesktopHeader extends StatelessWidget {
+  const _DashboardDesktopHeader({
+    required this.selectedTab,
+    required this.onTabChanged,
+  });
+  final int selectedTab;
+  final ValueChanged<int> onTabChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Resumen del mes — Marzo 2026', // TODO: dinámico cuando tengamos data
-            style: AppTypography.h3,
-            overflow: TextOverflow.ellipsis,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl2,
+        vertical: AppSpacing.xl,
+      ),
+      child: Row(
+        children: [
+          Text('Dashboard', style: AppTypography.h1),
+          const SizedBox(width: AppSpacing.xl),
+          _TabSelector(selected: selectedTab, onChanged: onTabChanged),
+          const Spacer(),
+          Text(
+            'Resumen del mes — Marzo 2026',
+            style: AppTypography.body.copyWith(color: AppColors.textMuted),
           ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text('Este mes', style: AppTypography.small),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -274,7 +274,7 @@ class _KpiRow extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: AppSpacing.md,
         mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.1,
         children: kpis.map((k) => _KpiCardWidget(data: k)).toList(),
       );
     }
@@ -496,41 +496,61 @@ class _OrdenesRecientes extends StatelessWidget {
 class _OrdenesTablaMock extends StatelessWidget {
   const _OrdenesTablaMock();
 
+  // Filas mock compartidas entre layouts
+  static final _filas = <(String, String, String, String, _EstadoBadge)>[
+    (
+      '#ORD-2847',
+      'María López',
+      'Camisas polo',
+      r'$1,250',
+      _EstadoBadge.completada,
+    ),
+    (
+      '#ORD-2846',
+      'Carlos Ruiz',
+      'Pantalones cargo',
+      r'$3,480',
+      _EstadoBadge.enProduccion,
+    ),
+    (
+      '#ORD-2845',
+      'Ana Torres',
+      'Uniformes esc.',
+      r'$890',
+      _EstadoBadge.pendiente,
+    ),
+    (
+      '#ORD-2844',
+      'Pedro Sánchez',
+      'Chalecos ind.',
+      r'$2,100',
+      _EstadoBadge.urgente,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final filas = [
-      (
-        '#ORD-2847',
-        'María López',
-        'Camisas polo',
-        r'$1,250',
-        _EstadoBadge.completada,
-      ),
-      (
-        '#ORD-2846',
-        'Carlos Ruiz',
-        'Pantalones cargo',
-        r'$3,480',
-        _EstadoBadge.enProduccion,
-      ),
-      (
-        '#ORD-2845',
-        'Ana Torres',
-        'Uniformes esc.',
-        r'$890',
-        _EstadoBadge.pendiente,
-      ),
-      (
-        '#ORD-2844',
-        'Pedro Sánchez',
-        'Chalecos ind.',
-        r'$2,100',
-        _EstadoBadge.urgente,
-      ),
-    ];
+    if (context.isMobile) {
+      return Column(
+        children: [
+          for (final fila in _filas) ...[
+            _OrdenCardMobile(
+              orden: fila.$1,
+              cliente: fila.$2,
+              producto: fila.$3,
+              total: fila.$4,
+              estado: fila.$5,
+            ),
+            if (fila != _filas.last)
+              const Divider(height: 1, color: AppColors.border),
+          ],
+        ],
+      );
+    }
+
+    // Desktop: tabla horizontal (mantiene el layout anterior)
     return Column(
       children: [
-        // Header de columnas
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Row(
@@ -544,7 +564,7 @@ class _OrdenesTablaMock extends StatelessWidget {
           ),
         ),
         const Divider(height: 1, color: AppColors.border),
-        for (final fila in filas) ...[
+        for (final fila in _filas) ...[
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Row(
@@ -574,7 +594,7 @@ class _OrdenesTablaMock extends StatelessWidget {
               ],
             ),
           ),
-          if (fila != filas.last)
+          if (fila != _filas.last)
             const Divider(height: 1, color: AppColors.border),
         ],
       ],
@@ -592,6 +612,55 @@ class _OrdenesTablaMock extends StatelessWidget {
       ),
     ),
   );
+}
+
+// Card de una orden en mobile — toda la info de la fila apilada vertical
+class _OrdenCardMobile extends StatelessWidget {
+  const _OrdenCardMobile({
+    required this.orden,
+    required this.cliente,
+    required this.producto,
+    required this.total,
+    required this.estado,
+  });
+
+  final String orden;
+  final String cliente;
+  final String producto;
+  final String total;
+  final _EstadoBadge estado;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  orden,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              _EstadoChip(estado: estado),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text('$cliente · $producto', style: AppTypography.small),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            total,
+            style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 enum _EstadoBadge { completada, enProduccion, pendiente, urgente }
