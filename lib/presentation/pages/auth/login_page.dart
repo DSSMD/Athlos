@@ -63,6 +63,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ref.invalidate(userProfileProvider);
       }
     } catch (e) {
+      final errorStr = e.toString();
+
+      if (errorStr.contains('user_banned')) {
+        setState(() {
+          _errorMessage = 'Tu cuenta está desactivada';
+        });
+        return;
+      }
+
       setState(() {
         _errorMessage =
             'Credenciales incorrectas. Verifica tu email y contraseña.';

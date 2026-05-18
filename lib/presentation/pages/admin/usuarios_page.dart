@@ -35,6 +35,7 @@ import '../../widgets/shared/mobile_screen_header.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/search_input.dart';
 import '../../widgets/shared/sticky_topbar.dart';
+import '../../widgets/users/role_badge.dart';
 
 import '../../../domain/models/usuario_model.dart';
 import '../../providers/usuario_provider.dart';
@@ -114,14 +115,23 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                     usuariosReales,
                     key: const ValueKey('usuarios'),
                   )
-                : _buildPagosTab(isMobile, key: const ValueKey('pagos')),
+                // AÑADE EL ARGUMENTO FALTANTE AQUÍ (ejemplo: usuariosReales o filteredUsers)
+                : _buildPagosTab(
+                    isMobile,
+                    usuariosReales, // <--- Aquí pasas el segundo argumento posicional
+                    key: const ValueKey('pagos'),
+                  ),
           ),
         );
       },
     );
   }
 
-  // ─────────────────────────────────────────────────────────── USUARIOS TAB ──
+  // ─────────────────────────────────────────────────────────────────────────
+  // FUNCIONES DE FILTRADO Y CONTEO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────── USUARIOS ──
 
   Widget _buildUsuariosTab(
     bool isMobile,
@@ -184,7 +194,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   selected: _selectedTab,
                   onChanged: (i) => setState(() {
                     _selectedTab = i;
-                    _currentPage = 1; // 💡 Reiniciamos al cambiar pestaña
+                    _currentPage = 1;
                   }),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -217,12 +227,11 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   ],
                   onChanged: (i) => setState(() {
                     _selectedFilter = i;
-                    _currentPage = 1; // 💡 Reiniciamos al usar los filtros
+                    _currentPage = 1;
                   }),
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                // 💡 NUEVO: Pasamos paginatedUsers en lugar de la lista completa
                 if (users.isEmpty)
                   const EmptyState(
                     icon: Icons.search_off,
@@ -236,7 +245,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // 💡 NUEVO: Llamamos a los widgets con sus nuevas variables
                 if (isMobile)
                   LoadMoreButton(
                     hasMore: _currentPage < totalPages,
@@ -262,7 +270,20 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
 
   // ──────────────────────────────────────────────────── PAGOS TRABAJADORES ──
 
-  Widget _buildPagosTab(bool isMobile, {Key? key}) {
+  Widget _buildPagosTab(
+    bool isMobile,
+    List<UsuarioModel> allUsers, {
+    Key? key,
+  }) {
+    var trabajadores = allUsers.where((u) => u.isTrabajador).toList();
+
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      trabajadores = trabajadores
+          .where((t) => t.name.toLowerCase().contains(query))
+          .toList();
+    }
+
     return Column(
       key: key,
       children: [
@@ -296,34 +317,70 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
               children: [
                 _TabSelector(
                   selected: _selectedTab,
-                  onChanged: (i) => setState(() => _selectedTab = i),
+                  onChanged: (i) => setState(() {
+                    _selectedTab = i;
+                    _searchController.clear(); // Limpiamos búsqueda al cambiar
+                  }),
                 ),
-                const SizedBox(height: AppSpacing.xl3),
+                const SizedBox(height: AppSpacing.xl),
+
+                // 💡 Tarjeta de resumen de RRHH
                 Container(
-                  padding: const EdgeInsets.all(AppSpacing.xl3),
+                  padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(
                     color: AppColors.neutral50,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      const Icon(
-                        Icons.payments_outlined,
-                        size: 48,
-                        color: AppColors.textMuted,
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary50,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: const Icon(
+                          Icons.people_outline,
+                          color: AppColors.primary500,
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text('Pagos a trabajadores', style: AppTypography.h3),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Pendiente de diseño en Figma.',
-                        style: AppTypography.small,
-                        textAlign: TextAlign.center,
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total de trabajadores activos',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Text(
+                              '${trabajadores.length}',
+                              style: AppTypography.h3,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // 💡 LISTADO DINÁMICO
+                if (trabajadores.isEmpty)
+                  const EmptyState(
+                    icon: Icons.badge_outlined,
+                    title: 'No hay trabajadores',
+                    subtitle:
+                        'Los usuarios con rol de Producción o Cajas aparecerán aquí.',
+                  )
+                else if (isMobile)
+                  _MobileList(users: trabajadores)
+                else
+                  _DesktopTable(users: trabajadores),
+
               ],
             ),
           ),
@@ -332,7 +389,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     );
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // TAB SELECTOR — pestañas Usuarios / Pagos a trabajadores
 // ══════════════════════════════════════════════════════════════════════════════
@@ -354,7 +410,7 @@ class _TabSelector extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         _TabPill(
-          label: 'Pagos a trabajadores',
+          label: 'Trabajadores',
           selected: selected == 1,
           onTap: () => onChanged(1),
         ),
@@ -590,4 +646,3 @@ class _MobileList extends StatelessWidget {
     );
   }
 }
-

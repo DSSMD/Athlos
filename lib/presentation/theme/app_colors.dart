@@ -60,4 +60,6 @@ class AppColors {
   static const Color border = neutral200;
   static const Color borderFocus = primary500;
   static const Color borderError = error;
+
+  static Color? get success600 => null;
 }
