@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:workspace/domain/models/detalle_orden_model.dart';
+//import 'package:workspace/domain/models/detalle_orden_model.dart';
 import 'package:workspace/domain/models/orden_model.dart';
 import 'package:workspace/presentation/components/ordenes/orden_draft.dart';
 
@@ -120,65 +120,6 @@ class OrdenService {
   // =================================================================
   // CREACIÓN DE ORDEN DESDE DRAFT
   // =================================================================
-  /// Crea una orden con sus detalles y tallas vía la RPC plpgsql
-  /// `crear_orden_completa`. Transaccional del lado BD: si cualquier paso
-  /// falla, se rollback el bloque entero.
-  ///
-  /// Retorna el `num_orden` (UUID como String) de la orden recién creada
-  /// para que el caller pueda navegar al detalle si quiere.
-  ///
-  /// Lanza Exception con mensaje útil en caso de error de validación,
-  /// FK violation, o cualquier error de Supabase.
-  /*Future<String> crearOrdenDesdeDraft(OrdenDraft draft) async {
-    // 1. Construir el payload de items
-    final itemsPayload = draft.items.map((item) {
-      return {
-        'id_conjunto': item.tipoItem == TipoItem.conjunto
-            ? item.idConjunto
-            : null,
-        'id_plantilla': item.tipoItem == TipoItem.plantilla
-            ? item.idPlantilla
-            : null,
-        'precio_unitario': item.precioUnitario,
-        'tallas': item.tallas
-            .map((t) => {'id_talla': t.idTalla, 'cantidad': t.cantidad})
-            .toList(),
-      };
-    }).toList();
-
-    // 2. Postgres `date` espera 'YYYY-MM-DD'
-    final fecha = draft.fechaEntrega;
-    if (fecha == null) {
-      throw Exception('La fecha de entrega es requerida');
-    }
-    final fechaStr =
-        '${fecha.year.toString().padLeft(4, '0')}-'
-        '${fecha.month.toString().padLeft(2, '0')}-'
-        '${fecha.day.toString().padLeft(2, '0')}';
-
-    // 3. notas_adicionales: enviar null si descripción está vacía
-    final descTrim = draft.descripcion.trim();
-    final notas = descTrim.isNotEmpty ? descTrim : null;
-
-    // 4. Llamar a la RPC
-    try {
-      final result = await _supabase.rpc(
-        'crear_orden_completa',
-        params: {
-          'p_fecha_entrega': fechaStr,
-          'p_items': itemsPayload,
-          'p_id_cliente': draft.idCliente,
-          'p_notas_adicionales': notas,
-          'p_imagen_modelo': null,
-        },
-      );
-
-      return result.toString();
-    } on PostgrestException catch (e) {
-      throw Exception('Error al crear orden: ${e.message}');
-    }
-  }*/
-
   Future<void> crearOrdenDesdeDraft(OrdenDraft draft) async {
     // 1. Validaciones de seguridad antes de enviar al backend
     if (draft.idCliente == null) throw Exception('El cliente es obligatorio');
@@ -189,52 +130,74 @@ class OrdenService {
       throw Exception('La orden debe tener al menos un ítem');
     }
 
-    // 2. Mapeo del payload exacto como lo espera tu función RPC en PostgreSQL
+    // =================================================================
+    // 2. SUBIR IMAGEN A SUPABASE STORAGE (Si existe)
+    // =================================================================
+    String? imagenUrl;
+    if (draft.imagenBytes != null && draft.imagenNombre != null) {
+      try {
+        // Creamos un nombre de archivo único para evitar sobreescrituras
+        final extension = draft.imagenNombre!.split('.').last;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final rutaArchivo = 'modelo/modelo_$timestamp.$extension';
+
+        // Subimos los bytes al bucket llamado 'imagenes_ordenes'
+        await _supabase.storage
+            .from('fichas_tecnicas')
+            .uploadBinary(rutaArchivo, draft.imagenBytes!);
+
+        // Obtenemos la URL pública para guardarla en la base de datos
+        imagenUrl = _supabase.storage
+            .from('fichas_tecnicas')
+            .getPublicUrl(rutaArchivo);
+      } catch (e) {
+        throw Exception('Error al subir la imagen del modelo: $e');
+      }
+    }
+
+    // =================================================================
+    // 3. MAPEO DEL PAYLOAD PARA EL RPC
+    // =================================================================
     final params = {
       'p_id_cliente': draft.idCliente,
-      // Formateamos la fecha a YYYY-MM-DD para evitar problemas de timestamp
       'p_fecha_entrega': draft.fechaEntrega!.toIso8601String().split('T')[0],
 
-      // Si en el futuro agregas estos campos al OrdenDraft, los cambias aquí
-      'p_notas_adicionales': null,
-      'p_imagen_modelo': null,
+      // Pasamos la URL generada en el paso anterior (o null si no subió nada)
+      'p_imagen_modelo': imagenUrl,
 
-      // Enviamos el enum convertido a texto ('normal', 'alta', 'urgente')
+      // Conectamos también el campo de descripción/notas que el usuario escribe
+      'p_notas_adicionales': draft.descripcion.trim().isNotEmpty
+          ? draft.descripcion.trim()
+          : null,
+
       'p_prioridad': draft.prioridad.name,
-
-      // Inyectores financieros
       'p_anticipo': draft.anticipo,
       'p_metodo_pago': draft.metodoPago,
 
-      // Lista de ítems
       'p_items': draft.items.map((item) {
         return {
-          // Por el "atajo", id_conjunto viajará como null y se usará id_plantilla
           'id_conjunto': item.idConjunto,
           'id_plantilla': item.idPlantilla,
           'precio_unitario': item.precioUnitario,
           'tallas': item.tallas
-              .where(
-                (t) => t.cantidad > 0,
-              ) // Filtramos tallas vacías por seguridad
+              .where((t) => t.cantidad > 0)
               .map((t) => {'id_talla': t.idTalla, 'cantidad': t.cantidad})
               .toList(),
         };
       }).toList(),
     };
 
+    // =================================================================
+    // 4. LLAMADA A LA BASE DE DATOS
+    // =================================================================
     try {
-      // 3. Llamada al RPC de Supabase
-      final response = await Supabase.instance.client.rpc(
+      final response = await _supabase.rpc(
         'crear_orden_completa',
         params: params,
       );
-
       debugPrint('Orden creada con éxito. ID: $response');
     } catch (e) {
       debugPrint('Error al crear la orden desde el service: $e');
-      // Relanzamos el error para que el try-catch de OrdenFormPage
-      // lo atrape y muestre el SnackBar rojo
       rethrow;
     }
   }

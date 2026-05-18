@@ -132,59 +132,56 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
     );
   }
 
-  // ─── LAYOUT DESKTOP REDISEÑADO ───
+  // ─── LAYOUT DESKTOP REDISEÑADO (Main & Sidebar Balanceado) ───
   Widget _buildDesktop() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // FILA 1: Información General, Fechas y Prioridad
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
-            ),
-            const SizedBox(width: AppSpacing.xl),
-            Expanded(
-              flex: 1,
-              child: Column(
+        // COLUMNA IZQUIERDA (flex: 3): Información, Finanzas y Tabla de Productos
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OrdenInfoCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.xl),
+
+              // 👇 NUEVO: Resumen y Anticipo abajo de información en dos columnas
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  OrdenCalendarioCard(draft: _draft),
-                  const SizedBox(height: AppSpacing.lg),
-                  OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
+                  Expanded(child: OrdenResumenCard(draft: _draft)),
+                  const SizedBox(
+                    width: AppSpacing.xl,
+                  ), // Espaciado entre columnas financieras
+                  Expanded(
+                    child: OrdenAnticipoCard(
+                      draft: _draft,
+                      onChanged: _updateDraft,
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
+
+              const SizedBox(height: AppSpacing.xl),
+              OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
+            ],
+          ),
         ),
 
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-          child: Divider(color: AppColors.border),
-        ),
+        const SizedBox(width: AppSpacing.xl2),
 
-        // FILA 2: Detalle de Productos y Finanzas
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: OrdenProductosCard(draft: _draft, onChanged: _updateDraft),
-            ),
-            const SizedBox(width: AppSpacing.xl),
-            Expanded(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OrdenResumenCard(draft: _draft),
-                  const SizedBox(height: AppSpacing.lg),
-                  OrdenAnticipoCard(draft: _draft, onChanged: _updateDraft),
-                ],
-              ),
-            ),
-          ],
+        // COLUMNA DERECHA (flex: 2): Logística y Planificación (Sidebar)
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OrdenCalendarioCard(draft: _draft, onChanged: _updateDraft),
+              const SizedBox(height: AppSpacing.lg),
+              OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
+            ],
+          ),
         ),
       ],
     );
@@ -201,7 +198,7 @@ class _OrdenFormPageState extends ConsumerState<OrdenFormPage> {
         const SizedBox(height: AppSpacing.lg),
         OrdenResumenCard(draft: _draft),
         const SizedBox(height: AppSpacing.lg),
-        OrdenCalendarioCard(draft: _draft),
+        OrdenCalendarioCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),
         OrdenPrioridadCard(draft: _draft, onChanged: _updateDraft),
         const SizedBox(height: AppSpacing.lg),

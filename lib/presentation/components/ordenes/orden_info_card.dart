@@ -79,20 +79,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     widget.onChanged(widget.draft.copyWith(idCliente: id));
   }
 
-  Future<void> _pickFecha() async {
-    final hoy = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate:
-          widget.draft.fechaEntrega ?? hoy.add(const Duration(days: 7)),
-      firstDate: hoy,
-      lastDate: hoy.add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      widget.onChanged(widget.draft.copyWith(fechaEntrega: picked));
-    }
-  }
-
   Future<void> _subirImagen() async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
@@ -106,14 +92,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
         widget.draft.copyWith(imagenBytes: bytes, imagenNombre: image.name),
       );
     }
-  }
-
-  String _fechaDisplay() {
-    final f = widget.draft.fechaEntrega;
-    if (f == null) return 'dd/mm/yyyy';
-    return '${f.day.toString().padLeft(2, '0')}/'
-        '${f.month.toString().padLeft(2, '0')}/'
-        '${f.year}';
   }
 
   @override
@@ -130,16 +108,40 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
         children: [
           _header(),
           const SizedBox(height: AppSpacing.lg),
-          _filaClienteFecha(),
+
+          // FILA 1: Cliente y Moneda lado a lado
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 3, child: _selectorCliente()),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(flex: 2, child: _toggleMoneda()),
+            ],
+          ),
+
           const SizedBox(height: AppSpacing.lg),
-          _toggleMoneda(),
-          const SizedBox(height: AppSpacing.lg),
-          _selectorImagen(),
-          const SizedBox(height: AppSpacing.lg),
-          _bannerTipoCambio(),
-          if (widget.draft.moneda == OrdenMoneda.dolares)
-            const SizedBox(height: AppSpacing.lg),
-          _descripcion(),
+
+          // FILA 2: Imagen y Descripción lado a lado
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 2, child: _selectorImagen()),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.draft.moneda == OrdenMoneda.dolares) ...[
+                      _bannerTipoCambio(),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    _descripcion(),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -180,11 +182,7 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
   Widget _filaClienteFecha() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: _selectorCliente()),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(child: _selectorFecha()),
-      ],
+      children: [Expanded(child: _selectorCliente())],
     );
   }
 
@@ -261,49 +259,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
                 ),
               );
             },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _selectorFecha() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label('Fecha de entrega *'),
-        const SizedBox(height: AppSpacing.xs),
-        InkWell(
-          onTap: _pickFecha,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _fechaDisplay(),
-                    style: AppTypography.small.copyWith(
-                      color: widget.draft.fechaEntrega == null
-                          ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
-              ],
-            ),
           ),
         ),
       ],
