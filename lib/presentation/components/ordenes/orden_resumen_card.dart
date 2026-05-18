@@ -1,12 +1,16 @@
 // ============================================================================
 // orden_resumen_card.dart
 // Ubicación: lib/presentation/components/ordenes/orden_resumen_card.dart
-// Descripción: Card "Resumen" de la columna lateral (SCRUM-75).
-// Muestra moneda, listado de productos con subtotales, subtotal general,
-// descuento (5% mockeado), total, y equivalente en Bs si moneda es USD.
+// Descripción: Card "Resumen" de la columna lateral del form Crear Orden.
+// Muestra moneda, listado de ítems con subtotales, subtotal general,
+// descuento (5% mockeado del Figma), total y equivalente en Bs si moneda es USD.
 //
-// El descuento del 5% es mock fijo del Figma. Cuando exista lógica de
-// descuentos por cliente o promociones, se calcula dinámico.
+// Refactor (esquema nuevo):
+//   - Lee draft.items (List<OrdenItemDraft>) y draft.subtotalItems en lugar
+//     de los campos legacy draft.productos / draft.subtotal.
+//   - La fila por ítem muestra nombre + cantidad total (suma de tallas) +
+//     subtotal calculado como precioUnitario × cantidadTotal.
+//   - El descuento del 5% sigue mock fijo del Figma.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -19,7 +23,7 @@ import 'orden_draft.dart';
 
 class OrdenResumenCard extends StatelessWidget {
   final OrdenDraft draft;
-  final double descuentoFijo; // NUEVO parámetro
+  final double descuentoFijo;
 
   const OrdenResumenCard({
     super.key,
@@ -29,14 +33,25 @@ class OrdenResumenCard extends StatelessWidget {
 
   static const double _porcentajeDescuento = 0.05;
 
+  // ─── Helpers locales por ítem (duplican lo que tiene OrdenProductosCard;
+  //     se pueden promover a getters de OrdenItemDraft en una limpieza
+  //     futura para deduplicar) ───
+  static int _cantidadTotal(OrdenItemDraft item) =>
+      item.tallas.fold(0, (sum, t) => sum + t.cantidad);
+
+  static double _subtotalItem(OrdenItemDraft item) =>
+      item.precioUnitario * _cantidadTotal(item);
+
   @override
   Widget build(BuildContext context) {
-    // 1. Todo esto está internamente en Bolivianos (Bs)
-    final subtotal = draft.subtotal;
-    final descuento = subtotal * descuentoFijo;
-    final total = subtotal - descuento;
+    final subtotal = draft.subtotalItems;
 
-    // 2. Si la UI está en Dólares, el equivalente en Bs es simplemente el 'total' puro
+    // Aquí usamos el descuento real del draft. Si lo implementas luego, cámbialo a:
+    // final descuento = draft.descuento ?? 0.0;
+    // Por ahora, lo mantenemos en 0 para que no altere tus números hasta que agregues el input.
+    final descuento = 0.0;
+
+    final total = subtotal - descuento;
     final equivalenteBs = draft.moneda == OrdenMoneda.dolares ? total : null;
 
     return Container(
@@ -53,25 +68,33 @@ class OrdenResumenCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           _filaMoneda(),
           const SizedBox(height: AppSpacing.md),
-          if (draft.productos.isEmpty)
+
+          if (draft.items.isEmpty)
             _empty()
           else ...[
-            ...draft.productos.map((p) => _filaProducto(p)),
+            ...draft.items.map((item) => _filaItem(item)),
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
 
-            // formatPrecio se encargará de dividir si está en Dólares, o dejarlo igual si está en Bs
             _filaTotal('Subtotal', draft.formatPrecio(subtotal)),
-            const SizedBox(height: AppSpacing.sm),
-            _filaDescuento(descuento),
+
+            // Solo mostramos la fila de descuento si es mayor a 0
+            if (descuento > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _filaDescuento(descuento),
+            ],
+
             const SizedBox(height: AppSpacing.md),
             const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppSpacing.md),
 
-            _filaTotal('Total', draft.formatPrecio(total), destacado: true),
+            _filaTotal(
+              'Total de la Orden',
+              draft.formatPrecio(total),
+              destacado: true,
+            ),
 
-            // Mostramos el monto original contable en la parte inferior si la vista está en USD
             if (equivalenteBs != null) ...[
               const SizedBox(height: AppSpacing.sm),
               _filaEquivalenteBs(equivalenteBs),
@@ -82,16 +105,8 @@ class OrdenResumenCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HEADER
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _header() {
-    return Text('Resumen', style: AppTypography.h3);
-  }
+  Widget _header() => Text('Resumen', style: AppTypography.h3);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA MONEDA — label + badge con la moneda actual
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _filaMoneda() {
     final esUsd = draft.moneda == OrdenMoneda.dolares;
     return Row(
@@ -122,38 +137,34 @@ class OrdenResumenCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // EMPTY STATE
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _empty() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Text(
-        'Agregá productos para ver el resumen',
+        'Agregá ítems para ver el resumen',
         style: AppTypography.small.copyWith(color: AppColors.textMuted),
         textAlign: TextAlign.center,
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA DE PRODUCTO — nombre (cantidad) — precio
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _filaProducto(OrdenProductoItem p) {
+  Widget _filaItem(OrdenItemDraft item) {
+    final cant = _cantidadTotal(item);
+    final sub = _subtotalItem(item);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              '${p.nombre} (${p.cantidad})',
+              '${item.nombre} ($cant)',
               style: AppTypography.small,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
-            draft.formatPrecio(p.subtotal),
+            draft.formatPrecio(sub),
             style: AppTypography.small.copyWith(fontWeight: FontWeight.w500),
           ),
         ],
@@ -161,9 +172,6 @@ class OrdenResumenCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA TOTAL/SUBTOTAL — label + valor
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _filaTotal(String label, String valor, {bool destacado = false}) {
     final style = destacado
         ? AppTypography.h3.copyWith(fontWeight: FontWeight.w700)
@@ -184,9 +192,6 @@ class OrdenResumenCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA DESCUENTO — verde, con porcentaje
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _filaDescuento(double descuento) {
     final porcentaje = (_porcentajeDescuento * 100).toStringAsFixed(0);
     return Row(
@@ -205,9 +210,6 @@ class OrdenResumenCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA EQUIVALENTE EN Bs — solo aparece en USD
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _filaEquivalenteBs(double valor) {
     return Row(
       children: [

@@ -44,12 +44,10 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
     required String password,
     required String? telefono,
     required UserRole rol,
-    int? idArea,
-    double? tarifaPagoBase,
-    // TODO (Permisos): Recibir required List<String> permisos, y pasarlos al Service.
   }) async {
     final service = ref.read(usuarioServiceProvider);
 
+    // 1.  EL TRUCO: Guardamos la lista de usuarios que está actualmente en pantalla
     final estadoAnterior = state;
 
     state = const AsyncValue.loading();
@@ -66,17 +64,17 @@ class UsuariosNotifier extends AsyncNotifier<List<UsuarioModel>> {
         tarifaPagoBase: tarifaPagoBase,
       );
 
+      // Si sale bien, recargamos la lista desde la base de datos
       state = await AsyncValue.guard(() async {
         return _fetchUsuarios();
       });
-
     } catch (e) {
-      // 2. 💡 LA CORRECCIÓN: Si falla, NO ponemos estado de error. 
+      // 2. 💡 LA CORRECCIÓN: Si falla, NO ponemos estado de error.
       // Restauramos la tabla normal que guardamos al principio.
-      state = estadoAnterior; 
-      
+      state = estadoAnterior;
+
       // 3. Escupimos el error hacia el Frontend para que tu SnackBar lo atrape
-      rethrow; 
+      rethrow;
     }
   }
 

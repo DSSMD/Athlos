@@ -11,18 +11,18 @@ import '../widgets/shared/more_options_sheet.dart';
 import 'athlos_sidebar.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
-class SidebarCollapsedNotifier extends Notifier<bool> {
+class SidebarCollapsedNotifier extends Notifier<bool?> {
   @override
-  bool build() => false; // Estado inicial: expandido (false)
+  bool? build() => null; // null significa "comportamiento automático por pantalla"
 
-  void toggle() {
-    state = !state;
+  void toggle(bool isCurrentlyCollapsed) {
+    state = !isCurrentlyCollapsed;
   }
 }
 
 // Declaramos el provider usando la nueva sintaxis
 final sidebarCollapsedProvider =
-    NotifierProvider<SidebarCollapsedNotifier, bool>(
+    NotifierProvider<SidebarCollapsedNotifier, bool?>(
       SidebarCollapsedNotifier.new,
     );
 
@@ -60,8 +60,8 @@ class MainLayout extends ConsumerWidget {
     bool isExtended,
     
   ) {
-    final isManuallyCollapsed = ref.watch(sidebarCollapsedProvider);
-    final shouldCollapse = !isExtended || isManuallyCollapsed;
+    final manualState = ref.watch(sidebarCollapsedProvider);
+    final shouldCollapse = manualState ?? !isExtended;
     final sidebarItems = railDestinations.map((dest) {
       return SidebarItem(
         icon: (dest.icon as Icon).icon ?? Icons.circle,
@@ -85,7 +85,7 @@ class MainLayout extends ConsumerWidget {
               ref.read(navigationIndexProvider.notifier).changeIndex(index);
             },
             onToggleCollapsed: () {
-              ref.read(sidebarCollapsedProvider.notifier).toggle();
+              ref.read(sidebarCollapsedProvider.notifier).toggle(shouldCollapse);
             },
           ),
           Expanded(

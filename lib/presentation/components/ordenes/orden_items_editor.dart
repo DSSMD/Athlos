@@ -44,7 +44,6 @@ class OrdenItemsEditor extends StatefulWidget {
   /// Recibe el mapa con id_tipo_prenda, id_talla, cantidad.
   /// Si es null, el editor funciona en modo solo-lectura (no muestra el botón agregar).
   final Future<void> Function(Map<String, dynamic> nuevoItem)? onAgregarItem;
-  
 
   const OrdenItemsEditor({
     super.key,
@@ -206,8 +205,7 @@ class _OrdenItemsEditorState extends State<OrdenItemsEditor> {
               ),
             ),
 
-          for (var i = 0; i < _items.length; i++)
-            _ItemRow(item: _items[i]),
+          for (var i = 0; i < _items.length; i++) _ItemRow(item: _items[i]),
 
           if (_items.isNotEmpty) ...[
             const Divider(),
@@ -254,9 +252,7 @@ class _ItemRow extends StatelessWidget {
             flex: 4,
             child: Text(item.nombre, style: AppTypography.small),
           ),
-          Expanded(
-            child: Text('${item.cantidad}', style: AppTypography.small),
-          ),
+          Expanded(child: Text('${item.cantidad}', style: AppTypography.small)),
           Expanded(
             flex: 2,
             child: Text(
@@ -373,8 +369,8 @@ class _AgregarItemDetalleDialogState
                           items: tallas
                               .map(
                                 (t) => DropdownMenuItem<int>(
-                                  value: t['id_talla'] as int,
-                                  child: Text(t['nombre_talla'].toString()),
+                                  value: t.id,
+                                  child: Text(t.nombre),
                                 ),
                               )
                               .toList(),
@@ -382,9 +378,9 @@ class _AgregarItemDetalleDialogState
                             if (val != null) {
                               setState(() {
                                 _idTalla = val;
-                                _nombreTalla = tallas.firstWhere(
-                                  (t) => t['id_talla'] == val,
-                                )['nombre_talla'];
+                                _nombreTalla = tallas
+                                    .firstWhere((t) => t.id == val)
+                                    .nombre;
                               });
                             }
                           },

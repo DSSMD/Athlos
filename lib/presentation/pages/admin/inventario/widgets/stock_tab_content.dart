@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/presentation/pages/admin/inventario/widgets/insumo_detalle_modal.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
-import '../../../../widgets/users/kpi_card.dart';
+//import '../../../../widgets/users/kpi_card.dart';
 import 'kardex_historial_modal.dart';
 
 class StockTabContent extends ConsumerWidget {
@@ -171,7 +171,7 @@ class _FiltrosCard extends ConsumerWidget {
                   ];
 
                   return DropdownButtonFormField<String?>(
-                    value: filtros.nombreCategoriaFiltro,
+                    initialValue: filtros.nombreCategoriaFiltro,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
@@ -185,7 +185,7 @@ class _FiltrosCard extends ConsumerWidget {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const Text('Error al cargar categorías'),
+                error: (_, _) => const Text('Error al cargar categorías'),
               ),
             ),
             
@@ -193,7 +193,7 @@ class _FiltrosCard extends ConsumerWidget {
             SizedBox(
               width: 150,
               child: DropdownButtonFormField<InventarioOrden>(
-                value: filtros.orden,
+                initialValue: filtros.orden,
                 isExpanded: true,
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
@@ -1049,7 +1049,9 @@ class _Pagination extends StatelessWidget {
     if (current > 3) result.add(-1);
     final start = (current - 1).clamp(2, total - 1);
     final end = (current + 1).clamp(2, total - 1);
-    for (var i = start; i <= end; i++) result.add(i);
+    for (var i = start; i <= end; i++) {
+      result.add(i);
+    }
     if (current < total - 2) result.add(-1);
     result.add(total);
     return result;

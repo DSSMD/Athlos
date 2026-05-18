@@ -27,7 +27,7 @@ class _SingupPageState extends State<SingupPage> {
 
   void _handleRegister() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Simulación de carga (Solo Frontend)
     setState(() => _isLoading = true);
     Future.delayed(const Duration(seconds: 2), () {
@@ -97,7 +97,8 @@ class _SingupPageState extends State<SingupPage> {
           Center(
             child: Image.asset(
               'assets/images/logoAthlos.png',
-              width: 140, // Ligeramente más pequeño para dar espacio a los campos
+              width:
+                  140, // Ligeramente más pequeño para dar espacio a los campos
               height: 140,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
@@ -217,7 +218,9 @@ class _SingupPageState extends State<SingupPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF0000),
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFFF0000).withValues(alpha: 0.5),
+                disabledBackgroundColor: const Color(
+                  0xFFFF0000,
+                ).withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -243,7 +246,7 @@ class _SingupPageState extends State<SingupPage> {
           ),
 
           const SizedBox(height: 24),
-          
+
           // Separador visual
           Row(
             children: [
@@ -303,9 +306,9 @@ class _SingupPageState extends State<SingupPage> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Regresar al Login
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

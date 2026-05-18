@@ -38,8 +38,13 @@ class _EntregaReal {
 
 class OrdenCalendarioCard extends ConsumerStatefulWidget {
   final OrdenDraft draft;
+  final ValueChanged<OrdenDraft> onChanged;
 
-  const OrdenCalendarioCard({super.key, required this.draft});
+  const OrdenCalendarioCard({
+    super.key,
+    required this.draft,
+    required this.onChanged,
+  });
 
   @override
   ConsumerState<OrdenCalendarioCard> createState() =>
@@ -74,19 +79,22 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
 
   List<_EntregaReal> _buildEntregas(List<OrdenModel> ordenes) {
     return ordenes
-        .where((o) =>
-            o.fechaEntrega.month == _mesVisible.month &&
-            o.fechaEntrega.year == _mesVisible.year)
+        .where(
+          (o) =>
+              o.fechaEntrega.month == _mesVisible.month &&
+              o.fechaEntrega.year == _mesVisible.year,
+        )
         .map((o) {
-      final codigoCorto = o.numOrden.length > 8
-          ? o.numOrden.substring(0, 8).toUpperCase()
-          : o.numOrden.toUpperCase();
-      return _EntregaReal(
-        fecha: o.fechaEntrega,
-        numOrden: codigoCorto,
-        estado: _mapEstado(o.idEstado),
-      );
-    }).toList()
+          final codigoCorto = o.numOrden.length > 8
+              ? o.numOrden.substring(0, 8).toUpperCase()
+              : o.numOrden.toUpperCase();
+          return _EntregaReal(
+            fecha: o.fechaEntrega,
+            numOrden: codigoCorto,
+            estado: _mapEstado(o.idEstado),
+          );
+        })
+        .toList()
       ..sort((a, b) => a.fecha.compareTo(b.fecha));
   }
 
@@ -225,14 +233,25 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CALENDARIO
+  // CALENDARIO (CON VALIDACIÓN DE FECHAS PASADAS)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _calendario(List<_EntregaReal> entregas, DateTime? estaOrdenFecha) {
+    final hoy = DateTime.now();
+    // Normalizamos la fecha de hoy a medianoche (00:00:00) para evitar que
+    // las horas, minutos o segundos bloqueen erróneamente el día actual.
+    final hoyCero = DateTime(hoy.year, hoy.month, hoy.day);
+
     return TableCalendar(
       firstDay: DateTime(2020),
       lastDay: DateTime(2030),
       focusedDay: _mesVisible,
       locale: 'es_ES',
+
+      // 👇 NUEVO: Deshabilitar visualmente y bloquear los días pasados
+      enabledDayPredicate: (day) {
+        return !day.isBefore(hoyCero);
+      },
+
       headerStyle: HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
@@ -269,7 +288,15 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
         outsideDaysVisible: false,
         defaultTextStyle: AppTypography.small,
         weekendTextStyle: AppTypography.small,
-        todayDecoration: BoxDecoration(
+
+        // Estilo para los días que queden deshabilitados por la validación
+        disabledTextStyle: AppTypography.small.copyWith(
+          color: AppColors.textMuted.withOpacity(0.4),
+          decoration: TextDecoration
+              .lineThrough, // Opcional: añade una línea sobre el número
+        ),
+
+        todayDecoration: const BoxDecoration(
           color: AppColors.neutral200,
           shape: BoxShape.circle,
         ),
@@ -277,7 +304,7 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
           fontWeight: FontWeight.w600,
         ),
         selectedDecoration: BoxDecoration(
-          color: AppColors.primary500.withValues(alpha: 0.15),
+          color: AppColors.primary500.withOpacity(0.15),
           shape: BoxShape.circle,
         ),
         selectedTextStyle: AppTypography.small.copyWith(
@@ -290,6 +317,13 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
         return isSameDay(day, estaOrdenFecha);
       },
       onPageChanged: (focusedDay) {
+        setState(() => _mesVisible = focusedDay);
+      },
+      onDaySelected: (selectedDay, focusedDay) {
+        if (estaOrdenFecha != null && isSameDay(selectedDay, estaOrdenFecha)) {
+          return;
+        }
+        widget.onChanged(widget.draft.copyWith(fechaEntrega: selectedDay));
         setState(() => _mesVisible = focusedDay);
       },
       calendarBuilders: CalendarBuilders(
@@ -371,59 +405,91 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // LISTA DE ENTREGAS DEL MES
+  // LISTA DE ENTREGAS DEL DÍA SELECCIONADO
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _listaEntregas(List<_EntregaReal> entregas, DateTime? estaOrdenFecha) {
-    final tieneEstaOrden =
-        estaOrdenFecha != null &&
-        estaOrdenFecha.month == _mesVisible.month &&
-        estaOrdenFecha.year == _mesVisible.year;
-    final total = entregas.length + (tieneEstaOrden ? 1 : 0);
+    // Si aún no ha seleccionado fecha en el calendario
+    if (estaOrdenFecha == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Text(
+          'Selecciona una fecha en el calendario para ver las entregas de ese día.',
+          style: AppTypography.small.copyWith(color: AppColors.textMuted),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
 
-    final mesShort = _nombreMes(_mesVisible).split(' ').first.toLowerCase();
+    // Filtramos para obtener SOLO las entregas del día seleccionado
+    final entregasDelDia = entregas
+        .where((e) => isSameDay(e.fecha, estaOrdenFecha))
+        .toList();
+
+    final total =
+        entregasDelDia.length +
+        1; // +1 sumando "Esta orden" que estamos creando
+
+    final mesStr = _nombreMes(estaOrdenFecha).split(' ').first.toLowerCase();
+    final diaStr = estaOrdenFecha.day.toString();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Entregas en $mesShort ($total órdenes)',
+          'Entregas para el $diaStr de $mesStr ($total órdenes)',
           style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppSpacing.sm),
 
-        if (entregas.isEmpty && !tieneEstaOrden)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(
-              'No hay entregas programadas para este mes.',
-              style: AppTypography.small.copyWith(color: AppColors.textMuted),
-            ),
+        // 1. Mostrar siempre la orden actual que estamos agendando
+        Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
-
-        ...entregas.map(
-          (e) => _entregaRow(
-            dia: e.fecha.day,
-            numOrden: e.numOrden,
-            estado: e.estado,
-            esEstaOrden: false,
+          decoration: BoxDecoration(
+            color: AppColors.primary500.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: _entregaRow(
+            dia: estaOrdenFecha.day,
+            numOrden: 'Esta orden (Nueva)',
+            estado: _EstadoEntrega.estaOrden,
+            esEstaOrden: true,
           ),
         ),
-        if (tieneEstaOrden)
-          Container(
-            margin: const EdgeInsets.only(top: AppSpacing.xs),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
+
+        // 2. Si no hay más entregas ese día, mostramos el mensaje de éxito
+        if (entregasDelDia.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  size: 18,
+                  color: AppColors.success,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'Día libre. Excelente fecha para agendar.',
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            decoration: BoxDecoration(
-              color: AppColors.primary500.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: _entregaRow(
-              dia: estaOrdenFecha.day,
-              numOrden: 'Esta orden',
-              estado: _EstadoEntrega.estaOrden,
-              esEstaOrden: true,
+          )
+        // 3. Si hay entregas, las listamos
+        else
+          ...entregasDelDia.map(
+            (e) => _entregaRow(
+              dia: e.fecha.day,
+              numOrden: e.numOrden,
+              estado: e.estado,
+              esEstaOrden: false,
             ),
           ),
       ],

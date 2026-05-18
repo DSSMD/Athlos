@@ -46,7 +46,7 @@ class AuthProfileMenu extends ConsumerWidget {
                 );
               },
               loading: () => const UserAvatar(name: '?', size: 32),
-              error: (_, __) =>
+              error: (_, _) =>
                   const Icon(Icons.error, color: Colors.red, size: 32),
             ),
           ),

@@ -1,26 +1,16 @@
-// ============================================================================
-// orden_draft.dart
-// Ubicación: lib/presentation/components/ordenes/orden_draft.dart
-// Descripción: State local del formulario "Nueva orden" (SCRUM-75).
-//
-// NO es un modelo de BD. Es la representación rica del form mientras el
-// usuario lo está llenando, con todos los campos que pide el Figma.
-// Cuando se aprieta "Crear orden", este draft se mappea a OrdenModel
-// (los 7 campos que sí existen en BD) y los campos extra quedan como
-// Ver HANDOFF — patrón "placeholders honestos con TODOs".
-// ============================================================================
+// lib/presentation/components/ordenes/orden_draft.dart
 
 import 'dart:typed_data';
+import '../../../domain/models/detalle_orden_model.dart';
 
-/// Moneda de la orden. El Figma muestra toggle Bs / USD.
 enum OrdenMoneda { bolivianos, dolares }
 
-/// Prioridad de la orden. El Figma muestra Normal / Alta / Urgente.
 enum OrdenPrioridad { normal, alta, urgente }
 
-/// Tipo de cambio mockeado USD -> Bs.
 const double kTipoCambioUsdBs = 10.50;
 
+/// LEGACY: ítem aplanado (tipo_prenda + talla) del esquema viejo.
+/// Será eliminado en cleanup tras la migración completa a OrdenItemDraft.
 class OrdenProductoItem {
   final int? idTipoPrenda;
   final int? idTalla;
@@ -70,11 +60,9 @@ class OrdenMaterialRequerido {
     required this.unidad,
   });
 
-  // Lógica de estado automática
   String get estado => stockActual >= requerido ? 'disponible' : 'insuficiente';
   double get despues => stockActual - requerido;
 
-  // ESTO ES LO QUE FALTA:
   OrdenMaterialRequerido copyWith({
     String? material,
     double? requerido,
@@ -90,10 +78,74 @@ class OrdenMaterialRequerido {
   }
 }
 
-/// Borrador de orden. State local del form de creación.
-///
-/// Inmutable: cada cambio devuelve una copia con `copyWith` para que el
-/// padre haga `setState` y el form se redibuje. Mismo patrón que clientes.
+/// Una talla específica con cantidad, dentro de un OrdenItemDraft.
+/// Espejo en el draft de DetalleOrdenTalla.
+class OrdenTallaDraft {
+  final int idTalla;
+  final String nombreTalla;
+  final int cantidad;
+
+  const OrdenTallaDraft({
+    required this.idTalla,
+    required this.nombreTalla,
+    required this.cantidad,
+  });
+
+  OrdenTallaDraft copyWith({int? idTalla, String? nombreTalla, int? cantidad}) {
+    return OrdenTallaDraft(
+      idTalla: idTalla ?? this.idTalla,
+      nombreTalla: nombreTalla ?? this.nombreTalla,
+      cantidad: cantidad ?? this.cantidad,
+    );
+  }
+}
+
+/// Un ítem en el draft del form: o un conjunto, o una plantilla suelta,
+/// con sus tallas. Espejo en el draft de DetalleOrden. Se convierte a
+/// DetalleOrden al momento de persistir la orden.
+class OrdenItemDraft {
+  final TipoItem tipoItem;
+  final String? idConjunto; // poblado si tipoItem == conjunto
+  final String? idPlantilla; // poblado si tipoItem == plantilla
+  final String nombre; // denormalizado: nombre del conjunto o plantilla
+  final double
+  precioUnitario; // viene del catálogo (plantilla.precio_plantilla / conjunto.precio_conjunto)
+  final List<OrdenTallaDraft> tallas;
+
+  const OrdenItemDraft({
+    required this.tipoItem,
+    this.idConjunto,
+    this.idPlantilla,
+    required this.nombre,
+    required this.precioUnitario,
+    this.tallas = const [],
+  });
+
+  /// Suma de cantidades de todas las tallas del ítem.
+  int get cantidadTotal => tallas.fold(0, (sum, t) => sum + t.cantidad);
+
+  /// cantidadTotal × precioUnitario.
+  double get subtotal => cantidadTotal * precioUnitario;
+
+  OrdenItemDraft copyWith({
+    TipoItem? tipoItem,
+    String? idConjunto,
+    String? idPlantilla,
+    String? nombre,
+    double? precioUnitario,
+    List<OrdenTallaDraft>? tallas,
+  }) {
+    return OrdenItemDraft(
+      tipoItem: tipoItem ?? this.tipoItem,
+      idConjunto: idConjunto ?? this.idConjunto,
+      idPlantilla: idPlantilla ?? this.idPlantilla,
+      nombre: nombre ?? this.nombre,
+      precioUnitario: precioUnitario ?? this.precioUnitario,
+      tallas: tallas ?? this.tallas,
+    );
+  }
+}
+
 class OrdenDraft {
   // ───── Información del pedido ─────
   final String? idCliente;
@@ -101,17 +153,21 @@ class OrdenDraft {
   final String descripcion;
   final OrdenMoneda moneda;
 
-  // ───── Producto rápido (header del Figma) ─────
-  // El Figma duplica producto/cantidad/precio en el header de "Información"
-  // Y en la tabla "Productos de la orden". Mantenemos los dos según diseño.
+  // ───── Producto rápido (header del Figma, LEGACY) ─────
+  // LEGACY: será eliminado en cleanup tras migración.
   final int? idTipoPrenda;
   final String productoRapidoNombre;
   final int productoRapidoCantidad;
   final double productoRapidoPrecio;
   final String productoRapidoUnidad;
 
-  // ───── Productos ─────
+  // ───── Productos (LEGACY esquema viejo) ─────
+  // LEGACY: el form actual aún lo usa. Será reemplazado por `items` tras migración.
   final List<OrdenProductoItem> productos;
+
+  // ───── Items (esquema nuevo) ─────
+  // Estructura nueva: cada item es conjunto o plantilla con sus tallas.
+  final List<OrdenItemDraft> items;
 
   // ───── Materiales (calculadora) ─────
   final List<OrdenMaterialRequerido> materiales;
@@ -121,34 +177,36 @@ class OrdenDraft {
   final double anticipo;
   final String metodoPago;
 
-  // ───── IMAGEN  ─────
+  // ───── IMAGEN ─────
   final Uint8List? imagenBytes;
   final String? imagenNombre;
+
+  // ───── Totales ─────
+  final double descuento;
 
   const OrdenDraft({
     this.idCliente,
     this.fechaEntrega,
     this.descripcion = '',
     this.moneda = OrdenMoneda.bolivianos,
-
     this.idTipoPrenda,
     this.productoRapidoNombre = '',
     this.productoRapidoCantidad = 0,
     this.productoRapidoPrecio = 0,
     this.productoRapidoUnidad = 'Unidades',
     this.productos = const [],
+    this.items = const [],
     this.materiales = const [],
     this.prioridad = OrdenPrioridad.normal,
     this.anticipo = 0,
     this.metodoPago = 'Transferencia',
     this.imagenBytes,
     this.imagenNombre,
+    this.descuento = 0.0,
   });
 
-  /// Draft vacío inicial.
   factory OrdenDraft.empty() => const OrdenDraft();
 
-  /// Copia con cambios. Patrón estándar para state inmutable.
   OrdenDraft copyWith({
     String? idCliente,
     DateTime? fechaEntrega,
@@ -159,6 +217,7 @@ class OrdenDraft {
     double? productoRapidoPrecio,
     String? productoRapidoUnidad,
     List<OrdenProductoItem>? productos,
+    List<OrdenItemDraft>? items,
     List<OrdenMaterialRequerido>? materiales,
     OrdenPrioridad? prioridad,
     double? anticipo,
@@ -166,6 +225,7 @@ class OrdenDraft {
     int? idTipoPrenda,
     Uint8List? imagenBytes,
     String? imagenNombre,
+    double? descuento,
   }) {
     return OrdenDraft(
       idCliente: idCliente ?? this.idCliente,
@@ -178,6 +238,7 @@ class OrdenDraft {
       productoRapidoPrecio: productoRapidoPrecio ?? this.productoRapidoPrecio,
       productoRapidoUnidad: productoRapidoUnidad ?? this.productoRapidoUnidad,
       productos: productos ?? this.productos,
+      items: items ?? this.items,
       materiales: materiales ?? this.materiales,
       prioridad: prioridad ?? this.prioridad,
       anticipo: anticipo ?? this.anticipo,
@@ -185,21 +246,33 @@ class OrdenDraft {
       idTipoPrenda: idTipoPrenda ?? this.idTipoPrenda,
       imagenBytes: imagenBytes ?? this.imagenBytes,
       imagenNombre: imagenNombre ?? this.imagenNombre,
+      descuento: descuento ?? this.descuento,
     );
   }
 
-  /// Subtotal: suma de subtotales de productos.
+  /// LEGACY: subtotal del esquema viejo (productos). Se mantiene mientras
+  /// el form actual aún use OrdenProductoItem.
   double get subtotal => productos.fold(0, (sum, p) => sum + p.subtotal);
 
-  /// Validación mínima para habilitar el botón "Crear orden".
+  /// Subtotal calculado sobre los items del esquema nuevo.
+  /// Reemplazará a `subtotal` cuando se complete la migración del form.
+  double get subtotalItems => items.fold(0, (sum, i) => sum + i.subtotal);
+
+  /// LEGACY: validación basada en productos. Se mantiene mientras el form
+  /// actual aún use OrdenProductoItem.
   bool get esValido {
     return idCliente != null && fechaEntrega != null && productos.isNotEmpty;
   }
 
-  //int? get idTipoPrenda => null;
+  /// Validación basada en el esquema nuevo (items).
+  /// Reemplazará a `esValido` cuando se complete la migración del form.
+  bool get esValidoItems {
+    return idCliente != null && fechaEntrega != null && items.isNotEmpty;
+  }
 
-  /// Helper para formatear precios según moneda actual.
-  // En lib/presentation/components/ordenes/orden_draft.dart
+  double get total => subtotalItems - descuento;
+
+  double get saldoPendiente => total - anticipo;
 
   String formatPrecio(double valorEnBs) {
     if (moneda == OrdenMoneda.dolares) {

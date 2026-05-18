@@ -29,7 +29,7 @@ class MiPerfilPage extends ConsumerWidget {
           Expanded(
             child: profileAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => Center(
+              error: (_, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl2),
                   child: Text(

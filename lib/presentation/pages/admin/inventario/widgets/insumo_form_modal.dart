@@ -11,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/movimiento_model.dart';
 import '../../../../providers/auth_provider.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -224,7 +224,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
                         'Error al cargar categorías. Revise su conexión.');
                   }
                   return DropdownButtonFormField<int>(
-                    value: _idCategoria,
+                    initialValue: _idCategoria,
                     isExpanded: true,
                     hint: const Text('Seleccioná una categoría'),
                     items: snap.data!
@@ -670,7 +670,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
       ]);
     }
     return DropdownButtonFormField<int>(
-      value: _idUnidad,
+      initialValue: _idUnidad,
       isExpanded: true,
       hint: const Text('Seleccioná una unidad'),
       items: _unidades

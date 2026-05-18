@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../components/ordenes/orden_items_editor.dart';
 import '../../components/ordenes/orden_workflow_stepper.dart';
@@ -35,16 +36,22 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
   void initState() {
     super.initState();
 
-    // ✅ 1. Llenamos la tabla directamente con la PRENDA, TALLA y su PRECIO EXACTO congelado
-    _items = widget.orden.desgloseTallas.map((talla) {
-      return OrdenItem(
-        nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
-        cantidad: talla.cantidad,
-        precioUnitario: talla.precioUnitario,
-      );
+    // Construir items visuales desde detalleOrden (esquema nuevo).
+    // Cada talla de cada detalle = una fila visual con prefix del nombre del ítem
+    // (sea conjunto o plantilla suelta).
+    _items = widget.orden.detalleOrden.expand((detalle) {
+      return detalle.tallas.map((talla) {
+        return OrdenItem(
+          nombre: '${detalle.nombreItem} - Talla ${talla.nombreTalla}',
+          cantidad: talla.cantidad,
+          precioUnitario: detalle.precioUnitario,
+        );
+      });
     }).toList();
 
-    // 🛡️ 2. Fallback de emergencia (Solo si una orden vieja no tiene tallas guardadas)
+    // Fallback de emergencia: si la orden no tiene detalleOrden poblado
+    // (caso degenerado de datos legacy o orden incompleta), mostramos un
+    // solo ítem agregado con el total general.
     if (_items.isEmpty) {
       _items = [
         OrdenItem(
@@ -249,16 +256,18 @@ class _EstadoChip extends StatelessWidget {
 // COMPONENTES DE LA PÁGINA DE DETALLE DE ORDEN
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _PagosCard extends StatelessWidget {
+class _PagosCard extends ConsumerWidget {
   final OrdenModel orden;
   final double totalItems;
+
   const _PagosCard({required this.orden, required this.totalItems});
 
   @override
-  Widget build(BuildContext context) {
-    // Usamos el costoTotal del modelo (BD) como fuente de verdad.
+  Widget build(BuildContext context, WidgetRef ref) {
     final double total = orden.costoTotal;
-    final bool pagado = orden.idEstadoPago != 1; // 1 = Pendiente
+
+    // Escuchamos los pagos de esta orden en específico
+    final pagosAsync = ref.watch(pagosOrdenProvider(orden.numOrden));
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -267,25 +276,276 @@ class _PagosCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Resumen Financiero', style: AppTypography.smallBold),
-          const SizedBox(height: AppSpacing.md),
-          _FinRow(
-            label: 'Costo Total',
-            value: 'Bs. ${total.toStringAsFixed(2)}',
-            isBold: true,
-            color: AppColors.textPrimary,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _FinRow(
-            label: 'Estado de Pago',
-            value: orden.estadoPago,
-            isSuccess: pagado,
-            color: pagado ? AppColors.success : AppColors.warning,
-          ),
-        ],
+      child: pagosAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Text(
+          'Error al cargar pagos: $e',
+          style: AppTypography.small.copyWith(color: AppColors.error),
+        ),
+        data: (pagos) {
+          // Calculamos el total pagado sumando los montos de la tabla pago_cliente
+          final totalPagado = pagos.fold<double>(
+            0,
+            (sum, pago) => sum + (pago['monto'] as num).toDouble(),
+          );
+
+          final saldoPendiente = total - totalPagado;
+          final estaPagado = saldoPendiente <= 0;
+
+          void _mostrarDialogoPago(
+            BuildContext context,
+            WidgetRef ref,
+            double saldoPendiente,
+          ) {
+            final montoCtrl = TextEditingController(
+              text: saldoPendiente.toStringAsFixed(2),
+            );
+            String metodoSel = 'Efectivo';
+            bool guardando = false;
+
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => StatefulBuilder(
+                builder: (context, setStateModal) {
+                  return AlertDialog(
+                    title: Text(
+                      'Registrar Nuevo Pago',
+                      style: AppTypography.h3,
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Saldo actual: Bs. ${saldoPendiente.toStringAsFixed(2)}',
+                          style: AppTypography.small,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: montoCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Monto a pagar (Bs)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        DropdownButtonFormField<String>(
+                          value: metodoSel,
+                          decoration: const InputDecoration(
+                            labelText: 'Método',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              [
+                                    'Efectivo',
+                                    'Transferencia',
+                                    'Tarjeta',
+                                    'Cheque',
+                                    'QR',
+                                  ]
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(m),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (v) => setStateModal(() => metodoSel = v!),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      if (!guardando)
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancelar'),
+                        ),
+                      ElevatedButton(
+                        onPressed: guardando
+                            ? null
+                            : () async {
+                                final monto =
+                                    double.tryParse(montoCtrl.text) ?? 0;
+                                if (monto <= 0) return;
+
+                                setStateModal(() => guardando = true);
+                                try {
+                                  // Llamamos a nuestro nuevo RPC en Supabase
+                                  await Supabase.instance.client.rpc(
+                                    'registrar_pago_orden',
+                                    params: {
+                                      'p_id_orden': orden.numOrden,
+                                      'p_id_cliente': orden.idCliente,
+                                      'p_monto': monto,
+                                      'p_metodo_pago': metodoSel,
+                                    },
+                                  );
+
+                                  // ✨ LA MAGIA DE RIVERPOD: Invalidamos el provider para que la UI se refresque sola
+                                  ref.invalidate(
+                                    pagosOrdenProvider(orden.numOrden),
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Pago registrado correctamente',
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setStateModal(() => guardando = false);
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                        child: guardando
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Confirmar Pago'),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Resumen Financiero', style: AppTypography.smallBold),
+              const SizedBox(height: AppSpacing.md),
+
+              _FinRow(
+                label: 'Costo Total',
+                value: 'Bs. ${total.toStringAsFixed(2)}',
+                isBold: true,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+
+              _FinRow(
+                label: 'Total Pagado (Anticipo)',
+                value: 'Bs. ${totalPagado.toStringAsFixed(2)}',
+                color: AppColors.success,
+              ),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Divider(height: 1),
+              ),
+
+              _FinRow(
+                label: 'Saldo Pendiente',
+                value:
+                    'Bs. ${(saldoPendiente > 0 ? saldoPendiente : 0).toStringAsFixed(2)}',
+                isBold: true,
+                color: estaPagado ? AppColors.success : AppColors.primary500,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+
+              _FinRow(
+                label: 'Estado de Caja',
+                value: estaPagado
+                    ? 'PAGADO TOTALMENTE'
+                    : (totalPagado > 0 ? 'CON ANTICIPO' : 'PENDIENTE'),
+                isSuccess: estaPagado,
+                color: estaPagado ? AppColors.success : AppColors.warning,
+              ),
+
+              if (!estaPagado) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        _mostrarDialogoPago(context, ref, saldoPendiente),
+                    icon: const Icon(Icons.add_card),
+                    label: const Text('Registrar Anticipo / Pago'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary500,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+
+              // Lista de transacciones (Si el cliente dio anticipos)
+              if (pagos.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Historial de Transacciones',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+
+                ...pagos.map((pago) {
+                  final fechaRaw = DateTime.parse(
+                    pago['fecha_pago'].toString(),
+                  );
+                  final fechaStr =
+                      '${fechaRaw.day.toString().padLeft(2, '0')}/${fechaRaw.month.toString().padLeft(2, '0')}/${fechaRaw.year}';
+                  final metodo = pago['metodo_pago'] ?? 'No especificado';
+                  final monto = (pago['monto'] as num).toDouble();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.payments_outlined,
+                              size: 14,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$fechaStr - $metodo',
+                              style: AppTypography.caption,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '+ Bs. ${monto.toStringAsFixed(2)}',
+                          style: AppTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

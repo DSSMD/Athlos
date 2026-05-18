@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
+import 'package:workspace/presentation/pages/trabajador/trabajador_dashboard_page.dart';
+import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
+import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
 
 // Importamos el cerebro y tus providers
@@ -14,9 +17,10 @@ import '../../presentation/layouts/main_layout.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
 import '../../presentation/pages/cajas/orden_page.dart';
+import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
-import '../../presentation/pages/admin/inventario/inventario_page.dart';
+import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
 import '../../presentation/layouts/splash_screen_page.dart';
@@ -96,23 +100,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
-      // ────────── ROL 1: ADMINISTRADOR (10 Páginas) ──────────
+      // ────────── ROL 1: ADMINISTRADOR (12 Páginas en total, índices 0 al 11) ──────────
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
           pages: [
             _buildPlaceholder('Dashboard'), // 0. Dashboard
-            const OrdenPage(), // 1. Órdenes
-            const InventarioPage(), // 2. Inventario
-            _buildPlaceholder(
-              'Producción',
-            ), // 3. Producción (Reemplazado por placeholder)
-            const ClientesPage(), // 4. Clientes
-            _buildPlaceholder('Pagos'), // 5. Pagos
-            _buildPlaceholder('Balance'), // 6. Balance
-            const UsuariosPage(), // 7. Usuarios
-            _buildPlaceholder('Configuración'), // 8. Config
-            _buildPlaceholder('Avisos'), // 9. Notificaciones
+            const OrdenPage(),              // 1. Órdenes
+            const InventarioPage(),         // 2. Inventario
+            const ProduccionPage(),// 3. Producción
+            const PlantillasPage(),         // 4. Plantillas
+            const ConjuntosPage(),          // 5. Conjuntos 💡 (La página real)
+            const ClientesPage(),           // 6. Clientes
+            _buildPlaceholder('Pagos'),     // 7. Pagos
+            _buildPlaceholder('Balance'),   // 8. Balance
+            const UsuariosPage(),           // 9. Usuarios
+            _buildPlaceholder('Configuración'), // 10. Configuración 💡 (Un placeholder por ahora)
+            _buildPlaceholder('Avisos'),    // 11. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),
@@ -125,9 +129,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: [
-            _buildPlaceholder('Dashboard Taller'), // 0. Dashboard
+            const TrabajadorDashboardPage(), // 0. Dashboard
             const InventarioPage(), // 1. Inventario
-            _buildPlaceholder('Producción'), // 2. Producción
+            const ProduccionPage(), // 2. Producción
           ],
           railDestinations: _buildRailFromRole('2'),
           bottomNavItems: _buildBottomFromRole('2'),

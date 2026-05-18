@@ -41,6 +41,9 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     // 2. Refrescamos la lista local para que el Switch se mueva visualmente
     // Esto obliga a Flutter a volver a descargar los datos reales
     ref.invalidateSelf();
+    
+    // 3. Invalidamos el catálogo para que el dropdown de Plantillas se actualice
+    ref.invalidate(inventarioProvider);
   }
 
   /// MOCK — crea un insumo a través del service y lo agrega al state local.
@@ -64,6 +67,10 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     );
     final actuales = state.value ?? const <InventarioItemModel>[];
     state = AsyncValue.data([...actuales, nuevo]);
+    
+    // Invalidamos el catálogo para que el nuevo insumo aparezca en Plantillas
+    ref.invalidate(inventarioProvider);
+    
     return nuevo;
   }
 

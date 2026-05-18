@@ -7,7 +7,7 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
 import '../../../theme/app_typography.dart';
 import '../../../theme/breakpoints.dart';
-import '../../../providers/inventario_provider.dart';
+import '../../../providers/insumo_provider.dart';
 import '../../../providers/movimiento_provider.dart';
 import '../../../widgets/shared/mobile_screen_header.dart';
 import '../../../widgets/shared/mobile_tabs_row.dart';
