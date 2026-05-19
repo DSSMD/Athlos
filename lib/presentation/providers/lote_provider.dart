@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/lote_service.dart';
 import '../../domain/models/lote_model.dart';
@@ -9,7 +10,7 @@ final loteServiceProvider = Provider<LoteService>((ref) {
 });
 
 // 2. Provider que obtiene la lista de lotes
-final lotesListProvider = FutureProvider<List<LoteModel>>((ref) async {
+final FutureProvider<List<LoteModel>> lotesListProvider = FutureProvider<List<LoteModel>>((ref) async {
   final service = ref.watch(loteServiceProvider);
   final lotes = await service.getLotes();
 
@@ -69,6 +70,14 @@ final lotesListProvider = FutureProvider<List<LoteModel>>((ref) async {
   } catch (e) {
     print('SYNC ORDER STATE SYSTEM ERROR: $e');
   }
+
+  // --- Autorefresh periódico (cada 10 segundos) ---
+  final timer = Timer(const Duration(seconds: 10), () {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(() {
+    timer.cancel();
+  });
 
   return lotes;
 });
