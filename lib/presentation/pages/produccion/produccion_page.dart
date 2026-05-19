@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -72,6 +73,13 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
               }
 
               final List<String> ordenesUnicas = lotesPorOrden.keys.toList();
+              // Ordenar por fecha_orden descendente (la más reciente primero)
+              ordenesUnicas.sort((a, b) {
+                final dateA = lotesPorOrden[a]?.first.fechaOrden ?? DateTime(1970);
+                final dateB = lotesPorOrden[b]?.first.fechaOrden ?? DateTime(1970);
+                return dateB.compareTo(dateA);
+              });
+
               final int totalItems = ordenesUnicas.length;
               final int totalPages = (totalItems > 0)
                   ? (totalItems / _itemsPerPage).ceil()
@@ -138,8 +146,24 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              subtitle: Text(
-                                'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
+                                  ),
+                                  if (lotesDeEstaOrden.first.fechaOrden != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Creada: ${DateFormat('dd/MM/yyyy HH:mm').format(lotesDeEstaOrden.first.fechaOrden!.toLocal())}',
+                                      style: AppTypography.caption.copyWith(
+                                        color: AppColors.primary500,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               trailing: ElevatedButton.icon(
                                 onPressed: () {
