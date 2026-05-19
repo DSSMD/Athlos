@@ -66,7 +66,9 @@ class LoteService {
         id_area_actual,
         orden:num_orden (
           num_orden,
-          cliente:id_cliente (nom_cliente)
+          fecha_orden,
+          id_estado,
+          cliente (nom_cliente)
         ),
         plantilla_prenda:id_plantilla (nombre), 
         areas:id_area_actual (nombre_area),

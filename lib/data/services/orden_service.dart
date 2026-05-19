@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 //import 'package:workspace/domain/models/detalle_orden_model.dart';
 import 'package:workspace/domain/models/orden_model.dart';
+import 'package:workspace/domain/models/auditoria_orden_model.dart';
 import 'package:workspace/presentation/components/ordenes/orden_draft.dart';
 
 class OrdenService {
@@ -83,18 +84,90 @@ class OrdenService {
   }
 
   // =================================================================
-  // ACTUALIZACIÓN DE ESTADO DE ORDEN
+  // ACTUALIZACIÓN DE ESTADO DE ORDEN CON AUDITORÍA
   // =================================================================
-  /// La tabla `orden` no cambió en el schema nuevo. Este método se
-  /// mantiene tal cual.
-  Future<void> actualizarEstadoOrden(String numOrden, int nuevoIdEstado) async {
+  Future<void> actualizarEstadoOrden(
+    String numOrden,
+    int nuevoIdEstado, {
+    String? descripcion,
+  }) async {
     try {
+      // 1. Obtener el estado actual (anterior) de la orden
+      final currentOrder = await _supabase
+          .from('orden')
+          .select('id_estado')
+          .eq('num_orden', numOrden)
+          .single();
+
+      final int? estadoAnterior = currentOrder['id_estado'] as int?;
+
+      // 2. Si el estado ya es el mismo, no hacemos nada
+      if (estadoAnterior == nuevoIdEstado) return;
+
+      // 3. Actualizar el estado de la orden en la BD
       await _supabase
           .from('orden')
           .update({'id_estado': nuevoIdEstado})
           .eq('num_orden', numOrden);
+
+      // 4. Registrar en la tabla de auditoría (envuelto para que no rompa si falla la FK o RLS)
+      try {
+        final String? idUsuario = _supabase.auth.currentUser?.id;
+
+        // Validar si el idUsuario existe en la tabla profiles para evitar violación de FK
+        bool usuarioExiste = false;
+        if (idUsuario != null) {
+          final userCheck = await _supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', idUsuario)
+              .maybeSingle();
+          usuarioExiste = userCheck != null;
+        }
+
+        final String desc = descripcion ?? (nuevoIdEstado == 4 
+            ? 'Pedido entregado al cliente'
+            : nuevoIdEstado == 3 
+                ? 'Producción finalizada de todos los lotes'
+                : 'Avance de estado de orden');
+
+        await _supabase.from('auditoria_ordenes').insert({
+          'num_orden': numOrden,
+          'id_usuario': usuarioExiste ? idUsuario : null,
+          'estado_anterior_id': estadoAnterior,
+          'estado_nuevo_id': nuevoIdEstado,
+          'descripcion_detalle': desc,
+        });
+      } catch (auditError) {
+        debugPrint('SYNC AUDIT WARNING: No se pudo registrar la auditoría: $auditError');
+      }
     } catch (e) {
       throw Exception('Error al actualizar el estado de la orden: $e');
+    }
+  }
+
+  // =================================================================
+  // LECTURA: AUDITORÍA / HISTORIAL DE CAMBIOS DE ORDEN
+  // =================================================================
+  Future<List<AuditoriaOrdenModel>> obtenerAuditoriaOrden(String numOrden) async {
+    try {
+      final response = await _supabase
+          .from('auditoria_ordenes')
+          .select('''
+            id_log, num_orden, id_usuario, fecha_cambio, descripcion_detalle,
+            estado_anterior_id, estado_nuevo_id,
+            profiles!id_usuario (nombre, apellido),
+            estado_anterior:estado_orden!estado_anterior_id (nombre_estado),
+            estado_nuevo:estado_orden!estado_nuevo_id (nombre_estado)
+          ''')
+          .eq('num_orden', numOrden)
+          .order('fecha_cambio', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((json) => AuditoriaOrdenModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener la auditoría de la orden: $e');
     }
   }
 
