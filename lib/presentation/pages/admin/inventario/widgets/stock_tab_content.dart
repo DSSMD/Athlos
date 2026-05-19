@@ -61,7 +61,7 @@ class _StockBody extends ConsumerStatefulWidget {
 }
 
 class _StockBodyState extends ConsumerState<_StockBody> {
-  static const int _itemsPerPage = 8;
+  static const int _itemsPerPage = 10;
   int _currentPage = 1;
 
   @override
