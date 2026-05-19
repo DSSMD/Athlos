@@ -21,6 +21,7 @@ import '../../presentation/pages/cajas/orden_page.dart';
 import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
+import '../../presentation/pages/admin/dashboard/dashboard_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
@@ -113,20 +114,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin',
         builder: (context, state) => MainLayout(
           pages: [
-            _buildPlaceholder('Dashboard'), // 0. Dashboard
-            const OrdenPage(), // 1. Órdenes
-            const InventarioPage(), // 2. Inventario
-            const ProduccionPage(), // 3. Producción
-            const PlantillasPage(), // 4. Plantillas
-            const ConjuntosPage(), // 5. Conjuntos 💡 (La página real)
-            const ClientesPage(), // 6. Clientes
-            _buildPlaceholder('Pagos'), // 7. Pagos
-            _buildPlaceholder('Balance'), // 8. Balance
-            const UsuariosPage(), // 9. Usuarios
-            _buildPlaceholder(
-              'Configuración',
-            ), // 10. Configuración 💡 (Un placeholder por ahora)
-            _buildPlaceholder('Avisos'), // 11. Notificaciones
+            const DashboardPage(), // 0. Dashboard
+            const OrdenPage(),              // 1. Órdenes
+            const InventarioPage(),         // 2. Inventario
+            const ProduccionPage(),// 3. Producción
+            const PlantillasPage(),         // 4. Plantillas
+            const ConjuntosPage(),          // 5. Conjuntos 
+            const ClientesPage(),           // 6. Clientes
+            _buildPlaceholder('Pagos'),     // 7. Pagos
+            _buildPlaceholder('Balance'),   // 8. Balance
+            const UsuariosPage(),           // 9. Usuarios
+            _buildPlaceholder('Configuración'), // 10. Configuración
+            _buildPlaceholder('Avisos'),    // 11. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),
