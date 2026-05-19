@@ -291,6 +291,7 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
 
         // Estilo para los días que queden deshabilitados por la validación
         disabledTextStyle: AppTypography.small.copyWith(
+          // ignore: deprecated_member_use
           color: AppColors.textMuted.withOpacity(0.4),
           decoration: TextDecoration
               .lineThrough, // Opcional: añade una línea sobre el número
@@ -304,6 +305,7 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
           fontWeight: FontWeight.w600,
         ),
         selectedDecoration: BoxDecoration(
+          // ignore: deprecated_member_use
           color: AppColors.primary500.withOpacity(0.15),
           shape: BoxShape.circle,
         ),
@@ -449,6 +451,7 @@ class _OrdenCalendarioCardState extends ConsumerState<OrdenCalendarioCard> {
             vertical: AppSpacing.xs,
           ),
           decoration: BoxDecoration(
+            // ignore: deprecated_member_use
             color: AppColors.primary500.withOpacity(0.08),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),

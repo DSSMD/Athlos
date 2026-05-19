@@ -176,16 +176,6 @@ class _OrdenInfoCardState extends ConsumerState<OrdenInfoCard> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA: Cliente + Fecha
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _filaClienteFecha() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [Expanded(child: _selectorCliente())],
-    );
-  }
-
   Widget _selectorCliente() {
     // 1. Escuchamos tu provider de clientes reales
     final clientesAsync = ref.watch(clientesProvider);

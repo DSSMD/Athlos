@@ -10,7 +10,9 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:workspace/presentation/providers/cliente_provider.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -45,7 +47,8 @@ class ClienteResumenView extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          const _UltimasOrdenesCard(),
+          _UltimasOrdenesCard(cliente: cliente),
+
           const SizedBox(height: AppSpacing.xl),
         ],
       ),
@@ -201,7 +204,7 @@ class _InfoContactoCard extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// RESUMEN FINANCIERO (placeholders + crédito real)
+// RESUMEN FINANCIERO (conectado con datos reales)
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _ResumenFinancieroCard extends StatelessWidget {
@@ -210,14 +213,37 @@ class _ResumenFinancieroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calculamos lo que ya ha pagado (Total menos lo que debe)
+    final double pagado = cliente.totalComprado > 0
+        ? (cliente.totalComprado - cliente.deudaTotal)
+        : 0;
+
+    // Calculamos el ticket promedio de compra
+    final double ticketPromedio = cliente.totalOrdenes > 0
+        ? (cliente.totalComprado / cliente.totalOrdenes)
+        : 0;
+
     return _Card(
       title: 'Resumen financiero',
       child: Column(
         children: [
-          // TODO(SCRUM-69): conectar cuando backend exponga totales del cliente
-          const _FilaMonto(label: 'Total comprado', valor: '—'),
-          const _FilaMonto(label: 'Pagado', valor: '—'),
-          const _FilaMonto(label: 'Deuda actual', valor: '—'),
+          _FilaMonto(
+            label: 'Total comprado',
+            valor: 'Bs. ${cliente.totalComprado.toStringAsFixed(2)}',
+          ),
+          _FilaMonto(
+            label: 'Pagado',
+            valor: 'Bs. ${pagado.toStringAsFixed(2)}',
+          ),
+          _FilaMonto(
+            label: 'Deuda actual',
+            valor: cliente.deudaTotal > 0
+                ? 'Bs. ${cliente.deudaTotal.toStringAsFixed(2)}'
+                : '0.00',
+            valorColor: cliente.deudaTotal > 0
+                ? AppColors.error
+                : AppColors.success,
+          ),
           _FilaMonto(
             label: 'Crédito disponible',
             valor: cliente.permiteCredito
@@ -227,7 +253,10 @@ class _ResumenFinancieroCard extends StatelessWidget {
                 ? AppColors.success
                 : AppColors.textMuted,
           ),
-          const _FilaMonto(label: 'Ticket promedio', valor: '—'),
+          _FilaMonto(
+            label: 'Ticket promedio',
+            valor: 'Bs. ${ticketPromedio.toStringAsFixed(2)}',
+          ),
           if (cliente.permiteCredito) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -240,37 +269,104 @@ class _ResumenFinancieroCard extends StatelessWidget {
     );
   }
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
-// ÚLTIMAS ÓRDENES (empty state)
+// ÚLTIMAS ÓRDENES (conectado a Riverpod)
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _UltimasOrdenesCard extends StatelessWidget {
-  const _UltimasOrdenesCard();
+class _UltimasOrdenesCard extends ConsumerWidget {
+  const _UltimasOrdenesCard({required this.cliente});
+  final ClienteModel cliente;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Escuchamos el proveedor con el ID del cliente
+    final ultimasOrdenesAsync = ref.watch(
+      ultimasOrdenesClienteProvider(cliente.idCliente!),
+    );
+
     return _Card(
       title: 'Últimas órdenes',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 32,
-                color: AppColors.textMuted,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Las órdenes se mostrarán cuando estén\nconectadas al sistema.',
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
-                textAlign: TextAlign.center,
-              ),
-            ],
+      child: ultimasOrdenesAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            'Error al cargar órdenes',
+            style: AppTypography.small.copyWith(color: AppColors.error),
           ),
         ),
+        data: (ordenes) {
+          if (ordenes.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.receipt_long_outlined,
+                      size: 32,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Este cliente aún no tiene órdenes.',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Si hay órdenes, las dibujamos en una lista compacta
+          return Column(
+            children: ordenes.map((orden) {
+              final codigoCorto = orden.numOrden.substring(0, 8).toUpperCase();
+              final fecha =
+                  '${orden.fechaOrden.day.toString().padLeft(2, '0')}/${orden.fechaOrden.month.toString().padLeft(2, '0')}';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.local_mall_outlined,
+                          size: 16,
+                          color: AppColors.textMuted,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          '#$codigoCorto',
+                          style: AppTypography.small.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      fecha,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    Text(
+                      'Bs. ${orden.costoTotal.toStringAsFixed(2)}',
+                      style: AppTypography.small,
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
@@ -479,6 +575,7 @@ class _WhatsappMiniButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         backgroundColor: whatsappBgColor,
+        // ignore: deprecated_member_use
         side: BorderSide(color: whatsappColor.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,

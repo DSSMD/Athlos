@@ -7,7 +7,7 @@ class LoteService {
 
   Future<void> obtenerHistorialLote(String loteId) async {
     try {
-      final response = await Supabase.instance.client
+      await Supabase.instance.client
           .from('asignaciones_lote')
           .select('''
             id_asignacion,
@@ -28,9 +28,8 @@ class LoteService {
           ); // Ordenamos del más nuevo al más viejo
 
       // Aquí ya tendrías tu lista para mostrarla en pantalla
-      print('Historial recuperado: $response');
     } catch (e) {
-      print('Error al obtener historial: $e');
+      throw Exception('Error al obtener el historial del lote: $e');
     }
   }
 
@@ -79,8 +78,6 @@ class LoteService {
       ''')
           .order('id_lote', ascending: false);
 
-      // 👇 PON ESTE PRINT PARA VER LA VERDAD ABSOLUTA
-      print('DEBUG RAW SUPABASE: $response');
       // NOTA SOBRE LAS TALLAS:
       // Extraer las tallas directamente desde lote -> desglose -> detalle_talla
       // en una sola consulta de Supabase sin vistas puede ser complejo si la FK no es directa.
@@ -90,7 +87,6 @@ class LoteService {
           .map((json) => LoteModel.fromJson(json))
           .toList();
     } catch (e) {
-      print('ERROR en LoteService (getLotes): $e');
       throw Exception('Error al obtener los lotes: $e');
     }
   }

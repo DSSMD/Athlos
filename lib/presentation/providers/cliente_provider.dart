@@ -2,6 +2,8 @@
 
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workspace/domain/models/orden_model.dart';
+import 'package:workspace/presentation/providers/orden_provider.dart';
 import '../../data/services/cliente_service.dart';
 import '../../domain/models/cliente_model.dart';
 
@@ -85,3 +87,23 @@ class ClientesNotifier extends AsyncNotifier<List<ClienteModel>> {
     });
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// NUEVO: PROVEEDOR PARA LAS ÚLTIMAS ÓRDENES DE UN CLIENTE ESPECÍFICO
+// ══════════════════════════════════════════════════════════════════════════
+final ultimasOrdenesClienteProvider = FutureProvider.family<List<OrdenModel>, String>((
+  ref,
+  idCliente,
+) async {
+  // Reutilizamos el servicio de órdenes que ya tienes importado en tu proyecto
+  final service = ref.read(ordenServiceProvider);
+
+  // Obtenemos todas las órdenes
+  final todasLasOrdenes = await service.obtenerOrdenes();
+
+  // Filtramos localmente para que solo queden las de este cliente, y tomamos las 3 más recientes
+  return todasLasOrdenes
+      .where((o) => o.idCliente == idCliente)
+      .take(3)
+      .toList();
+});

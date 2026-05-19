@@ -44,7 +44,6 @@ class InventarioService {
         return InventarioItemModel.fromJson(json);
       }).toList();
     } catch (e) {
-      print('🚨 ERROR SUPABASE LECTURA: $e');
       throw Exception('Error al obtener el inventario: $e');
     }
   }
@@ -59,7 +58,6 @@ class InventarioService {
       // Devolvemos una lista cruda para que el Dropdown la lea fácilmente
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('🚨 ERROR AL CARGAR CATEGORÍAS DROPDOWN: $e');
       throw Exception('Error al cargar opciones de categorías');
     }
   }
@@ -73,7 +71,6 @@ class InventarioService {
 
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('🚨 ERROR AL CARGAR UNIDADES DROPDOWN: $e');
       throw Exception('Error al cargar opciones de unidades');
     }
   }

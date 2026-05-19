@@ -40,6 +40,12 @@ class ClienteModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  // Campos calculados (no se guardan en la BD, pero son útiles para la UI)
+  final int totalOrdenes;
+  final double totalComprado;
+  final double deudaTotal;
+  final DateTime? ultimoPedido;
+
   ClienteModel({
     this.idCliente,
     required this.ciCliente,
@@ -59,6 +65,10 @@ class ClienteModel {
     this.activo = true,
     this.createdAt,
     this.updatedAt,
+    this.totalOrdenes = 0,
+    this.totalComprado = 0.0,
+    this.deudaTotal = 0.0,
+    this.ultimoPedido,
   });
 
   /// Convierte el entero de la BD al Enum de Flutter para facilitar la lógica de UI
@@ -109,6 +119,12 @@ class ClienteModel {
           : null,
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
+          : null,
+      totalOrdenes: json['total_ordenes'] ?? 0,
+      totalComprado: (json['total_comprado'] ?? 0).toDouble(),
+      deudaTotal: (json['deuda_total'] ?? 0).toDouble(),
+      ultimoPedido: json['ultimo_pedido'] != null
+          ? DateTime.parse(json['ultimo_pedido'])
           : null,
     );
   }
