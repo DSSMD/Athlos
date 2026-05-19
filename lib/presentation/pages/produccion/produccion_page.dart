@@ -27,6 +27,36 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
 
+  String _obtenerNombreEstadoOrden(int? id) {
+    switch (id) {
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'En Producción';
+      case 3:
+        return 'Finalizada';
+      case 4:
+        return 'Entregada';
+      default:
+        return 'Desconocido';
+    }
+  }
+
+  Color _obtenerColorEstadoOrden(int? id) {
+    switch (id) {
+      case 1:
+        return Colors.orange;
+      case 2:
+        return AppColors.primary500;
+      case 3:
+        return Colors.green;
+      case 4:
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -140,11 +170,45 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                   color: AppColors.primary500,
                                 ),
                               ),
-                              title: Text(
-                                'Orden: $ordenId',
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Orden: $ordenId',
+                                    style: AppTypography.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (lotesDeEstaOrden.first.idEstadoOrden != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _obtenerColorEstadoOrden(
+                                          lotesDeEstaOrden.first.idEstadoOrden,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: _obtenerColorEstadoOrden(
+                                            lotesDeEstaOrden.first.idEstadoOrden,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _obtenerNombreEstadoOrden(
+                                          lotesDeEstaOrden.first.idEstadoOrden,
+                                        ),
+                                        style: AppTypography.caption.copyWith(
+                                          color: _obtenerColorEstadoOrden(
+                                            lotesDeEstaOrden.first.idEstadoOrden,
+                                          ),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

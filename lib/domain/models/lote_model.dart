@@ -9,6 +9,7 @@ class LoteModel {
   final String idArea;
   final String estado;
   final DateTime? fechaOrden;
+  final int? idEstadoOrden;
 
   LoteModel({
     required this.id,
@@ -21,6 +22,7 @@ class LoteModel {
     required this.idArea,
     required this.estado,
     this.fechaOrden,
+    this.idEstadoOrden,
   });
 
   factory LoteModel.fromJson(Map<String, dynamic> json) {
@@ -84,6 +86,7 @@ class LoteModel {
 
     final fechaOrdenStr = orden['fecha_orden']?.toString();
     final DateTime? fechaOrden = fechaOrdenStr != null ? DateTime.tryParse(fechaOrdenStr) : null;
+    final int? idEstadoOrden = (orden['id_estado'] as num?)?.toInt();
 
     return LoteModel(
       id: json['id_lote']?.toString() ?? 'ID_NO_ENCONTRADO',
@@ -97,6 +100,7 @@ class LoteModel {
       estado: traducirEstado(idEstado),
       idArea: json['id_area_actual']?.toString() ?? '',
       fechaOrden: fechaOrden,
+      idEstadoOrden: idEstadoOrden,
     );
   }
 }
