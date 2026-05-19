@@ -174,7 +174,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Orden: $ordenId',
+                                    'Orden: ${ordenId.length > 8 ? ordenId.substring(0, 8).toUpperCase() : ordenId.toUpperCase()}',
                                     style: AppTypography.body.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),

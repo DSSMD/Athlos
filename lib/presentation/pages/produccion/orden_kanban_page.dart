@@ -100,7 +100,7 @@ class _OrdenKanbanPageState extends ConsumerState<OrdenKanbanPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tablero: ${widget.ordenId}',
+              'Tablero: ${widget.ordenId.length > 8 ? widget.ordenId.substring(0, 8).toUpperCase() : widget.ordenId.toUpperCase()}',
               style: AppTypography.body.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,

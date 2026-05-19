@@ -54,7 +54,7 @@ class LoteDetalleDialog extends StatelessWidget {
               const SizedBox(height: AppSpacing.xl),
 
               // Campos normales
-              _buildInfoRow('Orden de producción', lote.ordenId),
+              _buildInfoRow('Orden de producción', lote.ordenId.length > 8 ? lote.ordenId.substring(0, 8).toUpperCase() : lote.ordenId.toUpperCase()),
               _buildInfoRow('Cliente solicitado', lote.cliente),
               _buildInfoRow('Prenda', lote.prenda),
               _buildInfoRow('Detalle de tallas', lote.tallas.join(', ')),
