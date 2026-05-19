@@ -407,6 +407,7 @@ class _PagosCard extends ConsumerWidget {
                                   }
                                 } catch (e) {
                                   setStateModal(() => guardando = false);
+                                  // ignore: use_build_context_synchronously
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
                                       content: Text('Error: $e'),

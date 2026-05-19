@@ -1,5 +1,7 @@
 // lib/presentation/pages/admin/inventario/widgets/stock_tab_content.dart
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/presentation/pages/admin/inventario/widgets/insumo_detalle_modal.dart';

@@ -26,8 +26,8 @@ class LoteModel {
   });
 
   factory LoteModel.fromJson(Map<String, dynamic> json) {
-    print('--- DATOS DEL LOTE ${json['id_lote']} ---');
-    print('Estado JSON: ${json['estado_lote']}');
+    // print('--- DATOS DEL LOTE ${json['id_lote']} ---');
+    // print('Estado JSON: ${json['estado_lote']}');
     // Supabase devuelve los JOINs como diccionarios anidados
 
     final orden = json['orden'] ?? {};

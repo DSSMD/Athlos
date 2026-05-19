@@ -20,7 +20,7 @@ class ProduccionService {
           .map((json) => TrabajoAsignadoModel.fromJson(json))
           .toList();
     } catch (e) {
-      print('ERROR en getMisTrabajos: $e');
+      // print('ERROR en getMisTrabajos: $e');
       throw Exception('Error al cargar trabajos: $e');
     }
   }
@@ -68,11 +68,8 @@ class ProduccionService {
           .update({'id_estado_asignacion': idEstado})
           .filter('id_asignacion', 'in', listaIds);
 
-      print(
-        'DEBUG: Se actualizaron ${listaIds.length} asignaciones al ID: $idEstado',
-      );
     } catch (e) {
-      print('ERROR REAL: $e');
+      // print('ERROR REAL: $e');
       throw Exception('No se pudo actualizar: $e');
     }
   }

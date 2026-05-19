@@ -7,6 +7,8 @@
 //   - motivo sugerido (texto listo para guardar)
 //
 // Se usa en el wizard de alta (Paso 2) y en el form de movimiento standalone.
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

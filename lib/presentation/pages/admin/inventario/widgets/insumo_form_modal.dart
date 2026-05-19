@@ -3,6 +3,8 @@
 // Wizard de 2 pasos. NADA se persiste hasta que el usuario confirma en el
 // paso 2. Si regresa al paso 1, puede editar libremente sin dejar datos
 // huérfanos en la BD.
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';

@@ -61,14 +61,14 @@ final FutureProvider<List<LoteModel>> lotesListProvider = FutureProvider<List<Lo
         ordenService.actualizarEstadoOrden(ordenId, targetState).then((_) {
           // Refrescamos el listado de órdenes en el backend
           ref.invalidate(ordenesProvider);
-          print('SYNC ORDER STATE: Orden $ordenId actualizada de $currentOrderState a $targetState con éxito.');
+          // print('SYNC ORDER STATE: Orden $ordenId actualizada de $currentOrderState a $targetState con éxito.');
         }).catchError((err) {
-          print('SYNC ORDER STATE ERROR: No se pudo actualizar estado de orden $ordenId: $err');
+          // print('SYNC ORDER STATE ERROR: No se pudo actualizar estado de orden $ordenId: $err');
         });
       }
     }
   } catch (e) {
-    print('SYNC ORDER STATE SYSTEM ERROR: $e');
+    // print('SYNC ORDER STATE SYSTEM ERROR: $e');
   }
 
   // --- Autorefresh periódico (cada 10 segundos) ---
