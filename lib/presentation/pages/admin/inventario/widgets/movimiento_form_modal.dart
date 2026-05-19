@@ -127,7 +127,9 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
 
   Widget _buildForm() {
     final asyncInsumos = ref.watch(inventarioProvider);
-    final insumos = asyncInsumos.value ?? const <InventarioItemModel>[];
+    final insumos = (asyncInsumos.value ?? const <InventarioItemModel>[])
+        .where((i) => i.activo)
+        .toList();
     final nombreUnidad = _insumo?.unidad ?? 'unidad';
     // Si el insumo se mide en metros, asumimos que viene en rollos (es dimensionable)
     final esDim =

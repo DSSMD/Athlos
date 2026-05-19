@@ -231,14 +231,19 @@ class _MaterialRowState extends State<_MaterialRow> {
       requestFocusOnTap: true,
       menuHeight: 320,
       expandedInsets: EdgeInsets.zero,
-      dropdownMenuEntries: widget.insumos.map((i) {
+      dropdownMenuEntries: widget.insumos
+          .where((i) => i.activo || i.id == widget.material.idInsumo)
+          .map((i) {
         final yaUsadoEnOtraFila = widget.seleccionadosOtros.contains(i.id);
         final base =
             '${i.nombre}${i.unidad.isNotEmpty ? ' (${i.unidad})' : ''}';
+        final label = !i.activo
+            ? '$base (Desactivado)'
+            : (yaUsadoEnOtraFila ? '$base — ya seleccionado' : base);
         return DropdownMenuEntry<String>(
           value: i.id,
-          label: yaUsadoEnOtraFila ? '$base — ya seleccionado' : base,
-          enabled: !yaUsadoEnOtraFila,
+          label: label,
+          enabled: i.activo && !yaUsadoEnOtraFila,
         );
       }).toList(),
       onSelected: (v) {
