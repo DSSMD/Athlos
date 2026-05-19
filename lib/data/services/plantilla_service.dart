@@ -11,15 +11,10 @@
 // IMPORTANTE: las operaciones de crear/actualizar NO son transaccionales a
 // nivel cliente. Si una operación múltiple falla a medias, puede quedar
 // data huérfana. Para mejorar:
-// TODO Backend Mel: crear funciones RPC en PostgreSQL para crear/actualizar
 // plantilla con sus hijas en una sola transacción atómica.
 //
 // IMPORTANTE: existe trigger en receta_material que bloquea inserts con
 // insumos inactivos. El service traduce ese error a un mensaje amigable.
-// ============================================================================
-//
-// ============================================================================
-// TODO Backend Mel: política de edición parcial
 // ============================================================================
 // El PDF de Den especifica que en modo editar "se podrá editar pero no todo".
 // Decisión arquitectónica pendiente:

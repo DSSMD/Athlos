@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/presentation/providers/orden_provider.dart';
 
+import '../../../core/utils/export_helper.dart';
+
 // Tema
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -63,6 +65,49 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _exportarOrdenes(List<OrdenModel> allOrders) {
+    if (allOrders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay órdenes para exportar.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
+    buffer.writeln('Número de Orden;Cliente;CI / NIT;Teléfono;Email;Dirección;Fecha Creación;Fecha Entrega;Costo Total (Bs);Resumen Prenda;Cantidad Total;Estado de Orden;Estado de Pago;Notas');
+
+    for (final o in allOrders) {
+      final numOrden = o.numOrden.toUpperCase();
+      final cliente = o.clienteNombre.replaceAll(';', ',');
+      final ci = (o.clienteCi ?? '').replaceAll(';', ',');
+      final tel = (o.clienteTelefono ?? '').replaceAll(';', ',');
+      final email = (o.clienteEmail ?? '').replaceAll(';', ',');
+      final dir = (o.clienteDireccion ?? '').replaceAll('\n', ' ').replaceAll(';', ',');
+      final fCreacion = '${o.fechaOrden.day}/${o.fechaOrden.month}/${o.fechaOrden.year}';
+      final fEntrega = '${o.fechaEntrega.day}/${o.fechaEntrega.month}/${o.fechaEntrega.year}';
+      final costo = o.costoTotal;
+      final producto = o.producto.replaceAll(';', ',');
+      final cant = o.cantidad;
+      final estOrden = o.estadoOrden;
+      final estPago = o.estadoPago;
+      final notas = o.notasAdicionales.replaceAll('\n', ' ').replaceAll(';', ',');
+
+      buffer.writeln('$numOrden;$cliente;$ci;$tel;$email;$dir;$fCreacion;$fEntrega;$costo;$producto;$cant;$estOrden;$estPago;$notas');
+    }
+
+    final String csvContent = buffer.toString();
+    final String timestamp = DateTime.now().toIso8601String().substring(0, 10);
+    saveCsvFile(
+      context: context,
+      fileName: 'Ordenes_Athlos_$timestamp.csv',
+      csvContent: csvContent,
+    );
   }
 
   @override
@@ -166,35 +211,90 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    FilterChips(
-                      labels: const [
-                        'Todas',
-                        'Pendientes',
-                        'Producción',
-                        'Entregadas',
-                        'Canceladas',
-                      ],
-                      counts: [
-                        listaDeOrdenesReales.length,
-                        listaDeOrdenesReales
-                            .where((o) => o.idEstado == 1)
-                            .length,
-                        listaDeOrdenesReales
-                            .where((o) => o.idEstado == 2)
-                            .length,
-                        listaDeOrdenesReales
-                            .where((o) => o.idEstado == 3)
-                            .length,
-                        listaDeOrdenesReales
-                            .where((o) => o.idEstado == 4)
-                            .length,
-                      ],
-                      selected: _selectedFilter,
-                      onChanged: (i) => setState(() {
-                        _selectedFilter = i;
-                        _currentPage = 1;
-                      }),
-                    ),
+                    if (isMobile) ...[
+                      FilterChips(
+                        labels: const [
+                          'Todas',
+                          'Pendientes',
+                          'Producción',
+                          'Entregadas',
+                          'Canceladas',
+                        ],
+                        counts: [
+                          listaDeOrdenesReales.length,
+                          listaDeOrdenesReales
+                              .where((o) => o.idEstado == 1)
+                              .length,
+                          listaDeOrdenesReales
+                              .where((o) => o.idEstado == 2)
+                              .length,
+                          listaDeOrdenesReales
+                              .where((o) => o.idEstado == 3)
+                              .length,
+                          listaDeOrdenesReales
+                              .where((o) => o.idEstado == 4)
+                              .length,
+                        ],
+                        selected: _selectedFilter,
+                        onChanged: (i) => setState(() {
+                          _selectedFilter = i;
+                          _currentPage = 1;
+                        }),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _exportarOrdenes(listaDeOrdenesReales),
+                          icon: const Icon(Icons.file_download_outlined, size: 18),
+                          label: const Text('Exportar'),
+                        ),
+                      ),
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilterChips(
+                              labels: const [
+                                'Todas',
+                                'Pendientes',
+                                'Producción',
+                                'Entregadas',
+                                'Canceladas',
+                              ],
+                              counts: [
+                                listaDeOrdenesReales.length,
+                                listaDeOrdenesReales
+                                    .where((o) => o.idEstado == 1)
+                                    .length,
+                                listaDeOrdenesReales
+                                    .where((o) => o.idEstado == 2)
+                                    .length,
+                                listaDeOrdenesReales
+                                    .where((o) => o.idEstado == 3)
+                                    .length,
+                                listaDeOrdenesReales
+                                    .where((o) => o.idEstado == 4)
+                                    .length,
+                              ],
+                              selected: _selectedFilter,
+                              onChanged: (i) => setState(() {
+                                _selectedFilter = i;
+                                _currentPage = 1;
+                              }),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          OutlinedButton.icon(
+                            onPressed: () => _exportarOrdenes(listaDeOrdenesReales),
+                            icon: const Icon(
+                              Icons.file_download_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Exportar'),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: AppSpacing.lg),
 
                     if (paginatedOrders.isEmpty)

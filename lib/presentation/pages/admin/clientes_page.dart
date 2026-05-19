@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/export_helper.dart';
 import '../../components/clientes/cliente_form_drawer.dart';
 import '../../components/clientes/cliente_card.dart';
 import '../../components/clientes/cliente_list_row.dart';
@@ -108,13 +109,42 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
   }
 
   void _exportar() {
-    // TODO(SCRUM-69): implementar exportación a Excel/CSV. Pendiente de
-    // confirmación de Denshelmer sobre formato y campos a exportar.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Exportar — funcionalidad pendiente'),
-        duration: Duration(seconds: 2),
-      ),
+    final clientesAsync = ref.read(clientesProvider);
+    final clientesReales = clientesAsync.value ?? const <ClienteModel>[];
+    if (clientesReales.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay clientes registrados para exportar.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
+    buffer.writeln('ID;Nombre;CI / NIT;Teléfono;Email;Dirección;Estado;Total Comprado (Bs);Cantidad de Órdenes');
+
+    for (final c in clientesReales) {
+      final id = c.idCliente;
+      final nombre = c.nombreMostrable.replaceAll(';', ',');
+      final ci = c.ciCliente.replaceAll(';', ',');
+      final celular = (c.numTelefono ?? '').replaceAll(';', ',');
+      final email = (c.email ?? '').replaceAll(';', ',');
+      final direccion = (c.direccion ?? '').replaceAll('\n', ' ').replaceAll(';', ',');
+      final estado = c.activo ? 'Activo' : 'Inactivo';
+      final totalComprado = c.totalComprado;
+      final cantidadOrdenes = c.totalOrdenes;
+
+      buffer.writeln('$id;$nombre;$ci;$celular;$email;$direccion;$estado;$totalComprado;$cantidadOrdenes');
+    }
+
+    final String csvContent = buffer.toString();
+    final String timestamp = DateTime.now().toIso8601String().substring(0, 10);
+    saveCsvFile(
+      context: context,
+      fileName: 'Clientes_Athlos_$timestamp.csv',
+      csvContent: csvContent,
     );
   }
 

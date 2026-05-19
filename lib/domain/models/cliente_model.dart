@@ -131,6 +131,8 @@ class ClienteModel {
 
   String? get nitCi => null;
 
+  Object? get cantOrdenes => null;
+
   Map<String, dynamic> toJson() {
     return {
       if (idCliente != null) 'id_cliente': idCliente,

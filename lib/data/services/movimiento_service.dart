@@ -35,7 +35,6 @@ class MovimientoService {
     } catch (e) {
       throw Exception('Error al obtener movimientos: $e');
     }
-    // TODO: query a Supabase tabla `movimiento_insumo`.
   }
 
   Future<List<MovimientoModel>> obtenerMovimientosPorInsumo(

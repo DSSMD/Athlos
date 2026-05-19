@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/export_helper.dart';
 import '../../components/users/user_form_drawer.dart';
 import '../../components/users/user_card.dart';
 import '../../components/users/user_list_row.dart';
@@ -58,6 +59,107 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _exportarUsuarios(List<UsuarioModel> allUsers) {
+    if (allUsers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay usuarios para exportar.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
+    buffer.writeln('ID;Nombre;Email;Rol;Estado;Trabajador');
+
+    for (final u in allUsers) {
+      final id = u.id;
+      final nombre = u.name.replaceAll(';', ',');
+      final email = u.email.replaceAll(';', ',');
+      
+      String rol = 'Invitado';
+      switch (u.role) {
+        case UserRole.administrador:
+          rol = 'Administrador';
+          break;
+        case UserRole.produccion:
+          rol = 'Producción';
+          break;
+        case UserRole.cajas:
+          rol = 'Cajas';
+          break;
+        case UserRole.invitado:
+          rol = 'Invitado';
+          break;
+      }
+
+      final estado = u.status == UserStatus.activo ? 'Activo' : 'Inactivo';
+      final esTrabajador = u.isTrabajador ? 'Sí' : 'No';
+
+      buffer.writeln('$id;$nombre;$email;$rol;$estado;$esTrabajador');
+    }
+
+    final String csvContent = buffer.toString();
+    final String timestamp = DateTime.now().toIso8601String().substring(0, 10);
+    saveCsvFile(
+      context: context,
+      fileName: 'Usuarios_Athlos_$timestamp.csv',
+      csvContent: csvContent,
+    );
+  }
+
+  void _exportarTrabajadores(List<UsuarioModel> allUsers) {
+    final trabajadores = allUsers.where((u) => u.isTrabajador).toList();
+    if (trabajadores.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay trabajadores para exportar.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('ID;Nombre;Email;Rol;Estado');
+
+    for (final t in trabajadores) {
+      final id = t.id;
+      final nombre = t.name.replaceAll(';', ',');
+      final email = t.email.replaceAll(';', ',');
+      
+      String rol = 'Invitado';
+      switch (t.role) {
+        case UserRole.administrador:
+          rol = 'Administrador';
+          break;
+        case UserRole.produccion:
+          rol = 'Producción';
+          break;
+        case UserRole.cajas:
+          rol = 'Cajas';
+          break;
+        case UserRole.invitado:
+          rol = 'Invitado';
+          break;
+      }
+
+      final estado = t.status == UserStatus.activo ? 'Activo' : 'Inactivo';
+
+      buffer.writeln('$id;$nombre;$email;$rol;$estado');
+    }
+
+    final String csvContent = buffer.toString();
+    final String timestamp = DateTime.now().toIso8601String().substring(0, 10);
+    saveCsvFile(
+      context: context,
+      fileName: 'Trabajadores_Athlos_$timestamp.csv',
+      csvContent: csvContent,
+    );
   }
 
   // 3. ADAPTAMOS TUS FUNCIONES PARA QUE RECIBAN LA LISTA REAL EN LUGAR DE mockUsers
@@ -216,19 +318,58 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                FilterChips(
-                  labels: const ['Todos', 'Activos', 'Inactivos'],
-                  selected: _selectedFilter,
-                  counts: [
-                    _countByFilter(allUsers, 0),
-                    _countByFilter(allUsers, 1),
-                    _countByFilter(allUsers, 2),
-                  ],
-                  onChanged: (i) => setState(() {
-                    _selectedFilter = i;
-                    _currentPage = 1;
-                  }),
-                ),
+                if (isMobile) ...[
+                  FilterChips(
+                    labels: const ['Todos', 'Activos', 'Inactivos'],
+                    selected: _selectedFilter,
+                    counts: [
+                      _countByFilter(allUsers, 0),
+                      _countByFilter(allUsers, 1),
+                      _countByFilter(allUsers, 2),
+                    ],
+                    onChanged: (i) => setState(() {
+                      _selectedFilter = i;
+                      _currentPage = 1;
+                    }),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _exportarUsuarios(allUsers),
+                      icon: const Icon(Icons.file_download_outlined, size: 18),
+                      label: const Text('Exportar'),
+                    ),
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilterChips(
+                          labels: const ['Todos', 'Activos', 'Inactivos'],
+                          selected: _selectedFilter,
+                          counts: [
+                            _countByFilter(allUsers, 0),
+                            _countByFilter(allUsers, 1),
+                            _countByFilter(allUsers, 2),
+                          ],
+                          onChanged: (i) => setState(() {
+                            _selectedFilter = i;
+                            _currentPage = 1;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      OutlinedButton.icon(
+                        onPressed: () => _exportarUsuarios(allUsers),
+                        icon: const Icon(
+                          Icons.file_download_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Exportar'),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: AppSpacing.lg),
 
                 if (users.isEmpty)
@@ -366,6 +507,15 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exportarTrabajadores(allUsers),
+                    icon: const Icon(Icons.file_download_outlined, size: 18),
+                    label: const Text('Exportar trabajadores'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
 
                 // 💡 LISTADO DINÁMICO
                 if (trabajadores.isEmpty)
@@ -379,7 +529,6 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   _MobileList(users: trabajadores)
                 else
                   _DesktopTable(users: trabajadores),
-
               ],
             ),
           ),

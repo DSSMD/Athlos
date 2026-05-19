@@ -34,13 +34,6 @@ class InventarioService {
       return (data as List).map((e) {
         final json = e as Map<String, dynamic>;
 
-        // 1. Extraemos el texto de la base de datos (ej. "Telas")
-        final catData = json['categoria_insumo'];
-        String nombreCat = 'telas'; // valor por defecto seguro
-        if (catData != null && catData is Map) {
-          nombreCat = catData['nombre_categoria']?.toString() ?? 'telas';
-        }
-
         return InventarioItemModel.fromJson(json);
       }).toList();
     } catch (e) {
