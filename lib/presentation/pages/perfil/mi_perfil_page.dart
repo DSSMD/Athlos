@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/models/usuario_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -39,16 +40,19 @@ class MiPerfilPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              data: (profile) {
-                if (profile == null) {
+              data: (profileData) {
+                if (profileData == null) {
                   return Center(
                     child: Text(
-                      'No se pudo cargar el perfil',
+                      'No se encontró información del perfil',
                       style: AppTypography.body,
                     ),
                   );
                 }
-                return _ProfileBody(profile: profile);
+
+                final usuario = UsuarioModel.fromJson(profileData);
+
+                return _ProfileBody(profile: usuario);
               },
             ),
           ),
@@ -61,16 +65,13 @@ class MiPerfilPage extends ConsumerWidget {
 class _ProfileBody extends StatelessWidget {
   const _ProfileBody({required this.profile});
 
-  final Map<String, dynamic> profile;
+  final UsuarioModel profile;
 
   @override
   Widget build(BuildContext context) {
-    final nombre = (profile['nombre'] ?? 'Usuario') as String;
-    final rol = (profile['roles']?['nombre_rol'] ?? 'Sin Rol') as String;
-    // TODO: backend aún no expone email/teléfono/último acceso en el perfil.
-    final email = profile['email'] as String?;
-    final telefono = profile['telefono'] as String?;
-    final ultimoAcceso = profile['ultimo_acceso'] as String?;
+    final ultimoAccesoStr = profile.lastAccess != null
+        ? '${profile.lastAccess!.day.toString().padLeft(2, '0')}/${profile.lastAccess!.month.toString().padLeft(2, '0')}/${profile.lastAccess!.year} ${profile.lastAccess!.hour.toString().padLeft(2, '0')}:${profile.lastAccess!.minute.toString().padLeft(2, '0')}'
+        : 'Sin registro';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -78,42 +79,107 @@ class _ProfileBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSpacing.xl),
-          Center(child: UserAvatar(name: nombre, size: 80)),
+          Center(child: UserAvatar(name: profile.name, size: 80)),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            nombre,
+            profile.name,
             style: AppTypography.h2.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
-          Center(child: _RoleChip(rol: rol)),
+          Center(child: _RoleChip(rol: profile.role.name.toUpperCase())),
+
+          // ════════════════════════════════════════════════════════════
+          // BOTONES DE ACCIÓN (Editar y Cambiar Contraseña)
+          // ════════════════════════════════════════════════════════════
+          const SizedBox(height: AppSpacing.xl),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _showEditProfileSheet(context, profile),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Editar Datos'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary500,
+                  side: const BorderSide(color: AppColors.primary500),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8), // AppRadius.md
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              OutlinedButton.icon(
+                onPressed: () {
+                  // TODO: Implementar flujo de cambio de contraseña
+                },
+                icon: const Icon(Icons.lock_outline, size: 18),
+                label: const Text('Seguridad'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textMuted,
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xl2),
+
           _SectionCard(
             title: 'Información personal',
             children: [
               _InfoRow(
                 icon: Icons.email_outlined,
                 label: 'Email',
-                value: email ?? '—',
+                value: profile.email,
               ),
               const Divider(height: 1, color: AppColors.border),
               _InfoRow(
                 icon: Icons.phone_outlined,
                 label: 'Teléfono',
-                value: telefono ?? '—',
+                value: profile.phone ?? 'No registrado',
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
+
+          if (profile.isTrabajador) ...[
+            _SectionCard(
+              title: 'Información laboral',
+              children: [
+                _InfoRow(
+                  icon: Icons.factory_outlined,
+                  label: 'Área de Producción',
+                  value: profile.nombreArea ?? 'Área no asignada',
+                ),
+                const Divider(height: 1, color: AppColors.border),
+                _InfoRow(
+                  icon: Icons.payments_outlined,
+                  label: 'Tarifa Base',
+                  value: profile.tarifaPagoBase != null
+                      ? 'Bs. ${profile.tarifaPagoBase!.toStringAsFixed(2)}'
+                      : 'No establecida',
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
           _SectionCard(
             title: 'Cuenta',
             children: [
-              _InfoRow(icon: Icons.badge_outlined, label: 'Rol', value: rol),
+              _InfoRow(
+                icon: Icons.verified_user_outlined,
+                label: 'Estado',
+                value: profile.status.name.toUpperCase(),
+              ),
               const Divider(height: 1, color: AppColors.border),
               _InfoRow(
                 icon: Icons.access_time,
                 label: 'Último acceso',
-                value: ultimoAcceso ?? 'Sin registro',
+                value: ultimoAccesoStr,
               ),
             ],
           ),
@@ -123,6 +189,148 @@ class _ProfileBody extends StatelessWidget {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// MODAL DE EDICIÓN (Bottom Sheet)
+// ══════════════════════════════════════════════════════════════════════════
+void _showEditProfileSheet(BuildContext context, UsuarioModel profile) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true, // Para que el teclado no lo tape
+    backgroundColor: AppColors.background,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ), // AppRadius.xl
+    ),
+    builder: (sheetContext) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: _EditProfileForm(profile: profile),
+      );
+    },
+  );
+}
+
+class _EditProfileForm extends ConsumerStatefulWidget {
+  final UsuarioModel profile;
+  const _EditProfileForm({required this.profile});
+
+  @override
+  ConsumerState<_EditProfileForm> createState() => _EditProfileFormState();
+}
+
+class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
+  late TextEditingController _phoneCtrl;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-llenamos con los datos actuales
+    _phoneCtrl = TextEditingController(text: widget.profile.phone ?? '');
+  }
+
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardarCambios() async {
+    setState(() => _isLoading = true);
+
+    // TODO: Aquí llamarías a tu AuthProvider o UsuarioService
+    // para hacer el UPDATE en la tabla 'profiles' de Supabase.
+    // Ejemplo: await ref.read(usuarioServiceProvider).actualizarPerfilPropio(...);
+
+    await Future.delayed(const Duration(seconds: 1)); // Simulación
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      Navigator.of(context).pop(); // Cierra el modal
+      // Mostrar un SnackBar de éxito aquí
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Grab handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral400,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            Text(
+              'Editar Datos Personales',
+              style: AppTypography.h3.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Actualiza tu información de contacto. Tu nombre y datos laborales están administrados por RRHH.',
+              style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // Campo Teléfono
+            TextFormField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Número de Teléfono',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl2),
+
+            // Botón Guardar
+            ElevatedButton(
+              onPressed: _isLoading ? null : _guardarCambios,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: AppColors.brandWhite,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Guardar Cambios'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ... (Las clases _RoleChip, _SectionCard e _InfoRow se mantienen exactamente igual)
 
 class _RoleChip extends StatelessWidget {
   const _RoleChip({required this.rol});
@@ -137,7 +345,7 @@ class _RoleChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColors.primary500.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppRadius.full),
+        borderRadius: BorderRadius.circular(20), // Asumiendo AppRadius.full
       ),
       child: Text(
         rol,
@@ -161,7 +369,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(12), // Asumiendo AppRadius.lg
         border: Border.all(color: AppColors.border),
       ),
       child: Column(

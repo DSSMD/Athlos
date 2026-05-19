@@ -54,10 +54,21 @@ class AuthService {
       final response = await _client
           .from('profiles')
           .select('''
+            id,
             nombre,
+            apellido,
+            email,
+            telefono,
+            activo,
+            ultimo_acceso,
             id_rol,
-            roles (
-              nombre_rol
+            roles (nombre_rol),
+            trabajadores (
+              id_trabajador,
+              tarifa_pago_base,
+              fecha_contratacion,
+              id_area,
+              area_produccion (nombre_area)
             )
           ''')
           .eq('id', user.id)
