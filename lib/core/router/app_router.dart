@@ -109,7 +109,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MiPerfilPage(),
       ),
 
-      // ────────── ROL 1: ADMINISTRADOR (12 Páginas en total, índices 0 al 11) ──────────
+      // ────────── ROL 1: ADMINISTRADOR (Páginas activas) ──────────
       GoRoute(
         path: '/admin',
         builder: (context, state) => MainLayout(
@@ -121,11 +121,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             const PlantillasPage(),         // 4. Plantillas
             const ConjuntosPage(),          // 5. Conjuntos 
             const ClientesPage(),           // 6. Clientes
-            _buildPlaceholder('Pagos'),     // 7. Pagos
-            _buildPlaceholder('Balance'),   // 8. Balance
-            const UsuariosPage(),           // 9. Usuarios
-            _buildPlaceholder('Configuración'), // 10. Configuración
-            _buildPlaceholder('Avisos'),    // 11. Notificaciones
+            // _buildPlaceholder('Pagos'),     // (Comentado temporalmente)
+            // _buildPlaceholder('Balance'),   // (Comentado temporalmente)
+            const UsuariosPage(),           // 7. Usuarios (Antes 9)
+            // _buildPlaceholder('Configuración'), // (Comentado temporalmente)
+            // _buildPlaceholder('Avisos'),    // (Comentado temporalmente)
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),
@@ -147,7 +147,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ────────── ROL 3: VENTAS (4 Páginas) ──────────
+      // ────────── ROL 3: VENTAS (Páginas activas) ──────────
       // Ahora incluye la OrdenPage funcional
       GoRoute(
         path: '/ventas',
@@ -156,7 +156,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             _buildPlaceholder('Dashboard Ventas'), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes (Movido aquí)
             const ClientesPage(), // 2. Clientes
-            _buildPlaceholder('Pagos'), // 3. Pagos
+            // _buildPlaceholder('Pagos'), // (Comentado temporalmente)
           ],
           railDestinations: _buildRailFromRole('3'),
           bottomNavItems: _buildBottomFromRole('3'),

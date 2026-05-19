@@ -211,6 +211,7 @@ class _TabSelector extends StatelessWidget {
           selected: selected == 0,
           onTap: () => onChanged(0),
         ),
+        /*
         _TabPill(
           label: 'Ventas',
           selected: selected == 1,
@@ -221,6 +222,7 @@ class _TabSelector extends StatelessWidget {
           selected: selected == 2,
           onTap: () => onChanged(2),
         ),
+        */
       ],
     );
   }
