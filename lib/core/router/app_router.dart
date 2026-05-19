@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
+import 'package:workspace/presentation/pages/perfil/mi_perfil_page.dart';
 import 'package:workspace/presentation/pages/trabajador/trabajador_dashboard_page.dart';
 import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
 import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
@@ -101,6 +102,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
+      // ────────── RUTA GLOBAL DE PERFIL ──────────
+      // Cualquier rol que haga context.push('/perfil') abrirá esta pantalla
+      GoRoute(
+        path: '/perfil',
+        builder: (context, state) => const MiPerfilPage(),
+      ),
+
       // ────────── ROL 1: ADMINISTRADOR (12 Páginas en total, índices 0 al 11) ──────────
       GoRoute(
         path: '/admin',
@@ -111,12 +119,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             const InventarioPage(),         // 2. Inventario
             const ProduccionPage(),// 3. Producción
             const PlantillasPage(),         // 4. Plantillas
-            const ConjuntosPage(),          // 5. Conjuntos 💡 (La página real)
+            const ConjuntosPage(),          // 5. Conjuntos 
             const ClientesPage(),           // 6. Clientes
             _buildPlaceholder('Pagos'),     // 7. Pagos
             _buildPlaceholder('Balance'),   // 8. Balance
             const UsuariosPage(),           // 9. Usuarios
-            _buildPlaceholder('Configuración'), // 10. Configuración 💡 (Un placeholder por ahora)
+            _buildPlaceholder('Configuración'), // 10. Configuración
             _buildPlaceholder('Avisos'),    // 11. Notificaciones
           ],
           railDestinations: _buildRailFromRole('1'),

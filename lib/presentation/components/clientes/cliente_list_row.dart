@@ -7,10 +7,6 @@
 // Columnas según Figma (pantalla 13):
 // CLIENTE | NIT/CI | TELÉFONO | ÓRDENES | TOTAL COMPRADO | DEUDA |
 // ÚLTIMO PEDIDO | ESTADO | Ver
-//
-// TODO(SCRUM-69): los campos ÓRDENES, TOTAL COMPRADO, DEUDA y ÚLTIMO PEDIDO
-// requieren joins con la tabla de órdenes que aún no está conectada al
-// backend. Por ahora muestran '—'. Se conectarán cuando Mel exponga los datos.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -126,41 +122,50 @@ class _ClienteListRowState extends State<ClienteListRow> {
               ),
             ),
 
-            // ÓRDENES (placeholder)
+            // ÓRDENES
             Expanded(
               flex: 2,
               child: Text(
-                '—',
+                c.totalOrdenes.toString(),
                 textAlign: TextAlign.center,
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+                style: AppTypography.small,
               ),
             ),
 
-            // TOTAL COMPRADO (placeholder)
+            // TOTAL COMPRADO
             Expanded(
               flex: 2,
               child: Text(
-                '—',
+                'Bs. ${c.totalComprado.toStringAsFixed(2)}',
                 textAlign: TextAlign.center,
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+                style: AppTypography.small,
               ),
             ),
 
-            // DEUDA (placeholder)
+            // DEUDA
             Expanded(
               flex: 1,
               child: Text(
-                '—',
+                c.deudaTotal > 0
+                    ? 'Bs. ${c.deudaTotal.toStringAsFixed(2)}'
+                    : '0.00',
                 textAlign: TextAlign.center,
-                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+                style: AppTypography.small.copyWith(
+                  color: c.deudaTotal > 0 ? AppColors.error : AppColors.success,
+                  fontWeight: c.deudaTotal > 0
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
               ),
             ),
 
-            // ÚLTIMO PEDIDO (placeholder)
+            // ÚLTIMO PEDIDO
             Expanded(
               flex: 2,
               child: Text(
-                '—',
+                c.ultimoPedido != null
+                    ? '${c.ultimoPedido!.day.toString().padLeft(2, '0')}/${c.ultimoPedido!.month.toString().padLeft(2, '0')}/${c.ultimoPedido!.year}'
+                    : '—',
                 textAlign: TextAlign.center,
                 style: AppTypography.small.copyWith(color: AppColors.textMuted),
               ),

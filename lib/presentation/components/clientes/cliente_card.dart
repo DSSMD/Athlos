@@ -3,10 +3,6 @@
 // Ubicación: lib/presentation/components/clientes/cliente_card.dart
 // Descripción: Card de cliente para vista Mobile del listado.
 // Sigue el mismo patrón que user_card.dart para mantener consistencia.
-//
-// TODO(SCRUM-69): los datos de órdenes (cantidad, total comprado, deuda,
-// último pedido) requieren joins con la tabla de órdenes que aún no está
-// conectada al backend. Por ahora muestran '—'.
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -115,25 +111,40 @@ class ClienteCard extends StatelessWidget {
 
               const Divider(height: AppSpacing.xl),
 
-              // Datos de órdenes (placeholders por ahora)
+              // Datos de órdenes
               Row(
                 children: [
+                  // 1. Cantidad de Órdenes
                   Expanded(
-                    child: _MiniStat(label: 'Órdenes', value: '—'),
+                    child: _MiniStat(
+                      label: 'Órdenes',
+                      value: cliente.totalOrdenes.toString(),
+                    ),
                   ),
+
+                  // 2. Total Comprado en la historia
                   Expanded(
-                    child: _MiniStat(label: 'Total', value: '—'),
+                    child: _MiniStat(
+                      label: 'Total',
+                      value: 'Bs. ${cliente.totalComprado.toStringAsFixed(2)}',
+                    ),
                   ),
+
+                  // 3. Deuda Actual
                   Expanded(
                     child: _MiniStat(
                       label: 'Deuda',
-                      value: '—',
-                      valueColor: AppColors.textMuted,
+                      value: cliente.deudaTotal > 0
+                          ? 'Bs. ${cliente.deudaTotal.toStringAsFixed(2)}'
+                          : '0.00',
+                      // Si hay deuda, el texto se pinta de rojo para alertar visualmente
+                      valueColor: cliente.deudaTotal > 0
+                          ? AppColors.error
+                          : AppColors.success,
                     ),
                   ),
                 ],
               ),
-
               const SizedBox(height: AppSpacing.sm),
 
               // Footer: fecha de registro

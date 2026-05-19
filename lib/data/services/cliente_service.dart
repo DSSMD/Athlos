@@ -34,18 +34,60 @@ class ClienteService {
   // ══════════════════════════════════════════════════════════════════════════
   Future<List<ClienteModel>> obtenerClientes({bool soloActivos = true}) async {
     try {
-      var query = _supabase.from('cliente').select();
+      // 1. Modificamos el select para que también traiga las órdenes y los pagos
+      var query = _supabase.from('cliente').select('''
+        *,
+        orden (
+          fecha_orden,
+          costo_total,
+          pago_cliente ( monto )
+        )
+      ''');
 
-      // Si soloActivos es true, filtramos los eliminados lógicamente
+      // 2. Mantenemos tu filtro original intacto
       if (soloActivos) {
         query = query.eq('activo', true);
       }
 
       final response = await query.order('created_at', ascending: false);
 
-      return (response as List)
-          .map((json) => ClienteModel.fromJson(json))
-          .toList();
+      // 3. Hacemos el cálculo matemático antes de convertir a ClienteModel
+      return (response as List<dynamic>).map((json) {
+        final ordenes = json['orden'] as List<dynamic>? ?? [];
+
+        int totalOrdenes = ordenes.length;
+        double totalComprado = 0;
+        double deudaTotal = 0;
+        DateTime? ultimoPedido;
+
+        for (var o in ordenes) {
+          final costo = (o['costo_total'] ?? 0).toDouble();
+          totalComprado += costo;
+
+          final pagos = o['pago_cliente'] as List<dynamic>? ?? [];
+          double pagado = pagos.fold(
+            0.0,
+            (sum, p) => sum + (p['monto'] ?? 0).toDouble(),
+          );
+
+          deudaTotal += (costo - pagado);
+
+          if (o['fecha_orden'] != null) {
+            final fechaOrd = DateTime.parse(o['fecha_orden']);
+            if (ultimoPedido == null || fechaOrd.isAfter(ultimoPedido)) {
+              ultimoPedido = fechaOrd;
+            }
+          }
+        }
+
+        // Inyectamos los cálculos al diccionario
+        json['total_ordenes'] = totalOrdenes;
+        json['total_comprado'] = totalComprado;
+        json['deuda_total'] = deudaTotal;
+        json['ultimo_pedido'] = ultimoPedido?.toIso8601String();
+
+        return ClienteModel.fromJson(json as Map<String, dynamic>);
+      }).toList();
     } catch (e) {
       throw Exception('Error al obtener clientes: $e');
     }

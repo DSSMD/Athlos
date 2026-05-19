@@ -63,7 +63,7 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
   // Lógica Financiera
   double get _totalOrden {
     // Asumimos que draft.descuento existe. Si no, usa 0 por ahora.
-    final descuento = widget.draft.descuento ?? 0.0;
+    final descuento = widget.draft.descuento;
     return widget.draft.subtotalItems - descuento;
   }
 
@@ -124,6 +124,7 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: _saldoPendiente == 0
+                  // ignore: deprecated_member_use
                   ? AppColors.success.withOpacity(0.1)
                   : AppColors.neutral50,
               borderRadius: BorderRadius.circular(AppRadius.md),

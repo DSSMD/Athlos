@@ -3,6 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/data/services/orden_service.dart';
 import '../../domain/models/orden_model.dart';
+import '../../domain/models/auditoria_orden_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Importa también el OrdenDraft si lo necesitas para la creación
 import '../components/ordenes/orden_draft.dart';
@@ -10,6 +11,12 @@ import '../components/ordenes/orden_draft.dart';
 // Proveedor del servicio
 final ordenServiceProvider = Provider<OrdenService>((ref) {
   return OrdenService(Supabase.instance.client);
+});
+
+final historialOrdenProvider =
+    FutureProvider.family<List<AuditoriaOrdenModel>, String>((ref, numOrden) async {
+  final service = ref.watch(ordenServiceProvider);
+  return await service.obtenerAuditoriaOrden(numOrden);
 });
 
 // Proveedor de la lista de órdenes (AsyncNotifier)

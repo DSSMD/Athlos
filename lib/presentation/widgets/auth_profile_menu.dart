@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../pages/perfil/mi_perfil_page.dart';
 import '../providers/auth_provider.dart';
@@ -181,9 +182,7 @@ class AuthProfileMenu extends ConsumerWidget {
 enum _ProfileAction { profile, logout }
 
 void _goToProfile(BuildContext context) {
-  Navigator.of(
-    context,
-  ).push(MaterialPageRoute(builder: (_) => const MiPerfilPage()));
+  context.push('/perfil'); 
 }
 
 Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {

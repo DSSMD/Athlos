@@ -13,6 +13,7 @@ import '../../theme/breakpoints.dart';
 import '../../widgets/shared/mobile_screen_header.dart';
 
 import '../../../domain/models/orden_model.dart';
+import '../../../domain/models/auditoria_orden_model.dart';
 import '../../providers/orden_provider.dart';
 
 class OrdenDetallePage extends ConsumerStatefulWidget {
@@ -172,7 +173,7 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
               const SizedBox(height: AppSpacing.xl),
               _FechasClaveCard(orden: widget.orden),
               const SizedBox(height: AppSpacing.xl),
-              const _HistorialCard(),
+              _HistorialCard(numOrden: widget.orden.numOrden),
             ],
           ),
         ),
@@ -208,7 +209,7 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
         const SizedBox(height: AppSpacing.lg),
         _FechasClaveCard(orden: widget.orden),
         const SizedBox(height: AppSpacing.lg),
-        const _HistorialCard(),
+        _HistorialCard(numOrden: widget.orden.numOrden),
       ],
     );
   }
@@ -492,6 +493,14 @@ class _PagosCard extends ConsumerWidget {
                 ),
               ],
 
+              if (estaPagado && orden.idEstado == 3) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: _ConfirmarEntregaButton(orden: orden),
+                ),
+              ],
+
               // Lista de transacciones (Si el cliente dio anticipos)
               if (pagos.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),
@@ -628,19 +637,117 @@ class _FechasClaveCard extends StatelessWidget {
 // CARD DE HISTORIAL DE CAMBIOS (placeholder para futura integración con backend)
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _HistorialCard extends StatelessWidget {
-  const _HistorialCard();
+class _HistorialCard extends ConsumerWidget {
+  final String numOrden;
+  const _HistorialCard({required this.numOrden});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historialAsync = ref.watch(historialOrdenProvider(numOrden));
+
     return _Card(
       title: 'Historial',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Text(
-          'El historial de cambios se mostrará acá cuando backend lo exponga.',
-          style: AppTypography.small.copyWith(color: AppColors.textMuted),
+      child: historialAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Center(child: CircularProgressIndicator()),
         ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Text(
+            'Error al cargar el historial: $e',
+            style: AppTypography.small.copyWith(color: AppColors.error),
+          ),
+        ),
+        data: (List<AuditoriaOrdenModel> logs) {
+          if (logs.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Text(
+                'Sin registros de cambios aún.',
+                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: logs.map((log) {
+              final fecha = log.fechaCambio;
+              final fechaStr =
+                  '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year} '
+                  '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+
+              final estAnt = log.estadoAnteriorNombre ?? 'Pendiente';
+              final estNue = log.estadoNuevoNombre ?? 'Pendiente';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary500,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                log.usuarioNombre ?? 'Sistema / Obrero',
+                                style: AppTypography.smallBold,
+                              ),
+                              Text(
+                                fechaStr,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            log.descripcionDetalle ?? 'Cambio de estado',
+                            style: AppTypography.small,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              '$estAnt → $estNue',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
@@ -1011,7 +1118,7 @@ class _HoverImageWidget extends StatefulWidget {
 
 class _HoverImageWidgetState extends State<_HoverImageWidget> {
   bool _isHovered = false;
-
+ 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -1033,7 +1140,7 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
               ),
             ),
           ),
-
+ 
           // Capa Oscura (Aparece en Hover)
           AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
@@ -1054,6 +1161,126 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET INTERNO: BOTÓN DE CONFIRMAR ENTREGA (Auditoría integrada)
+// ══════════════════════════════════════════════════════════════════════════════
+class _ConfirmarEntregaButton extends StatefulWidget {
+  final OrdenModel orden;
+  const _ConfirmarEntregaButton({required this.orden});
+
+  @override
+  State<_ConfirmarEntregaButton> createState() => _ConfirmarEntregaButtonState();
+}
+
+class _ConfirmarEntregaButtonState extends State<_ConfirmarEntregaButton> {
+  bool _isDelivering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        return ElevatedButton.icon(
+          onPressed: _isDelivering
+              ? null
+              : () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.brandWhite,
+                      title: Text(
+                        'Confirmar Entrega',
+                        style: AppTypography.h3,
+                      ),
+                      content: Text(
+                        '¿Está seguro de marcar este pedido como ENTREGADO? '
+                        'Esta acción cambiará el estado de la orden y registrará la entrega.',
+                        style: AppTypography.body,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Confirmar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm != true) return;
+
+                  setState(() => _isDelivering = true);
+
+                  try {
+                    final service = ref.read(ordenServiceProvider);
+                    await service.actualizarEstadoOrden(
+                      widget.orden.numOrden,
+                      4, // 4 = Entregada
+                      descripcion: 'Pedido entregado al cliente por confirmar entrega en caja.',
+                    );
+
+                    // Refrescar órdenes e historial
+                    ref.invalidate(ordenesProvider);
+                    ref.invalidate(historialOrdenProvider(widget.orden.numOrden));
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Pedido marcado como ENTREGADO con éxito'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error al entregar pedido: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isDelivering = false);
+                  }
+                },
+          icon: _isDelivering
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.local_shipping),
+          label: Text(
+            'Confirmar Entrega',
+            style: AppTypography.small.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.success,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        );
+      },
     );
   }
 }

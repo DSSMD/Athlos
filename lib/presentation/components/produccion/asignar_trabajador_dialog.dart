@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
@@ -33,9 +35,6 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
       // Convertimos el idArea (que guardamos en el modelo) a número,
       // porque tu base de datos espera un 'integer'
       final idAreaInt = int.tryParse(widget.lote.idArea) ?? 0;
-      print(
-        '🔥 DEBUG ÁREA LOTE: El número que intentamos buscar es: $idAreaInt',
-      );
       // Si imprime "0", era exactamente este problema.
 
       final response = await Supabase.instance.client

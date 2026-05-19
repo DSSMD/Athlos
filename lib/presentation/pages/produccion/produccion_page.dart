@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -25,6 +26,36 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
   final TextEditingController _searchController = TextEditingController();
   int _currentPage = 1;
   static const int _itemsPerPage = 10;
+
+  String _obtenerNombreEstadoOrden(int? id) {
+    switch (id) {
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'En Producción';
+      case 3:
+        return 'Finalizada';
+      case 4:
+        return 'Entregada';
+      default:
+        return 'Desconocido';
+    }
+  }
+
+  Color _obtenerColorEstadoOrden(int? id) {
+    switch (id) {
+      case 1:
+        return Colors.orange;
+      case 2:
+        return AppColors.primary500;
+      case 3:
+        return Colors.green;
+      case 4:
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   void dispose() {
@@ -72,6 +103,13 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
               }
 
               final List<String> ordenesUnicas = lotesPorOrden.keys.toList();
+              // Ordenar por fecha_orden descendente (la más reciente primero)
+              ordenesUnicas.sort((a, b) {
+                final dateA = lotesPorOrden[a]?.first.fechaOrden ?? DateTime(1970);
+                final dateB = lotesPorOrden[b]?.first.fechaOrden ?? DateTime(1970);
+                return dateB.compareTo(dateA);
+              });
+
               final int totalItems = ordenesUnicas.length;
               final int totalPages = (totalItems > 0)
                   ? (totalItems / _itemsPerPage).ceil()
@@ -132,14 +170,64 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                   color: AppColors.primary500,
                                 ),
                               ),
-                              title: Text(
-                                'Orden: $ordenId',
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Orden: ${ordenId.length > 8 ? ordenId.substring(0, 8).toUpperCase() : ordenId.toUpperCase()}',
+                                    style: AppTypography.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (lotesDeEstaOrden.first.idEstadoOrden != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _obtenerColorEstadoOrden(
+                                          lotesDeEstaOrden.first.idEstadoOrden,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: _obtenerColorEstadoOrden(
+                                            lotesDeEstaOrden.first.idEstadoOrden,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _obtenerNombreEstadoOrden(
+                                          lotesDeEstaOrden.first.idEstadoOrden,
+                                        ),
+                                        style: AppTypography.caption.copyWith(
+                                          color: _obtenerColorEstadoOrden(
+                                            lotesDeEstaOrden.first.idEstadoOrden,
+                                          ),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              subtitle: Text(
-                                'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
+                                  ),
+                                  if (lotesDeEstaOrden.first.fechaOrden != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Creada: ${DateFormat('dd/MM/yyyy HH:mm').format(lotesDeEstaOrden.first.fechaOrden!.toLocal())}',
+                                      style: AppTypography.caption.copyWith(
+                                        color: AppColors.primary500,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               trailing: ElevatedButton.icon(
                                 onPressed: () {
