@@ -142,11 +142,6 @@ class _DesktopHeader extends StatelessWidget {
       child: Row(
         children: [
           Text('Dashboard de Ventas', style: AppTypography.h1),
-          const Spacer(),
-          Text(
-            'Resumen comercial — Athlos',
-            style: AppTypography.body.copyWith(color: AppColors.textMuted),
-          ),
         ],
       ),
     );
