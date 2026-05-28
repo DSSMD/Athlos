@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
+import '../../../../theme/breakpoints.dart';
 
 import '../../../../../domain/models/conjunto_model.dart';
 import '../../../../../domain/models/plantilla_model.dart';
@@ -135,15 +136,22 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = context.isMobile;
     return Dialog(
       backgroundColor: AppColors.brandWhite,
+      insetPadding: isMobile
+          ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md)
+          : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700, maxHeight: 820),
+        constraints: BoxConstraints(
+          maxWidth: isMobile ? 550 : 780,
+          maxHeight: isMobile ? 850 : 820,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl2),
+          padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.xl2),
           child: Form(
             key: _formKey,
             child: Column(
@@ -155,7 +163,9 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
                     Expanded(
                       child: Text(
                         _esEdicion ? 'Editar Conjunto' : 'Nuevo Conjunto',
-                        style: AppTypography.h3,
+                        style: AppTypography.h3.copyWith(
+                          fontSize: isMobile ? 18 : null,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -168,49 +178,93 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
                 const Divider(height: AppSpacing.xl),
 
                 Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Panel izquierdo: datos + plantillas seleccionadas ──
-                      Expanded(
-                        flex: 5,
-                        child: _PanelIzquierdo(
-                          nombreCtrl: _nombreCtrl,
-                          descripcionCtrl: _descripcionCtrl,
-                          seleccionadas: _seleccionadas,
-                          precioCalculado: _precioCalculado,
-                          errorGuardar: _errorGuardar,
-                          onQuitarPlantilla: _quitarPlantilla,
-                          onCambiarCantidad: _cambiarCantidad,
-                        ),
-                      ),
+                  child: isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Panel izquierdo: datos + plantillas seleccionadas ──
+                            Expanded(
+                              flex: 5,
+                              child: _PanelIzquierdo(
+                                nombreCtrl: _nombreCtrl,
+                                descripcionCtrl: _descripcionCtrl,
+                                seleccionadas: _seleccionadas,
+                                precioCalculado: _precioCalculado,
+                                errorGuardar: _errorGuardar,
+                                onQuitarPlantilla: _quitarPlantilla,
+                                onCambiarCantidad: _cambiarCantidad,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            const Divider(height: 1),
+                            const SizedBox(height: AppSpacing.lg),
+                            // ── Panel derecho: selector de plantillas ──
+                            Expanded(
+                              flex: 6,
+                              child: _PanelSelectorPlantillas(
+                                categoriaFiltro: _categoriaFiltro,
+                                tipoFiltro: _tipoFiltro,
+                                busqueda: _busquedaPlantilla,
+                                seleccionadasIds: _seleccionadas
+                                    .map((s) => s.plantillaId)
+                                    .toSet(),
+                                onCategoriaChanged: (cat) => setState(() {
+                                  _categoriaFiltro = cat;
+                                  _tipoFiltro = null;
+                                }),
+                                onTipoChanged: (id) =>
+                                    setState(() => _tipoFiltro = id),
+                                onBusquedaChanged: (q) =>
+                                    setState(() => _busquedaPlantilla = q),
+                                onAgregarPlantilla: _agregarPlantilla,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Panel izquierdo: datos + plantillas seleccionadas ──
+                            Expanded(
+                              flex: 5,
+                              child: _PanelIzquierdo(
+                                nombreCtrl: _nombreCtrl,
+                                descripcionCtrl: _descripcionCtrl,
+                                seleccionadas: _seleccionadas,
+                                precioCalculado: _precioCalculado,
+                                errorGuardar: _errorGuardar,
+                                onQuitarPlantilla: _quitarPlantilla,
+                                onCambiarCantidad: _cambiarCantidad,
+                              ),
+                            ),
 
-                      const SizedBox(width: AppSpacing.xl),
-                      const VerticalDivider(width: 1),
-                      const SizedBox(width: AppSpacing.xl),
+                            const SizedBox(width: AppSpacing.xl),
+                            const VerticalDivider(width: 1),
+                            const SizedBox(width: AppSpacing.xl),
 
-                      // ── Panel derecho: selector de plantillas ──
-                      Expanded(
-                        flex: 4,
-                        child: _PanelSelectorPlantillas(
-                          categoriaFiltro: _categoriaFiltro,
-                          tipoFiltro: _tipoFiltro,
-                          busqueda: _busquedaPlantilla,
-                          seleccionadasIds:
-                              _seleccionadas.map((s) => s.plantillaId).toSet(),
-                          onCategoriaChanged: (cat) => setState(() {
-                            _categoriaFiltro = cat;
-                            _tipoFiltro = null;
-                          }),
-                          onTipoChanged: (id) =>
-                              setState(() => _tipoFiltro = id),
-                          onBusquedaChanged: (q) =>
-                              setState(() => _busquedaPlantilla = q),
-                          onAgregarPlantilla: _agregarPlantilla,
+                            // ── Panel derecho: selector de plantillas ──
+                            Expanded(
+                              flex: 4,
+                              child: _PanelSelectorPlantillas(
+                                categoriaFiltro: _categoriaFiltro,
+                                tipoFiltro: _tipoFiltro,
+                                busqueda: _busquedaPlantilla,
+                                seleccionadasIds: _seleccionadas
+                                    .map((s) => s.plantillaId)
+                                    .toSet(),
+                                onCategoriaChanged: (cat) => setState(() {
+                                  _categoriaFiltro = cat;
+                                  _tipoFiltro = null;
+                                }),
+                                onTipoChanged: (id) =>
+                                    setState(() => _tipoFiltro = id),
+                                onBusquedaChanged: (q) =>
+                                    setState(() => _busquedaPlantilla = q),
+                                onAgregarPlantilla: _agregarPlantilla,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -732,11 +786,15 @@ class _ListaAgrupada extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    tipo.nombre,
-                    style: AppTypography.small.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                  Expanded(
+                    child: Text(
+                      tipo.nombre,
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

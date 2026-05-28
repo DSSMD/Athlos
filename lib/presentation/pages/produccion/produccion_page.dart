@@ -11,6 +11,8 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/shared/pagination.dart';
 import '../../widgets/shared/sticky_topbar.dart';
+import '../../widgets/shared/mobile_screen_header.dart';
+import '../../widgets/shared/search_input.dart';
 import '../../providers/lote_provider.dart';
 import '../../../domain/models/lote_model.dart';
 
@@ -72,12 +74,22 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
 
     return Column(
       children: [
-        StickyTopbar(
-          title: 'Directorio de Órdenes',
-          searchHint: 'Buscar por Orden o Cliente...',
-          searchController: _searchController,
-          onSearchChanged: (value) => setState(() => _currentPage = 1),
-        ),
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Directorio de Órdenes',
+            bottom: SearchInput(
+              hintText: 'Buscar por orden o cliente...',
+              controller: _searchController,
+              onChanged: (value) => setState(() => _currentPage = 1),
+            ),
+          )
+        else
+          StickyTopbar(
+            title: 'Directorio de Órdenes',
+            searchHint: 'Buscar por Orden o Cliente...',
+            searchController: _searchController,
+            onSearchChanged: (value) => setState(() => _currentPage = 1),
+          ),
         Expanded(
           child: lotesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -151,6 +163,19 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                           final lotesDeEstaOrden = lotesPorOrden[ordenId]!;
                           final cliente = lotesDeEstaOrden.first.cliente;
 
+                          final Function() abrirKanban = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrdenKanbanPage(
+                                  ordenId: ordenId,
+                                  cliente: cliente,
+                                  lotes: lotesDeEstaOrden,
+                                ),
+                              ),
+                            );
+                          };
+
                           return Card(
                             elevation: 0,
                             margin: const EdgeInsets.only(
@@ -160,101 +185,182 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                               borderRadius: BorderRadius.circular(AppRadius.lg),
                               side: const BorderSide(color: AppColors.border),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(
-                                AppSpacing.lg,
-                              ),
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.primary500
-                                    .withOpacity(0.1),
-                                child: const Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: AppColors.primary500,
-                                ),
-                              ),
-                              title: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Orden: ${ordenId.length > 8 ? ordenId.substring(0, 8).toUpperCase() : ordenId.toUpperCase()}',
-                                    style: AppTypography.body.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (lotesDeEstaOrden.first.idEstadoOrden != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _obtenerColorEstadoOrden(
-                                          lotesDeEstaOrden.first.idEstadoOrden,
-                                        ).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: _obtenerColorEstadoOrden(
-                                            lotesDeEstaOrden.first.idEstadoOrden,
+                            child: isMobile
+                                ? InkWell(
+                                    onTap: abrirKanban,
+                                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(AppSpacing.md),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Orden: ${ordenId.length > 8 ? ordenId.substring(0, 8).toUpperCase() : ordenId.toUpperCase()}',
+                                                style: AppTypography.body.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              if (lotesDeEstaOrden.first.idEstadoOrden != null)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: _obtenerColorEstadoOrden(
+                                                      lotesDeEstaOrden.first.idEstadoOrden,
+                                                    ).withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    border: Border.all(
+                                                      color: _obtenerColorEstadoOrden(
+                                                        lotesDeEstaOrden.first.idEstadoOrden,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    _obtenerNombreEstadoOrden(
+                                                      lotesDeEstaOrden.first.idEstadoOrden,
+                                                    ),
+                                                    style: AppTypography.caption.copyWith(
+                                                      color: _obtenerColorEstadoOrden(
+                                                        lotesDeEstaOrden.first.idEstadoOrden,
+                                                      ),
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        _obtenerNombreEstadoOrden(
-                                          lotesDeEstaOrden.first.idEstadoOrden,
-                                        ),
-                                        style: AppTypography.caption.copyWith(
-                                          color: _obtenerColorEstadoOrden(
-                                            lotesDeEstaOrden.first.idEstadoOrden,
+                                          const SizedBox(height: AppSpacing.sm),
+                                          Text(
+                                            'Cliente: $cliente',
+                                            style: AppTypography.body,
                                           ),
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${lotesDeEstaOrden.length} Lotes activos',
+                                            style: AppTypography.small.copyWith(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          if (lotesDeEstaOrden.first.fechaOrden != null) ...[
+                                            const SizedBox(height: AppSpacing.xs),
+                                            Text(
+                                              'Creada: ${DateFormat('dd/MM/yyyy HH:mm').format(lotesDeEstaOrden.first.fechaOrden!.toLocal())}',
+                                              style: AppTypography.caption.copyWith(
+                                                color: AppColors.primary500,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: AppSpacing.md),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: abrirKanban,
+                                              icon: const Icon(Icons.view_kanban, size: 18),
+                                              label: const Text('Ver Tablero'),
+                                              style: ElevatedButton.styleFrom(
+                                                elevation: 0,
+                                                padding: const EdgeInsets.symmetric(
+                                                  vertical: AppSpacing.sm,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
-                                  ),
-                                  if (lotesDeEstaOrden.first.fechaOrden != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Creada: ${DateFormat('dd/MM/yyyy HH:mm').format(lotesDeEstaOrden.first.fechaOrden!.toLocal())}',
-                                      style: AppTypography.caption.copyWith(
+                                  )
+                                : ListTile(
+                                    contentPadding: const EdgeInsets.all(
+                                      AppSpacing.lg,
+                                    ),
+                                    leading: CircleAvatar(
+                                      backgroundColor: AppColors.primary500
+                                          .withOpacity(0.1),
+                                      child: const Icon(
+                                        Icons.inventory_2_outlined,
                                         color: AppColors.primary500,
-                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                  ],
-                                ],
-                              ),
-                              trailing: ElevatedButton.icon(
-                                onPressed: () {
-                                  // 💡 AQUÍ NAVEGAMOS A LA NUEVA PANTALLA PASÁNDOLE LOS DATOS
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => OrdenKanbanPage(
-                                        ordenId: ordenId,
-                                        cliente: cliente,
-                                        lotes: lotesDeEstaOrden,
+                                    title: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Orden: ${ordenId.length > 8 ? ordenId.substring(0, 8).toUpperCase() : ordenId.toUpperCase()}',
+                                          style: AppTypography.body.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (lotesDeEstaOrden.first.idEstadoOrden != null)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _obtenerColorEstadoOrden(
+                                                lotesDeEstaOrden.first.idEstadoOrden,
+                                              ).withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: _obtenerColorEstadoOrden(
+                                                  lotesDeEstaOrden.first.idEstadoOrden,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _obtenerNombreEstadoOrden(
+                                                lotesDeEstaOrden.first.idEstadoOrden,
+                                              ),
+                                              style: AppTypography.caption.copyWith(
+                                                color: _obtenerColorEstadoOrden(
+                                                  lotesDeEstaOrden.first.idEstadoOrden,
+                                                ),
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Cliente: $cliente • ${lotesDeEstaOrden.length} Lotes activos',
+                                        ),
+                                        if (lotesDeEstaOrden.first.fechaOrden != null) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Creada: ${DateFormat('dd/MM/yyyy HH:mm').format(lotesDeEstaOrden.first.fechaOrden!.toLocal())}',
+                                            style: AppTypography.caption.copyWith(
+                                              color: AppColors.primary500,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    trailing: ElevatedButton.icon(
+                                      onPressed: abrirKanban,
+                                      icon: const Icon(Icons.view_kanban, size: 18),
+                                      label: const Text('Ver Tablero'),
+                                      style: ElevatedButton.styleFrom(
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.view_kanban, size: 18),
-                                label: const Text('Ver Tablero'),
-                                style: ElevatedButton.styleFrom(
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ),
-                              ),
-                            ),
                           );
                         },
                       ),

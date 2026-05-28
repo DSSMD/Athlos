@@ -12,6 +12,9 @@ import '../../../widgets/shared/sticky_topbar.dart';
 import '../../../widgets/shared/filter_chips.dart';
 import '../../../widgets/shared/pagination.dart';
 import '../../../widgets/shared/empty_state.dart';
+import '../../../widgets/shared/mobile_screen_header.dart';
+import '../../../widgets/shared/compact_new_button.dart';
+import '../../../widgets/shared/search_input.dart';
 import '../../../widgets/users/kpi_card.dart';
 
 import 'widgets/conjunto_row.dart';
@@ -229,7 +232,20 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
 
     return Column(
       children: [
-        if (!isMobile)
+        if (isMobile)
+          MobileScreenHeader(
+            title: 'Conjuntos',
+            trailing: CompactNewButton(
+              label: 'Nuevo',
+              onPressed: _abrirCrear,
+            ),
+            bottom: SearchInput(
+              hintText: 'Buscar conjunto...',
+              controller: _searchController,
+              onChanged: (_) => setState(() => _currentPage = 1),
+            ),
+          )
+        else
           StickyTopbar(
             title: 'Conjuntos',
             searchHint: 'Buscar por nombre o descripción...',
@@ -274,6 +290,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
                     conjuntos: paginatedConjuntos,
                     onView: _abrirDetalle,
                     onEdit: _abrirEditar,
+                    onDelete: _confirmarEliminacion,
                   )
                 else
                   _DesktopTable(
@@ -457,10 +474,12 @@ class _MobileList extends StatelessWidget {
     required this.conjuntos,
     required this.onView,
     required this.onEdit,
+    required this.onDelete,
   });
   final List<ConjuntoModel> conjuntos;
   final void Function(ConjuntoModel) onView;
   final void Function(ConjuntoModel) onEdit;
+  final void Function(ConjuntoModel) onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -470,11 +489,57 @@ class _MobileList extends StatelessWidget {
           Card(
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
             child: ListTile(
-              title: Text(conjunto.nombre),
+              title: Text(
+                conjunto.nombre,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               subtitle: Text(
                 '${conjunto.precioTotal.toStringAsFixed(2)} Bs. · ${conjunto.plantillas.length} plantillas',
               ),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  if (value == 'ver') {
+                    onView(conjunto);
+                  } else if (value == 'editar') {
+                    onEdit(conjunto);
+                  } else if (value == 'eliminar') {
+                    onDelete(conjunto);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'ver',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_outlined, size: 20, color: AppColors.textSecondary),
+                        SizedBox(width: AppSpacing.sm),
+                        Text('Ver Detalles'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'editar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 20, color: AppColors.primary500),
+                        SizedBox(width: AppSpacing.sm),
+                        Text('Editar'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'eliminar',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                        SizedBox(width: AppSpacing.sm),
+                        Text('Eliminar', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               onTap: () => onView(conjunto),
             ),
           ),
