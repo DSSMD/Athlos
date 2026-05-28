@@ -22,6 +22,7 @@ import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 import '../../presentation/pages/admin/dashboard/dashboard_page.dart';
+import '../../presentation/pages/cajas/dashboard/ventas_dashboard_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
@@ -153,7 +154,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: [
-            _buildPlaceholder('Dashboard Ventas'), // 0. Dashboard
+            const VentasDashboardPage(), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes (Movido aquí)
             const ClientesPage(), // 2. Clientes
             // _buildPlaceholder('Pagos'), // (Comentado temporalmente)
