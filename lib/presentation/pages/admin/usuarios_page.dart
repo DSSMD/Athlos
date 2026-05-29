@@ -283,6 +283,8 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
             }),
             newButtonLabelDesktop: 'Nuevo usuario',
             onNewPressed: () => showUserFormDrawer(context),
+            newButtonColor: AppColors.primary500,
+            newTextColor: Colors.white,
           ),
         // Contenido scrolleable
         Expanded(
@@ -448,6 +450,8 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
             onSearchChanged: (_) => setState(() {}),
             newButtonLabelDesktop: 'Nuevo usuario',
             onNewPressed: () => showUserFormDrawer(context),
+            newButtonColor: AppColors.primary500,
+            newTextColor: Colors.white,
           ),
         Expanded(
           child: SingleChildScrollView(

@@ -34,6 +34,8 @@ class StickyTopbar extends StatelessWidget {
   final String searchHint;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
+  final Color? newButtonColor;
+  final Color? newTextColor;
 
   final String? newButtonLabelMobile;
   final String? newButtonLabelDesktop;
