@@ -16,6 +16,7 @@ class InventarioItemModel {
     required this.costoUnitario,
     required this.activo,
     this.atributosTecnicosJson,
+    this.createdAt,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class InventarioItemModel {
   final double costoUnitario;
   final String? atributosTecnicosJson;
   final bool activo;
+  final DateTime? createdAt;
 
   /// Código presentacional generado desde el UUID — no persiste en BD.
   String get codigo => id.substring(0, 8).toUpperCase();
@@ -92,6 +94,9 @@ class InventarioItemModel {
           : null,
       activo: (json['activo'] as bool?) ?? true,
       nombreCategoria: nombreCategoria,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
     );
   }
 

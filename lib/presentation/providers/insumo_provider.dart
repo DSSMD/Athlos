@@ -43,8 +43,7 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     ref.invalidateSelf();
   }
 
-  /// MOCK — crea un insumo a través del service y lo agrega al state local.
-  /// Cuando exista backend, el service hará el INSERT y ya no será mock.
+  /// Crea un insumo a través del service y lo agrega al state local.
   Future<InventarioItemModel> crearInsumo({
     required String nombre,
     required int idCategoria,
@@ -64,6 +63,7 @@ class InventarioNotifier extends AsyncNotifier<List<InventarioItemModel>> {
     );
     final actuales = state.value ?? const <InventarioItemModel>[];
     state = AsyncValue.data([...actuales, nuevo]);
+    
     return nuevo;
   }
 
@@ -191,7 +191,9 @@ final inventarioFiltradoProvider = Provider<List<InventarioItemModel>>((ref) {
       case InventarioOrden.stockMayor:
         return b.stockActual.compareTo(a.stockActual);
       case InventarioOrden.recientes:
-      // Por ahora, usamos el ID para simular más recientes (los UUID nuevos suelen ser más grandes lexicográficamente, aunque no siempre, idealmente usaríamos un campo creado_en).
+        if (a.createdAt != null && b.createdAt != null) {
+          return b.createdAt!.compareTo(a.createdAt!);
+        }
         return b.id.compareTo(a.id); 
     }
   });

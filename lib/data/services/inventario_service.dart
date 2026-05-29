@@ -34,17 +34,9 @@ class InventarioService {
       return (data as List).map((e) {
         final json = e as Map<String, dynamic>;
 
-        // 1. Extraemos el texto de la base de datos (ej. "Telas")
-        final catData = json['categoria_insumo'];
-        String nombreCat = 'telas'; // valor por defecto seguro
-        if (catData != null && catData is Map) {
-          nombreCat = catData['nombre_categoria']?.toString() ?? 'telas';
-        }
-
         return InventarioItemModel.fromJson(json);
       }).toList();
     } catch (e) {
-      print('🚨 ERROR SUPABASE LECTURA: $e');
       throw Exception('Error al obtener el inventario: $e');
     }
   }
@@ -59,7 +51,6 @@ class InventarioService {
       // Devolvemos una lista cruda para que el Dropdown la lea fácilmente
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('🚨 ERROR AL CARGAR CATEGORÍAS DROPDOWN: $e');
       throw Exception('Error al cargar opciones de categorías');
     }
   }
@@ -131,6 +122,7 @@ class InventarioService {
         'stock_actual': 0,   // inicia en 0; el trigger lo actualiza en el primer ingreso
         'stock_minimo': stockMinimo,
         'id_unidad': idUnidad,
+        'activo': true,      // 👈 Fuerza que sea activo para que aparezca en catálogos
         // costo_unitario omitido: el trigger de Costo Promedio Ponderado lo calcula
         // automáticamente al insertar el primer movimiento_insumo de entrada.
         if (atributosTecnicosJson != null && atributosTecnicosJson.isNotEmpty)

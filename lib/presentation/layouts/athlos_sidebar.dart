@@ -59,12 +59,26 @@ class SidebarMenuConfig {
     section: SidebarSection.operaciones,
   );
 
+  static const itemPlantillas = SidebarItem(
+    icon: Icons.checkroom_outlined,
+    selectedIcon: Icons.checkroom,
+    label: 'Plantillas',
+    section: SidebarSection.operaciones,
+  );
+
+  static const itemConjuntos = SidebarItem(
+    icon: Icons.view_comfy_outlined,
+    selectedIcon: Icons.view_comfy,
+    label: 'Conjuntos',
+    section: SidebarSection.operaciones,
+  );
+
   // ─── COMERCIAL ──────────────────────────────────────────────────
   static const itemOrdenes = SidebarItem(
     icon: Icons.assignment_outlined,
     selectedIcon: Icons.assignment,
     label: 'Órdenes',
-    section: SidebarSection.comercial, // 👈 Órdenes ahora es comercial
+    section: SidebarSection.comercial,
     badge: 12,
   );
 
@@ -116,10 +130,18 @@ class SidebarMenuConfig {
 
   static Map<String, List<SidebarItem>> get itemsPorRol => {
     '1': [
-      // ADMIN: 10 ítems (Ve todo)
-      itemDashboard, itemOrdenes, itemInventario, itemProduccion,
-      itemClientes, itemPagos, itemBalance,
-      itemUsuarios, itemConfiguracion, itemNotificaciones,
+      itemDashboard,      // 0
+      itemOrdenes,        // 1
+      itemInventario,     // 2
+      itemProduccion,     // 3
+      itemPlantillas,     // 4
+      itemConjuntos,      // 5 💡 NUEVO ÍTEM INDEPENDIENTE
+      itemClientes,       // 6
+      // itemPagos,          // 7 (Placeholder comentado por ahora)
+      // itemBalance,        // 8 (Placeholder comentado por ahora)
+      itemUsuarios,       // 7 (Ahora índice 7 en visual, antes 9)
+      // itemConfiguracion,  // 10 (Placeholder comentado por ahora)
+      // itemNotificaciones, // 11 (Placeholder comentado por ahora)
     ],
     '2': [
       // PRODUCCIÓN: 3 ítems (Órdenes fue removido de aquí)
@@ -132,7 +154,7 @@ class SidebarMenuConfig {
       itemDashboard,
       itemOrdenes,
       itemClientes,
-      itemPagos,
+      // itemPagos,          // (Placeholder comentado por ahora)
     ],
     '4': [
       // INVITADO: 2 ítems

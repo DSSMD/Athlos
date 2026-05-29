@@ -7,8 +7,6 @@
 // lib/presentation/components/user_form_drawer.dart
 
 import 'package:flutter/material.dart';
-import 'package:riverpod/src/framework.dart';
-
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
@@ -533,7 +531,7 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                                 : null;
 
                             return DropdownButtonFormField<int>(
-                              value:
+                              initialValue:
                                   safeAreaId, // <-- Usamos la variable segura
                               decoration: InputDecoration(
                                 hintText: 'Seleccione un área',

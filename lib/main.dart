@@ -96,7 +96,7 @@ class MyApp extends ConsumerWidget {
               // 1. La aplicación normal con el InactivityDetector y el Router
               child!, 
               
-              // 2. Si se cae el internet, dibujamos el escudo por encima de TODO
+              // 2. Si se cae el internet, dibujamos el escudo por encima de todo
               if (!hasInternet)
                 Positioned.fill(
                   child: NoInternetOverlay(

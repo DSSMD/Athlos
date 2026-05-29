@@ -3,6 +3,8 @@
 // Wizard de 2 pasos. NADA se persiste hasta que el usuario confirma en el
 // paso 2. Si regresa al paso 1, puede editar libremente sin dejar datos
 // huérfanos en la BD.
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -11,7 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/movimiento_model.dart';
 import '../../../../providers/auth_provider.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -224,7 +226,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
                         'Error al cargar categorías. Revise su conexión.');
                   }
                   return DropdownButtonFormField<int>(
-                    value: _idCategoria,
+                    initialValue: _idCategoria,
                     isExpanded: true,
                     hint: const Text('Seleccioná una categoría'),
                     items: snap.data!
@@ -496,6 +498,9 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
           TextButton(
             onPressed:
                 _saving ? null : () => Navigator.of(context).pop(),
+                style: FilledButton.styleFrom(
+                  foregroundColor: AppColors.primary500, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
             child: const Text('Cancelar'),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -503,6 +508,11 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
             onPressed: _saving
                 ? null
                 : (_paso == 0 ? _goToStep2 : _confirmarYGuardar),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500, // <- Define el fondo rojo
+                  foregroundColor: Colors
+                      .white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
             child: _saving
                 ? const SizedBox(
                     width: 18, height: 18,
@@ -556,9 +566,16 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
+              style: FilledButton.styleFrom(
+                  foregroundColor: AppColors.primary500, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
               child: const Text('Revisar')),
           FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500, // <- Define el fondo rojo
+                  foregroundColor: Colors.white, // <- Asegura que el texto y el icono sean blancos para que contrasten bien
+                ),
               child: const Text('Confirmar')),
         ],
       ),
@@ -670,7 +687,7 @@ class _InsumoFormModalState extends ConsumerState<InsumoFormModal> {
       ]);
     }
     return DropdownButtonFormField<int>(
-      value: _idUnidad,
+      initialValue: _idUnidad,
       isExpanded: true,
       hint: const Text('Seleccioná una unidad'),
       items: _unidades

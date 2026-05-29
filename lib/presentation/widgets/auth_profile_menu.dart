@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../pages/perfil/mi_perfil_page.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -46,7 +46,7 @@ class AuthProfileMenu extends ConsumerWidget {
                 );
               },
               loading: () => const UserAvatar(name: '?', size: 32),
-              error: (_, __) =>
+              error: (_, _) =>
                   const Icon(Icons.error, color: Colors.red, size: 32),
             ),
           ),
@@ -181,9 +181,7 @@ class AuthProfileMenu extends ConsumerWidget {
 enum _ProfileAction { profile, logout }
 
 void _goToProfile(BuildContext context) {
-  Navigator.of(
-    context,
-  ).push(MaterialPageRoute(builder: (_) => const MiPerfilPage()));
+  context.push('/perfil'); 
 }
 
 Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {

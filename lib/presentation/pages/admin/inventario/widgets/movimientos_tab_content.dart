@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/movimiento_model.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -48,7 +48,7 @@ class _MovimientosBody extends ConsumerStatefulWidget {
 }
 
 class _MovimientosBodyState extends ConsumerState<_MovimientosBody> {
-  static const int _itemsPerPage = 8;
+  static const int _itemsPerPage = 10;
   int _currentPage = 1;
 
   void _resetPage() => setState(() => _currentPage = 1);
@@ -730,7 +730,9 @@ class _Pagination extends StatelessWidget {
     if (current > 3) result.add(-1);
     final start = (current - 1).clamp(2, total - 1);
     final end = (current + 1).clamp(2, total - 1);
-    for (var i = start; i <= end; i++) result.add(i);
+    for (var i = start; i <= end; i++) {
+      result.add(i);
+    }
     if (current < total - 2) result.add(-1);
     result.add(total);
     return result;

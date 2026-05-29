@@ -1,10 +1,3 @@
-// ============================================================================
-// orden_anticipo_card.dart
-// Ubicación: lib/presentation/components/ordenes/orden_anticipo_card.dart
-// Descripción: Card "Anticipo" de la columna lateral (SCRUM-75).
-// Monto + dropdown método de pago + nota "50% del total como anticipo".
-// ============================================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -49,14 +42,45 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
   }
 
   @override
+  void didUpdateWidget(covariant OrdenAnticipoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si el anticipo cambia desde afuera (o se resetea), actualizamos el controller
+    if (widget.draft.anticipo != oldWidget.draft.anticipo) {
+      if (_montoCtrl.text != widget.draft.anticipo.toStringAsFixed(2)) {
+        _montoCtrl.text = widget.draft.anticipo == 0
+            ? ''
+            : widget.draft.anticipo.toStringAsFixed(2);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _montoCtrl.dispose();
     super.dispose();
   }
 
+  // Lógica Financiera
+  double get _totalOrden {
+    // Asumimos que draft.descuento existe. Si no, usa 0 por ahora.
+    final descuento = widget.draft.descuento;
+    return widget.draft.subtotalItems - descuento;
+  }
+
+  double get _saldoPendiente {
+    final saldo = _totalOrden - widget.draft.anticipo;
+    return saldo < 0 ? 0 : saldo; // Evitar saldos negativos si dan más anticipo
+  }
+
+  void _sugerirMitad() {
+    final mitad = _totalOrden / 2;
+    widget.onChanged(widget.draft.copyWith(anticipo: mitad));
+  }
+
   @override
   Widget build(BuildContext context) {
     final esUsd = widget.draft.moneda == OrdenMoneda.dolares;
+    final prefijo = esUsd ? 'USD \$' : 'Bs.';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -68,36 +92,78 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Anticipo', style: AppTypography.h3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Anticipo y Pagos', style: AppTypography.h3),
+              // Botón de acceso rápido para calcular el 50%
+              TextButton.icon(
+                onPressed: _totalOrden > 0 ? _sugerirMitad : null,
+                icon: const Icon(Icons.calculate, size: 16),
+                label: const Text('Sugerir 50%'),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.lg),
+
           _label('Monto de anticipo'),
           const SizedBox(height: AppSpacing.xs),
           _filaMonto(esUsd),
+
           const SizedBox(height: AppSpacing.lg),
           _label('Método de pago'),
           const SizedBox(height: AppSpacing.xs),
           _dropdownMetodoPago(),
+
+          const SizedBox(height: AppSpacing.lg),
+          const Divider(),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            '50% del total como anticipo',
-            style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+
+          // Indicador visual del Saldo Pendiente
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: _saldoPendiente == 0
+                  // ignore: deprecated_member_use
+                  ? AppColors.success.withOpacity(0.1)
+                  : AppColors.neutral50,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _saldoPendiente == 0
+                      ? 'Pagado en su totalidad'
+                      : 'Saldo Pendiente (Contra entrega)',
+                  style: AppTypography.small.copyWith(
+                    color: _saldoPendiente == 0
+                        ? AppColors.success
+                        : AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$prefijo ${_saldoPendiente.toStringAsFixed(2)}',
+                  style: AppTypography.h3.copyWith(
+                    color: _saldoPendiente == 0
+                        ? AppColors.success
+                        : AppColors.primary500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILA MONTO — prefijo de moneda + input
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _filaMonto(bool esUsd) {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.md,
-          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.neutral100,
             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -122,24 +188,9 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
             },
             decoration: InputDecoration(
               hintText: '0.00',
-              hintStyle: AppTypography.small.copyWith(
-                color: AppColors.textMuted,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
+              contentPadding: const EdgeInsets.all(AppSpacing.md),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: const BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                borderSide: const BorderSide(color: AppColors.primary500),
               ),
             ),
           ),
@@ -148,9 +199,6 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DROPDOWN MÉTODO DE PAGO
-  // ═══════════════════════════════════════════════════════════════════════════
   Widget _dropdownMetodoPago() {
     return Container(
       decoration: BoxDecoration(
@@ -184,13 +232,11 @@ class _OrdenAnticipoCardState extends State<OrdenAnticipoCard> {
     );
   }
 
-  Widget _label(String text) {
-    return Text(
-      text,
-      style: AppTypography.small.copyWith(
-        color: AppColors.textSecondary,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
+  Widget _label(String text) => Text(
+    text,
+    style: AppTypography.small.copyWith(
+      color: AppColors.textSecondary,
+      fontWeight: FontWeight.w500,
+    ),
+  );
 }

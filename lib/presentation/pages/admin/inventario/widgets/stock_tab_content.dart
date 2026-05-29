@@ -1,15 +1,17 @@
 // lib/presentation/pages/admin/inventario/widgets/stock_tab_content.dart
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workspace/presentation/pages/admin/inventario/widgets/insumo_detalle_modal.dart';
 
 import '../../../../../domain/models/inventario_model.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
-import '../../../../widgets/users/kpi_card.dart';
+//import '../../../../widgets/users/kpi_card.dart';
 import 'kardex_historial_modal.dart';
 
 class StockTabContent extends ConsumerWidget {
@@ -59,7 +61,7 @@ class _StockBody extends ConsumerStatefulWidget {
 }
 
 class _StockBodyState extends ConsumerState<_StockBody> {
-  static const int _itemsPerPage = 8;
+  static const int _itemsPerPage = 10;
   int _currentPage = 1;
 
   @override
@@ -171,7 +173,7 @@ class _FiltrosCard extends ConsumerWidget {
                   ];
 
                   return DropdownButtonFormField<String?>(
-                    value: filtros.nombreCategoriaFiltro,
+                    initialValue: filtros.nombreCategoriaFiltro,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
@@ -185,7 +187,7 @@ class _FiltrosCard extends ConsumerWidget {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const Text('Error al cargar categorías'),
+                error: (_, _) => const Text('Error al cargar categorías'),
               ),
             ),
             
@@ -193,7 +195,7 @@ class _FiltrosCard extends ConsumerWidget {
             SizedBox(
               width: 150,
               child: DropdownButtonFormField<InventarioOrden>(
-                value: filtros.orden,
+                initialValue: filtros.orden,
                 isExpanded: true,
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
@@ -393,7 +395,7 @@ class _DesktopItemsTable extends StatelessWidget {
                 children: const [
                   _HeaderCell(label: 'CÓDIGO', flex: _kColCodigo),
                   SizedBox(width: _kColGap),
-                  _HeaderCell(label: 'INSUMO', flex: _kColInsumo),
+                  _HeaderCell(label: 'INSUMO', flex: _kColInsumo,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(label: 'CATEGORÍA', flex: _kColCategoria),
                   SizedBox(width: _kColGap),
@@ -403,7 +405,7 @@ class _DesktopItemsTable extends StatelessWidget {
                     align: TextAlign.center,
                   ),
                   SizedBox(width: _kColGapWide),
-                  _HeaderCell(label: 'NIVEL', flex: _kColNivel),
+                  _HeaderCell(label: 'NIVEL', flex: _kColNivel,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(
                     label: 'MÍNIMO',
@@ -411,7 +413,7 @@ class _DesktopItemsTable extends StatelessWidget {
                     align: TextAlign.center,
                   ),
                   SizedBox(width: _kColGap),
-                  _HeaderCell(label: 'UNIDAD', flex: _kColUnidad),
+                  _HeaderCell(label: 'UNIDAD', flex: _kColUnidad,align: TextAlign.center),
                   SizedBox(width: _kColGap),
                   _HeaderCell(
                     label: 'COSTO\nUNIT.',
@@ -430,9 +432,13 @@ class _DesktopItemsTable extends StatelessWidget {
                     flex: _kColEstado,
                     align: TextAlign.center,
                   ),
+                   SizedBox(width: _kColGap),
+                  _HeaderCell(
+                    label: 'ACCIONES',
+                    flex: _kColEstado,
+                    align: TextAlign.center,
+                  ),
                   SizedBox(width: _kColGap),
-                  // Columna de acciones sin título (Historial / Activar).
-                  Expanded(flex: _kColEditar, child: SizedBox.shrink()),
                 ],
               ),
             ),
@@ -1049,7 +1055,9 @@ class _Pagination extends StatelessWidget {
     if (current > 3) result.add(-1);
     final start = (current - 1).clamp(2, total - 1);
     final end = (current + 1).clamp(2, total - 1);
-    for (var i = start; i <= end; i++) result.add(i);
+    for (var i = start; i <= end; i++) {
+      result.add(i);
+    }
     if (current < total - 2) result.add(-1);
     result.add(total);
     return result;

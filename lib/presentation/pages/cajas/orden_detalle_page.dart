@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../components/ordenes/orden_items_editor.dart';
 import '../../components/ordenes/orden_workflow_stepper.dart';
@@ -12,6 +13,7 @@ import '../../theme/breakpoints.dart';
 import '../../widgets/shared/mobile_screen_header.dart';
 
 import '../../../domain/models/orden_model.dart';
+import '../../../domain/models/auditoria_orden_model.dart';
 import '../../providers/orden_provider.dart';
 
 class OrdenDetallePage extends ConsumerStatefulWidget {
@@ -35,16 +37,22 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
   void initState() {
     super.initState();
 
-    // ✅ 1. Llenamos la tabla directamente con la PRENDA, TALLA y su PRECIO EXACTO congelado
-    _items = widget.orden.desgloseTallas.map((talla) {
-      return OrdenItem(
-        nombre: '${talla.nombrePrenda} - Talla ${talla.nombreTalla}',
-        cantidad: talla.cantidad,
-        precioUnitario: talla.precioUnitario,
-      );
+    // Construir items visuales desde detalleOrden (esquema nuevo).
+    // Cada talla de cada detalle = una fila visual con prefix del nombre del ítem
+    // (sea conjunto o plantilla suelta).
+    _items = widget.orden.detalleOrden.expand((detalle) {
+      return detalle.tallas.map((talla) {
+        return OrdenItem(
+          nombre: '${detalle.nombreItem} - Talla ${talla.nombreTalla}',
+          cantidad: talla.cantidad,
+          precioUnitario: detalle.precioUnitario,
+        );
+      });
     }).toList();
 
-    // 🛡️ 2. Fallback de emergencia (Solo si una orden vieja no tiene tallas guardadas)
+    // Fallback de emergencia: si la orden no tiene detalleOrden poblado
+    // (caso degenerado de datos legacy o orden incompleta), mostramos un
+    // solo ítem agregado con el total general.
     if (_items.isEmpty) {
       _items = [
         OrdenItem(
@@ -165,7 +173,7 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
               const SizedBox(height: AppSpacing.xl),
               _FechasClaveCard(orden: widget.orden),
               const SizedBox(height: AppSpacing.xl),
-              const _HistorialCard(),
+              _HistorialCard(numOrden: widget.orden.numOrden),
             ],
           ),
         ),
@@ -201,7 +209,7 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
         const SizedBox(height: AppSpacing.lg),
         _FechasClaveCard(orden: widget.orden),
         const SizedBox(height: AppSpacing.lg),
-        const _HistorialCard(),
+        _HistorialCard(numOrden: widget.orden.numOrden),
       ],
     );
   }
@@ -249,16 +257,18 @@ class _EstadoChip extends StatelessWidget {
 // COMPONENTES DE LA PÁGINA DE DETALLE DE ORDEN
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _PagosCard extends StatelessWidget {
+class _PagosCard extends ConsumerWidget {
   final OrdenModel orden;
   final double totalItems;
+
   const _PagosCard({required this.orden, required this.totalItems});
 
   @override
-  Widget build(BuildContext context) {
-    // Usamos el costoTotal del modelo (BD) como fuente de verdad.
+  Widget build(BuildContext context, WidgetRef ref) {
     final double total = orden.costoTotal;
-    final bool pagado = orden.idEstadoPago != 1; // 1 = Pendiente
+
+    // Escuchamos los pagos de esta orden en específico
+    final pagosAsync = ref.watch(pagosOrdenProvider(orden.numOrden));
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -267,25 +277,285 @@ class _PagosCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Resumen Financiero', style: AppTypography.smallBold),
-          const SizedBox(height: AppSpacing.md),
-          _FinRow(
-            label: 'Costo Total',
-            value: 'Bs. ${total.toStringAsFixed(2)}',
-            isBold: true,
-            color: AppColors.textPrimary,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _FinRow(
-            label: 'Estado de Pago',
-            value: orden.estadoPago,
-            isSuccess: pagado,
-            color: pagado ? AppColors.success : AppColors.warning,
-          ),
-        ],
+      child: pagosAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => Text(
+          'Error al cargar pagos: $e',
+          style: AppTypography.small.copyWith(color: AppColors.error),
+        ),
+        data: (pagos) {
+          // Calculamos el total pagado sumando los montos de la tabla pago_cliente
+          final totalPagado = pagos.fold<double>(
+            0,
+            (sum, pago) => sum + (pago['monto'] as num).toDouble(),
+          );
+
+          final saldoPendiente = total - totalPagado;
+          final estaPagado = saldoPendiente <= 0;
+
+          void mostrarDialogoPago(
+            BuildContext context,
+            WidgetRef ref,
+            double saldoPendiente,
+          ) {
+            final montoCtrl = TextEditingController(
+              text: saldoPendiente.toStringAsFixed(2),
+            );
+            String metodoSel = 'Efectivo';
+            bool guardando = false;
+
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => StatefulBuilder(
+                builder: (context, setStateModal) {
+                  return AlertDialog(
+                    title: Text(
+                      'Registrar Nuevo Pago',
+                      style: AppTypography.h3,
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Saldo actual: Bs. ${saldoPendiente.toStringAsFixed(2)}',
+                          style: AppTypography.small,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: montoCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Monto a pagar (Bs)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        DropdownButtonFormField<String>(
+                          initialValue: metodoSel,
+                          decoration: const InputDecoration(
+                            labelText: 'Método',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              [
+                                    'Efectivo',
+                                    'Transferencia',
+                                    'Tarjeta',
+                                    'Cheque',
+                                    'QR',
+                                  ]
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(m),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (v) => setStateModal(() => metodoSel = v!),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      if (!guardando)
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancelar'),
+                        ),
+                      ElevatedButton(
+                        onPressed: guardando
+                            ? null
+                            : () async {
+                                final monto =
+                                    double.tryParse(montoCtrl.text) ?? 0;
+                                if (monto <= 0) return;
+
+                                setStateModal(() => guardando = true);
+                                try {
+                                  // Llamamos a nuestro nuevo RPC en Supabase
+                                  await Supabase.instance.client.rpc(
+                                    'registrar_pago_orden',
+                                    params: {
+                                      'p_id_orden': orden.numOrden,
+                                      'p_id_cliente': orden.idCliente,
+                                      'p_monto': monto,
+                                      'p_metodo_pago': metodoSel,
+                                    },
+                                  );
+
+                                  // ✨ LA MAGIA DE RIVERPOD: Invalidamos el provider para que la UI se refresque sola
+                                  ref.invalidate(
+                                    pagosOrdenProvider(orden.numOrden),
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Pago registrado correctamente',
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setStateModal(() => guardando = false);
+                                  // ignore: use_build_context_synchronously
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                        child: guardando
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Confirmar Pago'),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Resumen Financiero', style: AppTypography.smallBold),
+              const SizedBox(height: AppSpacing.md),
+
+              _FinRow(
+                label: 'Costo Total',
+                value: 'Bs. ${total.toStringAsFixed(2)}',
+                isBold: true,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+
+              _FinRow(
+                label: 'Total Pagado (Anticipo)',
+                value: 'Bs. ${totalPagado.toStringAsFixed(2)}',
+                color: AppColors.success,
+              ),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Divider(height: 1),
+              ),
+
+              _FinRow(
+                label: 'Saldo Pendiente',
+                value:
+                    'Bs. ${(saldoPendiente > 0 ? saldoPendiente : 0).toStringAsFixed(2)}',
+                isBold: true,
+                color: estaPagado ? AppColors.success : AppColors.primary500,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+
+              _FinRow(
+                label: 'Estado de Caja',
+                value: estaPagado
+                    ? 'PAGADO TOTALMENTE'
+                    : (totalPagado > 0 ? 'CON ANTICIPO' : 'PENDIENTE'),
+                isSuccess: estaPagado,
+                color: estaPagado ? AppColors.success : AppColors.warning,
+              ),
+
+              if (!estaPagado) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        mostrarDialogoPago(context, ref, saldoPendiente),
+                    icon: const Icon(Icons.add_card),
+                    label: const Text('Registrar Anticipo / Pago'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary500,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+
+              if (estaPagado && orden.idEstado == 3) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: _ConfirmarEntregaButton(orden: orden),
+                ),
+              ],
+
+              // Lista de transacciones (Si el cliente dio anticipos)
+              if (pagos.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Historial de Transacciones',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+
+                ...pagos.map((pago) {
+                  final fechaRaw = DateTime.parse(
+                    pago['fecha_pago'].toString(),
+                  );
+                  final fechaStr =
+                      '${fechaRaw.day.toString().padLeft(2, '0')}/${fechaRaw.month.toString().padLeft(2, '0')}/${fechaRaw.year}';
+                  final metodo = pago['metodo_pago'] ?? 'No especificado';
+                  final monto = (pago['monto'] as num).toDouble();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.payments_outlined,
+                              size: 14,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$fechaStr - $metodo',
+                              style: AppTypography.caption,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '+ Bs. ${monto.toStringAsFixed(2)}',
+                          style: AppTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -368,19 +638,117 @@ class _FechasClaveCard extends StatelessWidget {
 // CARD DE HISTORIAL DE CAMBIOS (placeholder para futura integración con backend)
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _HistorialCard extends StatelessWidget {
-  const _HistorialCard();
+class _HistorialCard extends ConsumerWidget {
+  final String numOrden;
+  const _HistorialCard({required this.numOrden});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historialAsync = ref.watch(historialOrdenProvider(numOrden));
+
     return _Card(
       title: 'Historial',
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Text(
-          'El historial de cambios se mostrará acá cuando backend lo exponga.',
-          style: AppTypography.small.copyWith(color: AppColors.textMuted),
+      child: historialAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Center(child: CircularProgressIndicator()),
         ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Text(
+            'Error al cargar el historial: $e',
+            style: AppTypography.small.copyWith(color: AppColors.error),
+          ),
+        ),
+        data: (List<AuditoriaOrdenModel> logs) {
+          if (logs.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Text(
+                'Sin registros de cambios aún.',
+                style: AppTypography.small.copyWith(color: AppColors.textMuted),
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: logs.map((log) {
+              final fecha = log.fechaCambio;
+              final fechaStr =
+                  '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year} '
+                  '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+
+              final estAnt = log.estadoAnteriorNombre ?? 'Pendiente';
+              final estNue = log.estadoNuevoNombre ?? 'Pendiente';
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary500,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                log.usuarioNombre ?? 'Sistema / Obrero',
+                                style: AppTypography.smallBold,
+                              ),
+                              Text(
+                                fechaStr,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            log.descripcionDetalle ?? 'Cambio de estado',
+                            style: AppTypography.small,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.neutral50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              '$estAnt → $estNue',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
@@ -751,7 +1119,7 @@ class _HoverImageWidget extends StatefulWidget {
 
 class _HoverImageWidgetState extends State<_HoverImageWidget> {
   bool _isHovered = false;
-
+ 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -773,7 +1141,7 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
               ),
             ),
           ),
-
+ 
           // Capa Oscura (Aparece en Hover)
           AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
@@ -794,6 +1162,126 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET INTERNO: BOTÓN DE CONFIRMAR ENTREGA (Auditoría integrada)
+// ══════════════════════════════════════════════════════════════════════════════
+class _ConfirmarEntregaButton extends StatefulWidget {
+  final OrdenModel orden;
+  const _ConfirmarEntregaButton({required this.orden});
+
+  @override
+  State<_ConfirmarEntregaButton> createState() => _ConfirmarEntregaButtonState();
+}
+
+class _ConfirmarEntregaButtonState extends State<_ConfirmarEntregaButton> {
+  bool _isDelivering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        return ElevatedButton.icon(
+          onPressed: _isDelivering
+              ? null
+              : () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.brandWhite,
+                      title: Text(
+                        'Confirmar Entrega',
+                        style: AppTypography.h3,
+                      ),
+                      content: Text(
+                        '¿Está seguro de marcar este pedido como ENTREGADO? '
+                        'Esta acción cambiará el estado de la orden y registrará la entrega.',
+                        style: AppTypography.body,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Confirmar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm != true) return;
+
+                  setState(() => _isDelivering = true);
+
+                  try {
+                    final service = ref.read(ordenServiceProvider);
+                    await service.actualizarEstadoOrden(
+                      widget.orden.numOrden,
+                      4, // 4 = Entregada
+                      descripcion: 'Pedido entregado al cliente por confirmar entrega en caja.',
+                    );
+
+                    // Refrescar órdenes e historial
+                    ref.invalidate(ordenesProvider);
+                    ref.invalidate(historialOrdenProvider(widget.orden.numOrden));
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Pedido marcado como ENTREGADO con éxito'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error al entregar pedido: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => _isDelivering = false);
+                  }
+                },
+          icon: _isDelivering
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.local_shipping),
+          label: Text(
+            'Confirmar Entrega',
+            style: AppTypography.small.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.success,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/movimiento_model.dart';
 import '../../../../providers/auth_provider.dart';
-import '../../../../providers/inventario_provider.dart';
+import '../../../../providers/insumo_provider.dart';
 import '../../../../providers/movimiento_provider.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
@@ -44,9 +44,9 @@ class MovimientoFormModal extends ConsumerStatefulWidget {
 }
 
 class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
-  final _formKey      = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _cantidadCtrl = TextEditingController(); // solo para SALIDA
-  final _motivoCtrl   = TextEditingController();
+  final _motivoCtrl = TextEditingController();
 
   InventarioItemModel? _insumo;
   TipoMovimiento? _tipo;
@@ -127,12 +127,15 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
 
   Widget _buildForm() {
     final asyncInsumos = ref.watch(inventarioProvider);
-    final insumos = asyncInsumos.value ?? const <InventarioItemModel>[];
+    final insumos = (asyncInsumos.value ?? const <InventarioItemModel>[])
+        .where((i) => i.activo)
+        .toList();
     final nombreUnidad = _insumo?.unidad ?? 'unidad';
     // Si el insumo se mide en metros, asumimos que viene en rollos (es dimensionable)
-    final esDim = _insumo != null &&
+    final esDim =
+        _insumo != null &&
         (_insumo!.unidad.toLowerCase().contains('metro') ||
-         _insumo!.unidad.toLowerCase() == 'm');
+            _insumo!.unidad.toLowerCase() == 'm');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -194,10 +197,10 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               onChanged: _saving
                   ? null
                   : (v) => setState(() {
-                        _tipo = v;
-                        _compraResult = CompraResult.empty;
-                        _motivoCtrl.clear();
-                      }),
+                      _tipo = v;
+                      _compraResult = CompraResult.empty;
+                      _motivoCtrl.clear();
+                    }),
               validator: (v) => v == null ? 'Seleccioná un tipo' : null,
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -226,7 +229,9 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               _label('Cantidad (${_insumo?.unidad ?? 'unidad'})'),
               TextFormField(
                 controller: _cantidadCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
@@ -250,7 +255,9 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'El costo se usará automáticamente del Costo Promedio Ponderado actual.',
-                style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
 
@@ -287,11 +294,16 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
         children: [
           TextButton(
             onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            style: FilledButton.styleFrom(foregroundColor: AppColors.primary500),
             child: const Text('Cancelar'),
           ),
           const SizedBox(width: AppSpacing.sm),
           FilledButton(
             onPressed: _saving ? null : _onProcesar,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary500,
+              foregroundColor: Colors.white,
+            ),
             child: _saving
                 ? const SizedBox(
                     width: 18,
@@ -353,19 +365,24 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
         content: Text(
           _esIngreso
               ? 'Se registrará:\n'
-                '• ${_formatStock(_compraResult.totalUnidades)} ${_insumo!.unidad} de "${_insumo!.nombre}"\n'
-                '• Costo: Bs ${_formatStock(_compraResult.costoUnitario)} / ${_insumo!.unidad}\n\n'
-                '¿Confirmás el ingreso?'
+                    '• ${_formatStock(_compraResult.totalUnidades)} ${_insumo!.unidad} de "${_insumo!.nombre}"\n'
+                    '• Costo: Bs ${_formatStock(_compraResult.costoUnitario)} / ${_insumo!.unidad}\n\n'
+                    '¿Confirmás el ingreso?'
               : '¿Estás seguro de procesar esta salida? '
-                'Esto modificará el stock del insumo.',
+                    'Esto modificará el stock del insumo.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Cancelar'),
+            style: FilledButton.styleFrom(foregroundColor: AppColors.primary500),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary500,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Confirmar'),
           ),
         ],
@@ -381,7 +398,9 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
 
     try {
       if (_esIngreso) {
-        await ref.read(movimientoProvider.notifier).crearMovimiento(
+        await ref
+            .read(movimientoProvider.notifier)
+            .crearMovimiento(
               idInsumo: _insumo!.id,
               tipo: TipoMovimiento.ingreso,
               cantidad: _compraResult.totalUnidades,
@@ -391,8 +410,11 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
             );
       } else {
         final cantidad = double.parse(
-            _cantidadCtrl.text.trim().replaceAll(',', '.'));
-        await ref.read(movimientoProvider.notifier).crearMovimiento(
+          _cantidadCtrl.text.trim().replaceAll(',', '.'),
+        );
+        await ref
+            .read(movimientoProvider.notifier)
+            .crearMovimiento(
               idInsumo: _insumo!.id,
               tipo: _tipo!,
               cantidad: cantidad,
@@ -410,7 +432,7 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
           content: Text(
             _esIngreso
                 ? 'Ingreso registrado: ${_formatStock(_compraResult.totalUnidades)} '
-                  '${_insumo!.unidad} @ Bs ${_formatStock(_compraResult.costoUnitario)}'
+                      '${_insumo!.unidad} @ Bs ${_formatStock(_compraResult.costoUnitario)}'
                 : 'Salida registrada correctamente',
           ),
           duration: const Duration(seconds: 2),
