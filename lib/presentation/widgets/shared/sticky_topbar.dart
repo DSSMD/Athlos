@@ -28,6 +28,8 @@ class StickyTopbar extends StatelessWidget {
     this.newButtonLabelMobile,
     this.newButtonLabelDesktop,
     this.onNewPressed,
+    this.newButtonColor,
+    this.newTextColor,
   });
 
   final String title;
@@ -106,6 +108,10 @@ class StickyTopbar extends StatelessWidget {
             onPressed: onNewPressed,
             icon: const Icon(Icons.add, size: 18),
             label: Text(newButtonLabelDesktop!),
+            style: FilledButton.styleFrom(
+              backgroundColor: newButtonColor,
+              foregroundColor: newTextColor,
+            ),
           ),
         ],
       ],

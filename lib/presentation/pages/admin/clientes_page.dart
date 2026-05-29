@@ -146,7 +146,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       fileName: 'Clientes_Athlos_$timestamp.csv',
       csvContent: csvContent,
     );
-  }*/
+  }
 
   // ─────────────────────────────────────────────────────────── BUILD ──
 
