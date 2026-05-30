@@ -28,6 +28,8 @@ class StickyTopbar extends StatelessWidget {
     this.newButtonLabelMobile,
     this.newButtonLabelDesktop,
     this.onNewPressed,
+    this.newButtonColor,
+    this.newTextColor,
   });
 
   final String title;
@@ -39,11 +41,15 @@ class StickyTopbar extends StatelessWidget {
 
   final String? newButtonLabelMobile;
   final String? newButtonLabelDesktop;
+
   final VoidCallback? onNewPressed;
 
   // Propiedad auxiliar para saber si debemos mostrar el botón
-  bool _showButton(BuildContext context) => onNewPressed != null && 
-      (context.isMobile ? newButtonLabelMobile != null : newButtonLabelDesktop != null);
+  bool _showButton(BuildContext context) =>
+      onNewPressed != null &&
+      (context.isMobile
+          ? newButtonLabelMobile != null
+          : newButtonLabelDesktop != null);
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +78,9 @@ class StickyTopbar extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onNewPressed,
                 icon: const Icon(Icons.add, size: 18),
-                label: Text(newButtonLabelMobile!), // Aquí el ! es seguro por el if
+                label: Text(
+                  newButtonLabelMobile!,
+                ), // Aquí el ! es seguro por el if
               ),
           ],
         ),

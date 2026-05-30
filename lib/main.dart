@@ -21,13 +21,55 @@ import 'core/router/app_router.dart';
 import 'core/inactivity/inactivity_detector.dart';
 import 'core/inactivity/session_expired_snackbar.dart';
 import 'presentation/providers/auth_provider.dart';
-// NUEVAS IMPORTACIONES PARA EL CHEQUEO DE CONEXION
+
+// Importaciones para el chequeo de conexión
 import 'presentation/widgets/shared/no_internet_overlay.dart';
 import 'presentation/providers/connectivity_provider.dart';
+
+// Importaciones de Firebase para Alertas Push
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
+
+// 1. MANEJADOR EN SEGUNDO PLANO (APP CERRADA O BLOQUEADA)
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Inicializamos Firebase en este hilo aislado
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print(
+    "🔔 Alerta Push recibida en segundo plano: ${message.notification?.title}",
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ---------------------------------------------------------------------------
+  // A. INICIALIZACIÓN DE FIREBASE Y ALERTAS PUSH
+  // ---------------------------------------------------------------------------
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    await FirebaseMessaging.instance.requestPermission();
+
+    // Le damos un límite de tiempo por si el internet del celular está lento
+    String? fcmToken = await FirebaseMessaging.instance.getToken().timeout(
+      const Duration(seconds: 10),
+    );
+    print("🔥 EL TOKEN DEL DISPOSITIVO ES: $fcmToken");
+
+    await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
+  } catch (e) {
+    // Si algo falla aquí (no hay internet, falta el google-services, etc.)
+    // lo atrapamos y dejamos que la app siga encendiendo normalmente.
+    print("⚠️ Error iniciando Notificaciones Push: $e");
+  }
+  // ---------------------------------------------------------------------------
+  // B. INICIALIZACIÓN DE SUPABASE Y ENTORNO
+  // ---------------------------------------------------------------------------
   // Cargamos las variables de entorno de forma segura
   await dotenv.load(fileName: ".env");
 
@@ -47,6 +89,7 @@ Future<void> main() async {
 // Cambiamos StatelessWidget por ConsumerWidget para poder leer a Riverpod
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Escuchamos y obtenemos la configuración de GoRouter que creamos
@@ -57,7 +100,8 @@ class MyApp extends ConsumerWidget {
     // no corre para no gastar recursos.
     final authAsync = ref.watch(authStateProvider);
     final isLoggedIn = authAsync.value?.session != null;
-    //para la conexion de internte esto revisa
+
+    // Para la conexión de internet, esto revisa
     final hasInternet = ref.watch(isConnectedProvider);
 
     // SCRUM-58: envolvemos la app con InactivityDetector. Al vencerse el
@@ -94,15 +138,17 @@ class MyApp extends ConsumerWidget {
           return Stack(
             children: [
               // 1. La aplicación normal con el InactivityDetector y el Router
-              child!, 
-              
+              child!,
+
               // 2. Si se cae el internet, dibujamos el escudo por encima de todo
               if (!hasInternet)
                 Positioned.fill(
                   child: NoInternetOverlay(
                     onRetry: () {
                       // Forzamos la verificación manual
-                      ref.read(isConnectedProvider.notifier).checkConnectionManual();
+                      ref
+                          .read(isConnectedProvider.notifier)
+                          .checkConnectionManual();
                     },
                   ),
                 ),
