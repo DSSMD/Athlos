@@ -34,7 +34,12 @@ class LoteService {
   }
 
   // Función para insertar la nueva asignación
-  Future<void> asignarTrabajador(String idLote, String idTrabajador) async {
+  // [montoAcordado]: lo que se le pagará al trabajador por este lote (ej: 350.00 Bs)
+  Future<void> asignarTrabajador(
+    String idLote,
+    String idTrabajador,
+    double montoAcordado, // 💰 Nuevo: monto pactado por este lote
+  ) async {
     try {
       await _supabase.from('asignaciones_lote').insert({
         'id_lote': idLote,
@@ -43,6 +48,9 @@ class LoteService {
         // OJO: Asumo que el estado '1' significa "Asignación Activa" o "En Curso" en tu tabla estado_asignacion.
         // Cámbialo si tu ID de estado activo es otro número.
         'id_estado_asignacion': 1,
+
+        // Campos financieros — estado_pago queda 'Pendiente' por DEFAULT en DB
+        'monto_acordado': montoAcordado,
 
         // No mandamos id_asignacion porque se genera solo (gen_random_uuid)
         // No mandamos fecha_inicio porque se pone sola (now)
