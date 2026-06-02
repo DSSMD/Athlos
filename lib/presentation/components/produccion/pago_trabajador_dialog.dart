@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -49,6 +50,11 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
   String _tipoPago = 'Adelanto';
   bool _guardando = false;
 
+  // 💰 Selección de asignación para asociar el pago
+  List<Map<String, dynamic>> _asignacionesPendientes = [];
+  String? _asignacionSeleccionada;
+  bool _cargandoAsignaciones = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +63,11 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
         ? widget.saldoPendiente!.toStringAsFixed(2)
         : '0.00';
     _montoCtrl = TextEditingController(text: initial);
+
+    // Si no se especificó un lote/asignación, cargamos sus asignaciones pendientes de cobro
+    if (widget.idAsignacion == null) {
+      _cargarAsignaciones();
+    }
   }
 
   @override
@@ -66,8 +77,72 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
     super.dispose();
   }
 
+  Future<void> _cargarAsignaciones() async {
+    setState(() => _cargandoAsignaciones = true);
+    try {
+      var query = Supabase.instance.client
+          .from('asignaciones_lote')
+          .select('''
+            id_asignacion,
+            monto_acordado,
+            estado_pago,
+            lote!inner (
+              id_lote,
+              num_orden,
+              plantilla_prenda:id_plantilla (
+                nombre
+              )
+            )
+          ''')
+          .eq('id_trabajador', widget.idTrabajador)
+          .neq('estado_pago', 'Pagado');
+      
+      // Si estamos en el detalle de una orden, filtramos por esa orden
+      if (widget.numOrden != 'global') {
+        query = query.eq('lote.num_orden', widget.numOrden);
+      }
+
+      final response = await query;
+      if (mounted) {
+        setState(() {
+          _asignacionesPendientes = List<Map<String, dynamic>>.from(response);
+          if (_asignacionesPendientes.isNotEmpty) {
+            _asignacionSeleccionada = _asignacionesPendientes.first['id_asignacion']?.toString();
+            _actualizarMontoSugerido();
+          }
+          _cargandoAsignaciones = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error al cargar asignaciones para pago: $e');
+      if (mounted) setState(() => _cargandoAsignaciones = false);
+    }
+  }
+
+  void _actualizarMontoSugerido() {
+    if (widget.idAsignacion != null || _asignacionSeleccionada == null) return;
+    try {
+      final selected = _asignacionesPendientes.firstWhere(
+        (element) => element['id_asignacion']?.toString() == _asignacionSeleccionada,
+      );
+      final montoAcordado = (selected['monto_acordado'] as num?)?.toDouble() ?? 0.0;
+      _montoCtrl.text = montoAcordado.toStringAsFixed(2);
+    } catch (_) {}
+  }
+
   Future<void> _guardar() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final idAsignacionFinal = widget.idAsignacion ?? _asignacionSeleccionada;
+    if (idAsignacionFinal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El trabajador no tiene trabajos pendientes de pago para asociar.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final monto = double.tryParse(_montoCtrl.text) ?? 0.0;
     if (monto <= 0) {
@@ -87,7 +162,7 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
             idTrabajador: widget.idTrabajador,
             monto: monto,
             tipoPago: _tipoPago,
-            idAsignacion: widget.idAsignacion,
+            idAsignacion: idAsignacionFinal,
             notas: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
             numOrden: widget.numOrden,
           );
@@ -255,6 +330,101 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
+
+                // ── Asignación/Trabajo a pagar (solo si widget.idAsignacion es null) ──
+                if (widget.idAsignacion == null) ...[
+                  Text(
+                    'Lote / Asignación a pagar',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _cargandoAsignaciones
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      : _asignacionesPendientes.isEmpty
+                          ? Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                'El trabajador no tiene lotes asignados o pendientes de cobro.',
+                                style: AppTypography.caption.copyWith(color: Colors.orange),
+                              ),
+                            )
+                          : DropdownButtonFormField<String>(
+                              value: _asignacionSeleccionada,
+                              dropdownColor: AppColors.brandWhite,
+                              isExpanded: true,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: AppColors.textSecondary,
+                              ),
+                              hint: const Text('Seleccionar asignación...'),
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.sm,
+                                ),
+                              ),
+                              items: _asignacionesPendientes.map((asig) {
+                                final id = asig['id_asignacion'].toString();
+                                final loteObj = asig['lote'];
+                                final numOrdenLote = loteObj != null ? loteObj['num_orden']?.toString() ?? '?' : '?';
+                                final ordCorto = numOrdenLote.length > 8 ? numOrdenLote.substring(0, 8).toUpperCase() : numOrdenLote.toUpperCase();
+                                final idLote = loteObj != null ? loteObj['id_lote']?.toString() ?? '?' : '?';
+                                final idCorto = idLote.length > 8 ? idLote.substring(0, 8).toUpperCase() : idLote.toUpperCase();
+                                final prenda = loteObj != null && loteObj['plantilla_prenda'] != null
+                                    ? loteObj['plantilla_prenda']['nombre']?.toString() ?? 'Prenda'
+                                    : 'Prenda';
+                                final pactado = (asig['monto_acordado'] as num?)?.toDouble() ?? 0.0;
+                                final estadoAsig = asig['estado_pago'] ?? 'Pendiente';
+
+                                return DropdownMenuItem<String>(
+                                  value: id,
+                                  child: Text(
+                                    'Ord: $ordCorto · Lote: $idCorto ($prenda) · Bs. $pactado ($estadoAsig)',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: _guardando
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _asignacionSeleccionada = val;
+                                        _actualizarMontoSugerido();
+                                      });
+                                    },
+                            ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
 
                 // ── Monto ─────────────────────────────────────────────────
                 Text(
