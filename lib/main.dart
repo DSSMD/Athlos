@@ -53,8 +53,10 @@ Future<void> main() async {
     );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     await FirebaseMessaging.instance.requestPermission();
-
     // Le damos un límite de tiempo por si el internet del celular está lento
     String? fcmToken = await FirebaseMessaging.instance.getToken().timeout(
       const Duration(seconds: 10),
