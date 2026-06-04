@@ -8,7 +8,7 @@
 //     Function de push fuera del alcance de este service)
 //
 // Estrategia mock-first:
-//   - `_useMockData = true` mientras el resto del front se cablea (UI,
+//   - `useMockData = true` mientras el resto del front se cablea (UI,
 //     provider, badge, lista). El service expone la misma firma pública en
 //     mock y en real, así que apagar el flag activa todo sin tocar UI ni
 //     provider.
@@ -30,7 +30,7 @@ class NotificacionService {
   /// Toggle global mock ↔ real. Cuando se apaga, todas las firmas públicas
   /// siguen funcionando contra la tabla `notificaciones` sin que UI ni
   /// provider necesiten cambios.
-  static const bool _useMockData = true;
+  static const bool useMockData = true;
 
   /// Cap defensivo en lecturas: la lista del bell muestra a lo sumo ~20-30
   /// items. Si más adelante se agrega una pantalla full-history, se levanta
@@ -42,7 +42,7 @@ class NotificacionService {
   /// Lista de notificaciones del usuario, ordenadas por fecha desc.
   /// En modo mock devuelve un set fijo (ver `_mockNotificaciones`).
   Future<List<NotificacionModel>> obtenerNotificaciones(String userId) async {
-    if (_useMockData) {
+    if (useMockData) {
       return _mockNotificaciones(userId);
     }
 
@@ -67,7 +67,7 @@ class NotificacionService {
   /// Marca una notificación como leída. No-op en modo mock — el provider
   /// hace update optimista local y eso es suficiente para validar UI.
   Future<void> marcarLeida(String idNotificacion) async {
-    if (_useMockData) return;
+    if (useMockData) return;
 
     try {
       await _client
@@ -82,7 +82,7 @@ class NotificacionService {
   /// Marca todas las no-leídas del usuario en una sola query. Útil para el
   /// botón "marcar todas como leídas" del dropdown.
   Future<void> marcarTodasLeidas(String userId) async {
-    if (_useMockData) return;
+    if (useMockData) return;
 
     try {
       await _client
@@ -97,7 +97,7 @@ class NotificacionService {
 
   // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
 
-  /// Notificaciones mockeadas que se devuelven mientras `_useMockData = true`.
+  /// Notificaciones mockeadas que se devuelven mientras `useMockData = true`.
   /// Los ids son determinísticos (NTF-MOCK-NN) para que updates optimistas
   /// en el provider tengan a qué pegarle. Los timestamps son relativos a
   /// DateTime.now() para que el "hace X tiempo" siempre tenga sentido.

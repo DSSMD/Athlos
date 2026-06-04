@@ -13,15 +13,24 @@
 //     o el id no está poblado, devolvemos lista vacía sin tirar error — la
 //     UI debería mostrar el bell en estado guest y no debería ver errores.
 //
+// Realtime:
+//   - En modo real (NotificacionService.useMockData = false) la notifier se
+//     suscribe a postgres_changes sobre la tabla `notificaciones` filtrado
+//     por id_usuario. Cada evento dispara un refetch + state directo (sin
+//     invalidateSelf para evitar churn de subscripción). La unsubscribe se
+//     registra con ref.onDispose para no leakear canales al re-build.
+//
 // Updates optimistas:
 //   - marcarLeida / marcarTodasLeidas mutan el state localmente ANTES de
 //     llamar al service. Si el service falla, invalidamos para refrescar
-//     desde BD. Con `_useMockData = true` en el service el update local es
+//     desde BD. Con `useMockData = true` en el service el update local es
 //     suficiente para que UI/badge respondan; cuando se prenda el modo real,
-//     la consistencia eventual la garantiza obtenerNotificaciones.
+//     la consistencia eventual la garantiza obtenerNotificaciones (y los
+//     refetches de Realtime).
 // ============================================================================
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/notificacion_service.dart';
 import '../../domain/models/notificacion_model.dart';
@@ -47,7 +56,38 @@ class NotificacionesNotifier extends AsyncNotifier<List<NotificacionModel>> {
     }
 
     final service = ref.read(notificacionServiceProvider);
-    return service.obtenerNotificaciones(userId);
+    final lista = await service.obtenerNotificaciones(userId);
+
+    // Suscripción Realtime — solo en modo real. En mock no hay tabla que
+    // escuchar y los cambios se simulan con updates optimistas locales.
+    if (!NotificacionService.useMockData) {
+      final canal = Supabase.instance.client.channel('notificaciones-$userId');
+      canal
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'notificaciones',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id_usuario',
+              value: userId,
+            ),
+            // IMPORTANTE: actualizamos state directo. invalidateSelf
+            // teardownearía la subscripción y la re-crearía en cada evento,
+            // generando churn innecesario.
+            callback: (payload) async {
+              final updated = await service.obtenerNotificaciones(userId);
+              state = AsyncValue.data(updated);
+            },
+          )
+          .subscribe();
+
+      ref.onDispose(() {
+        canal.unsubscribe();
+      });
+    }
+
+    return lista;
   }
 
   /// Marca una notificación como leída con update optimista. Si la llamada
