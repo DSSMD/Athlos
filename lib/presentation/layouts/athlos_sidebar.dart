@@ -5,6 +5,8 @@ import '../theme/app_typography.dart';
 import '../widgets/auth_profile_menu.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/providers/auth_provider.dart';
+import '../providers/notificacion_provider.dart';
+import '../widgets/notificaciones/notification_panel_launcher.dart';
 
 /// Agrupa un item de navegación con su sección visual.
 /// El mapeo label -> sección se hace en main_layout.dart.
@@ -130,31 +132,33 @@ class SidebarMenuConfig {
 
   static Map<String, List<SidebarItem>> get itemsPorRol => {
     '1': [
-      itemDashboard,      // 0
-      itemOrdenes,        // 1
-      itemInventario,     // 2
-      itemProduccion,     // 3
-      itemPlantillas,     // 4
-      itemConjuntos,      // 5 💡 NUEVO ÍTEM INDEPENDIENTE
-      itemClientes,       // 6
+      itemDashboard, // 0
+      itemOrdenes, // 1
+      itemInventario, // 2
+      itemProduccion, // 3
+      itemPlantillas, // 4
+      itemConjuntos, // 5 💡 NUEVO ÍTEM INDEPENDIENTE
+      itemClientes, // 6
       // itemPagos,          // 7 (Placeholder comentado por ahora)
       // itemBalance,        // 8 (Placeholder comentado por ahora)
-      itemUsuarios,       // 7 (Ahora índice 7 en visual, antes 9)
+      itemUsuarios, // 7 (Ahora índice 7 en visual, antes 9)
       // itemConfiguracion,  // 10 (Placeholder comentado por ahora)
-      // itemNotificaciones, // 11 (Placeholder comentado por ahora)
+      itemNotificaciones, // 8 Avisos — abre el panel, no navega a page
     ],
     '2': [
-      // PRODUCCIÓN: 3 ítems (Órdenes fue removido de aquí)
+      // PRODUCCIÓN: 3 ítems base + Avisos
       itemDashboard,
       itemInventario,
       itemProduccion,
+      itemNotificaciones, // Avisos — abre el panel, no navega a page
     ],
     '3': [
-      // VENTAS: 4 ítems (Ahora tienen la propiedad de Órdenes)
+      // VENTAS: ítems base + Avisos
       itemDashboard,
       itemOrdenes,
       itemClientes,
       // itemPagos,          // (Placeholder comentado por ahora)
+      itemNotificaciones, // Avisos — abre el panel, no navega a page
     ],
     '4': [
       // INVITADO: 2 ítems
@@ -192,6 +196,9 @@ class AthlosSidebar extends ConsumerWidget {
     // 6. Obtenemos la lista dinámica según el rol
     final dynamicItems = SidebarMenuConfig.itemsPorRol[roleId] ?? [];
 
+    // 7. Contador de no-leídas para inyectar al badge dinámico del item Avisos.
+    final unreadCount = ref.watch(unreadNotificacionesCountProvider);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
@@ -202,8 +209,8 @@ class AthlosSidebar extends ConsumerWidget {
           children: [
             _buildLogoWithToggle(),
             const SizedBox(height: AppSpacing.sm),
-            // 7. Pasamos los items dinámicos a la lista
-            Expanded(child: _buildNavList(dynamicItems)),
+            // 8. Pasamos items + count para que el tile de Avisos use el badge dinámico.
+            Expanded(child: _buildNavList(context, dynamicItems, unreadCount)),
             _buildUserFooter(),
           ],
         ),
@@ -262,7 +269,11 @@ class AthlosSidebar extends ConsumerWidget {
   }
 
   // ──────────────────────────────────────────────────────── NAV ITEMS ──
-  Widget _buildNavList(List<SidebarItem> dynamicItems) {
+  Widget _buildNavList(
+    BuildContext context,
+    List<SidebarItem> dynamicItems,
+    int unreadCount,
+  ) {
     final Map<SidebarSection, List<_IndexedItem>> grouped = {};
 
     // Iteramos sobre dynamicItems en lugar de "this.items"
@@ -315,14 +326,27 @@ class AthlosSidebar extends ConsumerWidget {
               )
             else
               const SizedBox(height: AppSpacing.sm),
-            ...grouped[section]!.map(
-              (entry) => _SidebarItemTile(
+            ...grouped[section]!.map((entry) {
+              // Avisos no navega a una page: en lugar de cambiar el índice,
+              // dispara el panel de notificaciones. El badge se resuelve
+              // dinámicamente con el contador real (no con item.badge
+              // hardcodeado en la constante).
+              final esAvisos = identical(
+                entry.item,
+                SidebarMenuConfig.itemNotificaciones,
+              );
+              return _SidebarItemTile(
                 item: entry.item,
-                selected: entry.index == selectedIndex,
+                selected: !esAvisos && entry.index == selectedIndex,
                 collapsed: collapsed,
-                onTap: () => onItemSelected(entry.index),
-              ),
-            ),
+                onTap: esAvisos
+                    ? () => showNotificationsPanel(context)
+                    : () => onItemSelected(entry.index),
+                badgeOverride: esAvisos
+                    ? (unreadCount > 0 ? unreadCount : null)
+                    : null,
+              );
+            }),
           ],
       ],
     );
@@ -358,12 +382,17 @@ class _SidebarItemTile extends StatefulWidget {
     required this.selected,
     required this.collapsed,
     required this.onTap,
+    this.badgeOverride,
   });
 
   final SidebarItem item;
   final bool selected;
   final bool collapsed;
   final VoidCallback onTap;
+
+  /// Si está seteado, anula `item.badge` al renderizar. Útil para items con
+  /// conteo dinámico (Avisos lee unreadNotificacionesCountProvider).
+  final int? badgeOverride;
 
   @override
   State<_SidebarItemTile> createState() => _SidebarItemTileState();
@@ -437,7 +466,8 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
                           softWrap: false,
                         ),
                       ),
-                      if (widget.item.badge != null) ...[
+                      if ((widget.badgeOverride ?? widget.item.badge) !=
+                          null) ...[
                         const SizedBox(width: AppSpacing.sm),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -449,7 +479,7 @@ class _SidebarItemTileState extends State<_SidebarItemTile> {
                             borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
-                            '${widget.item.badge}',
+                            '${widget.badgeOverride ?? widget.item.badge}',
                             style: AppTypography.caption.copyWith(
                               color: AppColors.brandWhite,
                               fontWeight: FontWeight.w600,

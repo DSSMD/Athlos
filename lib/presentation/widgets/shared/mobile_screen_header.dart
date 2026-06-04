@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
+import '../notificaciones/notification_bell.dart';
+import '../notificaciones/notification_panel_launcher.dart';
 import 'mobile_notification_avatar.dart';
 
 class MobileScreenHeader extends StatelessWidget {
@@ -81,6 +83,16 @@ class MobileScreenHeader extends StatelessWidget {
                     trailing!,
                   ],
                   if (showAvatar) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    // Bell de notificaciones — abre el panel responsive.
+                    // IconTheme fuerza color blanco para que el icono se
+                    // vea sobre el fondo oscuro del header.
+                    IconTheme(
+                      data: const IconThemeData(color: AppColors.brandWhite),
+                      child: NotificationBell(
+                        onTap: () => showNotificationsPanel(context),
+                      ),
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     const MobileNotificationAvatar(),
                   ],
