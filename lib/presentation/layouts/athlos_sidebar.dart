@@ -81,7 +81,6 @@ class SidebarMenuConfig {
     selectedIcon: Icons.assignment,
     label: 'Órdenes',
     section: SidebarSection.comercial,
-    badge: 12,
   );
 
   static const itemClientes = SidebarItem(

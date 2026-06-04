@@ -115,7 +115,7 @@ class NotificationCenter extends ConsumerWidget {
       return body;
     }
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
+      constraints: const BoxConstraints(maxWidth: 400),
       child: body,
     );
   }
@@ -142,7 +142,12 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Notificaciones', style: AppTypography.h3),
+                Text(
+                  'Notificaciones',
+                  style: AppTypography.h3,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 if (unread > 0) ...[
                   const SizedBox(height: 2),
                   Text(
