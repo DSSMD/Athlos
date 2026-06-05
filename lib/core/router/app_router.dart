@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
 import 'package:workspace/presentation/pages/perfil/mi_perfil_page.dart';
-import 'package:workspace/presentation/pages/trabajador/trabajador_dashboard_page.dart';
+import 'package:workspace/presentation/pages/produccion/dashboard/produccion_dashboard_page.dart';
 import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
 import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
@@ -115,15 +115,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: [
             const DashboardPage(), // 0. Dashboard
-            const OrdenPage(),              // 1. Órdenes
-            const InventarioPage(),         // 2. Inventario
-            const ProduccionPage(),// 3. Producción
-            const PlantillasPage(),         // 4. Plantillas
-            const ConjuntosPage(),          // 5. Conjuntos 
-            const ClientesPage(),           // 6. Clientes
+            const OrdenPage(), // 1. Órdenes
+            const InventarioPage(), // 2. Inventario
+            const ProduccionPage(), // 3. Producción
+            const PlantillasPage(), // 4. Plantillas
+            const ConjuntosPage(), // 5. Conjuntos
+            const ClientesPage(), // 6. Clientes
             // _buildPlaceholder('Pagos'),     // (Comentado temporalmente)
             // _buildPlaceholder('Balance'),   // (Comentado temporalmente)
-            const UsuariosPage(),           // 7. Usuarios (Antes 9)
+            const UsuariosPage(), // 7. Usuarios (Antes 9)
             // _buildPlaceholder('Configuración'), // (Comentado temporalmente)
             // _buildPlaceholder('Avisos'),    // (Comentado temporalmente)
           ],
@@ -138,7 +138,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: [
-            const TrabajadorDashboardPage(), // 0. Dashboard
+            const ProduccionDashboardPage(), // 0. Dashboard
             const InventarioPage(), // 1. Inventario
             const ProduccionPage(), // 2. Producción
           ],
