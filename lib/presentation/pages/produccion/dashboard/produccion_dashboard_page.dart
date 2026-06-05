@@ -2,7 +2,7 @@
 // produccion_dashboard_page.dart
 // Ubicación: lib/presentation/pages/produccion/dashboard/produccion_dashboard_page.dart
 // Descripción: Dashboard del rol producción. Dos pestañas:
-//   - Métricas (placeholder en Bloque 1 — KPIs reales y gráficos en Bloque 2)
+//   - Métricas (KPIs reactivos + lista de pedidos en producción activa)
 //   - Tareas (lista reactiva de trabajos asignados al usuario logueado)
 //
 // Replica el patrón del admin dashboard (admin/dashboard/dashboard_page.dart):
@@ -10,9 +10,7 @@
 // mobile / header custom desktop), AnimatedSwitcher entre tabs, sin Scaffold
 // propio (lo provee el shell de MainLayout).
 //
-// La tab por defecto al entrar es Métricas (índice 0). Como en Bloque 1 esa
-// tab es placeholder, el usuario verá el EmptyState al entrar — intencional
-// hasta que Bloque 2 la llene con KPIs y gráficos reales.
+// La tab por defecto al entrar es Métricas (índice 0).
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -22,9 +20,9 @@ import '../../../theme/app_colors.dart';
 import '../../../theme/app_spacing.dart';
 import '../../../theme/app_typography.dart';
 import '../../../theme/breakpoints.dart';
-import '../../../widgets/shared/empty_state.dart';
 import '../../../widgets/shared/mobile_screen_header.dart';
 
+import 'widgets/produccion_metricas_tab.dart';
 import 'widgets/produccion_tareas_tab.dart';
 
 class ProduccionDashboardPage extends ConsumerStatefulWidget {
@@ -37,7 +35,7 @@ class ProduccionDashboardPage extends ConsumerStatefulWidget {
 
 class _ProduccionDashboardPageState
     extends ConsumerState<ProduccionDashboardPage> {
-  // 0 = Métricas (placeholder en Bloque 1), 1 = Tareas
+  // 0 = Métricas, 1 = Tareas
   int _selectedTab = 0;
 
   @override
@@ -75,9 +73,7 @@ class _ProduccionDashboardPageState
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: switch (_selectedTab) {
-              0 => const _ProduccionMetricasPlaceholder(
-                key: ValueKey('metricas'),
-              ),
+              0 => const ProduccionMetricasTab(key: ValueKey('metricas')),
               _ => const ProduccionTareasTab(key: ValueKey('tareas')),
             },
           ),
@@ -187,27 +183,6 @@ class _DashboardDesktopHeader extends StatelessWidget {
             style: AppTypography.body.copyWith(color: AppColors.textMuted),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// PLACEHOLDER DE LA TAB MÉTRICAS — se llena en Bloque 2
-// ═════════════════════════════════════════════════════════════════════════════
-class _ProduccionMetricasPlaceholder extends StatelessWidget {
-  const _ProduccionMetricasPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = context.isMobile;
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(isMobile ? AppSpacing.lg : AppSpacing.xl2),
-      child: const EmptyState(
-        icon: Icons.insights_outlined,
-        title: 'Métricas en preparación',
-        subtitle:
-            'KPIs y gráficos de producción se habilitarán en una próxima entrega.',
       ),
     );
   }
