@@ -22,6 +22,7 @@ import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 import '../../presentation/pages/admin/dashboard/dashboard_page.dart';
+import '../../presentation/pages/admin/balance/balance_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
@@ -119,11 +120,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             const InventarioPage(),         // 2. Inventario
             const ProduccionPage(),// 3. Producción
             const PlantillasPage(),         // 4. Plantillas
-            const ConjuntosPage(),          // 5. Conjuntos 
+            const ConjuntosPage(),          // 5. Conjuntos
             const ClientesPage(),           // 6. Clientes
             // _buildPlaceholder('Pagos'),     // (Comentado temporalmente)
-            // _buildPlaceholder('Balance'),   // (Comentado temporalmente)
-            const UsuariosPage(),           // 7. Usuarios (Antes 9)
+            const BalancePage(),             // 7. Balance Financiero
+            const UsuariosPage(),           // 8. Usuarios
             // _buildPlaceholder('Configuración'), // (Comentado temporalmente)
             // _buildPlaceholder('Avisos'),    // (Comentado temporalmente)
           ],
