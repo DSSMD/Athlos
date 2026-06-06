@@ -35,6 +35,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../../domain/models/orden_model.dart';
 import '../../../../providers/orden_provider.dart';
@@ -42,6 +43,25 @@ import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_spacing.dart';
 import '../../../../theme/app_typography.dart';
 import '../../../../theme/breakpoints.dart';
+
+// ─── Helpers de prioridad (duplican intencionalmente la lógica de
+// produccion_pedidos_lista.dart). Allí están como top-level privadas y
+// no pueden importarse desde este archivo. Si la duplicación crece a un
+// tercer consumidor, extraer a produccion_helpers.dart.
+
+bool _esRetrasada(OrdenModel o, DateTime now) =>
+    o.idEstado != 4 && o.fechaEntrega.isBefore(now);
+
+bool _esProxAVencer(OrdenModel o, DateTime now) =>
+    o.idEstado != 4 &&
+    !_esRetrasada(o, now) &&
+    o.fechaEntrega.isBefore(now.add(const Duration(days: 4)));
+
+// Mismos primeros 8 chars que usa pedidos_lista para que las dos vistas
+// muestren el mismo identificador legible.
+String _shortId(String numOrden) => numOrden.length > 8
+    ? numOrden.substring(0, 8).toUpperCase()
+    : numOrden.toUpperCase();
 
 // ─── Dimensiones del donut ─────────────────────────────────────────────────
 
@@ -62,7 +82,7 @@ class ProduccionEstadoChart extends ConsumerWidget {
     final ordenesAsync = ref.watch(ordenesProvider);
     final isMobile = context.isMobile;
 
-    final card = _ChartFrame(
+    return _ChartFrame(
       child: ordenesAsync.when(
         loading: () => const SizedBox(
           height: _kLoadingHeight,
@@ -77,18 +97,6 @@ class ProduccionEstadoChart extends ConsumerWidget {
           ),
         ),
         data: (ordenes) => _buildChart(ordenes, isMobile),
-      ),
-    );
-
-    // Mobile: el card ocupa el ancho disponible (la columna ya está
-    // ajustada al device). Desktop: lo capamos a 700px y centramos para
-    // evitar que la leyenda se estire al borde derecho del shell.
-    if (isMobile) return card;
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700),
-        child: card,
       ),
     );
   }
@@ -108,23 +116,53 @@ class ProduccionEstadoChart extends ConsumerWidget {
 
     final donut = _Donut(segmentos: segmentos, total: total);
     final leyenda = _Leyenda(segmentos: segmentos);
+    final panel = _PedidosCriticosPanel(ordenes: ordenes);
 
     if (isMobile) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          donut,
+          // Row con mainAxis center centra horizontalmente sin pedir altura
+          // infinita. Center expande en los dos ejes y dentro de la Column
+          // (constraints verticales unbounded) eso revienta el layout.
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [donut]),
           const SizedBox(height: AppSpacing.lg),
           leyenda,
+          const SizedBox(height: AppSpacing.lg),
+          panel,
         ],
       );
     }
 
+    // Desktop: izquierda = donut + leyenda apilados; derecha = panel de
+    // pedidos críticos en una Expanded para llenar el card.
+    //
+    // Ancho fijo (240) del lado izquierdo: la _Leyenda usa flex internos
+    // (Expanded/Spacer) que exigen ancho bounded. Sin este SizedBox, la
+    // Column intermedia hace shrink-wrap y consulta intrinsic width →
+    // RenderFlex crashea con "non-zero flex but incoming width
+    // constraints are unbounded". El Donut va centrado horizontalmente
+    // dentro de los 240px con un Row(mainAxis: center).
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        donut,
-        const SizedBox(width: AppSpacing.xl2),
-        Expanded(child: leyenda),
+        SizedBox(
+          width: 240,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [donut],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              leyenda,
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xl),
+        Expanded(child: panel),
       ],
     );
   }
@@ -380,5 +418,124 @@ class _EstadoDonutPainter extends CustomPainter {
       if (old.segmentos[i].color != segmentos[i].color) return true;
     }
     return false;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PANEL DE PEDIDOS CRÍTICOS — top 5 retrasados / próximos a vencer.
+// Iconos estáticos a propósito: las flags pulsantes viven en la lista grande
+// de abajo, acá se enfatiza por ubicación + título, no por animación
+// (evita competencia visual entre dos secciones que parpadean a la vez).
+// ═════════════════════════════════════════════════════════════════════════════
+class _PedidosCriticosPanel extends StatelessWidget {
+  const _PedidosCriticosPanel({required this.ordenes});
+
+  final List<OrdenModel> ordenes;
+
+  // Máximo de items a mostrar en el panel. Mantiene la altura del panel
+  // acotada para que no empuje al donut/leyenda hacia abajo en desktop.
+  static const int _kMaxItems = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+
+    // Sólo activos (1 ó 2) y sólo críticos (retrasados o próximos a vencer).
+    // Los pedidos "normales" no entran al panel — para eso está la lista
+    // completa de abajo. Acá es exclusivamente atención inmediata.
+    final criticos = ordenes
+        .where(
+          (o) =>
+              (o.idEstado == 1 || o.idEstado == 2) &&
+              (_esRetrasada(o, now) || _esProxAVencer(o, now)),
+        )
+        .toList();
+
+    criticos.sort((a, b) {
+      final aRetrasada = _esRetrasada(a, now);
+      final bRetrasada = _esRetrasada(b, now);
+
+      // Retrasados antes que próximos a vencer. Dentro de cada grupo, más
+      // cerca/más viejo arriba (siempre fechaEntrega ascendente).
+      if (aRetrasada && !bRetrasada) return -1;
+      if (!aRetrasada && bRetrasada) return 1;
+      return a.fechaEntrega.compareTo(b.fechaEntrega);
+    });
+
+    final top = criticos.take(_kMaxItems).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Pedidos críticos', style: AppTypography.h3),
+        const SizedBox(height: AppSpacing.md),
+        if (top.isEmpty)
+          Text(
+            'Sin pedidos críticos',
+            style: AppTypography.small.copyWith(color: AppColors.textMuted),
+          )
+        else
+          for (var i = 0; i < top.length; i++) ...[
+            _CriticoItem(orden: top[i], now: now),
+            if (i < top.length - 1) const SizedBox(height: AppSpacing.sm),
+          ],
+      ],
+    );
+  }
+}
+
+class _CriticoItem extends StatelessWidget {
+  const _CriticoItem({required this.orden, required this.now});
+
+  final OrdenModel orden;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final retrasada = _esRetrasada(orden, now);
+    final icon = retrasada ? Icons.warning_amber_rounded : Icons.schedule;
+    final color = retrasada ? AppColors.error : AppColors.warning;
+
+    final fechaFmt = DateFormat(
+      'd MMM yyyy',
+      'es_ES',
+    ).format(orden.fechaEntrega);
+    final cliente = orden.clienteNombre.trim().isEmpty
+        ? '—'
+        : orden.clienteNombre;
+
+    // Fila horizontal compacta: [icono] [#orden 100px] [cliente flex] [fecha].
+    // Una sola línea por item aprovecha el ancho del panel (Expanded en
+    // desktop) en vez de apilar 3 textos cortos con whitespace a la derecha.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: AppSpacing.sm),
+        SizedBox(
+          width: 100,
+          child: Text(
+            '#${_shortId(orden.numOrden)}',
+            style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Text(
+            cliente,
+            style: AppTypography.small.copyWith(color: AppColors.textMuted),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Text(
+          fechaFmt,
+          style: AppTypography.small.copyWith(color: AppColors.textMuted),
+        ),
+      ],
+    );
   }
 }
