@@ -60,24 +60,26 @@ class NotificacionesNotifier extends AsyncNotifier<List<NotificacionModel>> {
 
     // Suscripción Realtime — solo en modo real. En mock no hay tabla que
     // escuchar y los cambios se simulan con updates optimistas locales.
+    // Búscalo en tu método build() dentro de NotificacionesNotifier:
     if (!NotificacionService.useMockData) {
-      final canal = Supabase.instance.client.channel('notificaciones-$userId');
+      final canal = Supabase.instance.client.channel(
+        'notificaciones-todos',
+      ); // Nombre genérico
       canal
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
             table: 'notificaciones',
-            filter: PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'id_usuario',
-              value: userId,
-            ),
-            // IMPORTANTE: actualizamos state directo. invalidateSelf
-            // teardownearía la subscripción y la re-crearía en cada evento,
-            // generando churn innecesario.
+            // 🔥 ELIMINAMOS EL FILTRO AQUÍ para recibir todo y filtrar manualmente
             callback: (payload) async {
-              final updated = await service.obtenerNotificaciones(userId);
-              state = AsyncValue.data(updated);
+              final record = payload.newRecord;
+              final targetUser = record['id_usuario'];
+
+              // Solo actualizamos si la notif es para mi usuario O es Global (null)
+              if (targetUser == userId || targetUser == null) {
+                final updated = await service.obtenerNotificaciones(userId);
+                state = AsyncValue.data(updated);
+              }
             },
           )
           .subscribe();

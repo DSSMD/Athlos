@@ -1,33 +1,10 @@
 // ============================================================================
 // lib/presentation/widgets/notificaciones/notification_toast_listener.dart
 // ============================================================================
-// Listener global de toasts: cuando llega una notificación nueva (no vista
-// y no leída) dispara un SnackBar flotante con NotificationToast adentro.
-//
-// Vive envolviendo el body del Scaffold en main_layout.dart para tener
-// acceso a ScaffoldMessenger.of(context). Watchea notificacionesProvider y
-// compara la lista contra los ids ya vistos en _seenIds.
-//
-// Por qué Set<String> y no List<String>:
-//   - Lookup O(1) vs O(n). Cuando la lista crezca a decenas de notificaciones
-//     el check `seen.contains(id)` corre por cada item de cada update —
-//     un Set evita degradación cuadrática.
-//
-// Por qué la flag _initialized:
-//   - Al cargar la app el provider entrega la lista completa de notifs
-//     existentes en su primera resolución. Sin la flag, lanzaríamos un toast
-//     por cada una de esas — un "barrage" de SnackBars apilados nada más
-//     entrar. La primera entrega solo siembra _seenIds; recién a partir de
-//     la segunda entrega (típicamente disparada por Realtime) salen toasts.
-//
-// Cola de toasts:
-//   - ScaffoldMessenger encola SnackBars automáticamente. No armamos cola
-//     propia — si llegan 3 notificaciones seguidas Material las muestra
-//     una atrás de otra al cerrar la anterior (manual o por timeout).
-// ============================================================================
-
+import 'dart:async'; // 🔥 IMPORTANTE PARA LA SUSCRIPCIÓN
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../../domain/models/notificacion_model.dart';
 import '../../providers/notificacion_provider.dart';
@@ -48,8 +25,44 @@ class _NotificationToastListenerState
   final Set<String> _seenIds = <String>{};
   bool _initialized = false;
 
+  // 🔥 VARIABLE PARA GUARDAR EL "ESCUCHADOR"
+  StreamSubscription<RemoteMessage>? _foregroundSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // ------------------------------------------------------------------------
+    // GUARDAMOS LA SUSCRIPCIÓN PARA PODER CERRARLA DESPUÉS
+    // ------------------------------------------------------------------------
+    _foregroundSubscription = FirebaseMessaging.onMessage.listen((
+      RemoteMessage message,
+    ) {
+      if (message.notification != null) {
+        final n = NotificacionModel(
+          idNotificacion: message.messageId ?? DateTime.now().toString(),
+          idUsuario: 'app_active',
+          titulo: message.notification!.title ?? 'Sin título',
+          mensaje: message.notification!.body ?? '',
+          leida: false,
+          fechaCreacion: DateTime.now(),
+          prioridad:
+              PrioridadNotificacion.informativa, // O ajustarlo según el data
+        );
+        _showToast(n);
+      }
+    });
+  }
+
+  // 🔥 ESTO EVITA QUE TENGAS TOASTS REPETIDOS O FUGAS DE MEMORIA
+  @override
+  void dispose() {
+    _foregroundSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // LÓGICA DE REALTIME INTACTA
     ref.listen<AsyncValue<List<NotificacionModel>>>(notificacionesProvider, (
       previous,
       next,
@@ -57,17 +70,12 @@ class _NotificationToastListenerState
       if (!next.hasValue) return;
       final lista = next.value!;
 
-      // Primera entrega: sembramos los ids como vistos para evitar
-      // disparar toasts por las notifs históricas al arrancar la app.
       if (!_initialized) {
         _seenIds.addAll(lista.map((n) => n.idNotificacion));
         _initialized = true;
         return;
       }
 
-      // Entregas posteriores: por cada notif que no hayamos visto y que
-      // venga marcada como no-leída, disparamos un toast y la sumamos al
-      // set para que próximos updates no la repitan.
       for (final n in lista) {
         if (_seenIds.contains(n.idNotificacion)) continue;
         _seenIds.add(n.idNotificacion);

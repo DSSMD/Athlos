@@ -30,7 +30,7 @@ class NotificacionService {
   /// Toggle global mock ↔ real. Cuando se apaga, todas las firmas públicas
   /// siguen funcionando contra la tabla `notificaciones` sin que UI ni
   /// provider necesiten cambios.
-  static const bool useMockData = true;
+  static const bool useMockData = false;
 
   /// Cap defensivo en lecturas: la lista del bell muestra a lo sumo ~20-30
   /// items. Si más adelante se agrega una pantalla full-history, se levanta
@@ -41,16 +41,16 @@ class NotificacionService {
 
   /// Lista de notificaciones del usuario, ordenadas por fecha desc.
   /// En modo mock devuelve un set fijo (ver `_mockNotificaciones`).
+  // Búscalo en tu método obtenerNotificaciones:
   Future<List<NotificacionModel>> obtenerNotificaciones(String userId) async {
-    if (useMockData) {
-      return _mockNotificaciones(userId);
-    }
+    if (useMockData) return _mockNotificaciones(userId);
 
     try {
       final response = await _client
           .from('notificaciones')
           .select()
-          .eq('id_usuario', userId)
+          // 🔥 AQUÍ ESTÁ EL CAMBIO: Filtramos por tu ID O porque es nulo (global)
+          .or('id_usuario.eq.$userId,id_usuario.is.null')
           .order('fecha_creacion', ascending: false)
           .limit(_limit);
 
