@@ -162,7 +162,7 @@ class _PedidosTabla extends StatelessWidget {
                 _HeaderCell('F. ENTREGA', flex: 2),
                 _HeaderCell('TOTAL', flex: 2),
                 _HeaderCell('ESTADO', flex: 2),
-                _HeaderCell('', flex: 1),
+                _HeaderCell('ALERTA', flex: 1),
               ],
             ),
           ),
@@ -392,13 +392,13 @@ class _FlagIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (_esRetrasada(orden, now)) {
-      return const Tooltip(
-        message: 'Retrasada',
-        child: Icon(
-          Icons.warning_amber_rounded,
-          color: AppColors.error,
-          size: 20,
-        ),
+      // Retrasada: pulso suave para enfatizar la urgencia. Sólo este
+      // estado anima; las próximas a vencer se quedan estáticas para
+      // mantener la jerarquía visual (un solo punto al que mirar).
+      return const _BlinkingFlag(
+        icon: Icons.warning_amber_rounded,
+        color: AppColors.error,
+        tooltip: 'Retrasada',
       );
     }
     if (_esProxAVencer(orden, now)) {
@@ -409,6 +409,56 @@ class _FlagIcon extends StatelessWidget {
     }
     // SizedBox vacío para mantener la columna alineada en la tabla desktop.
     return const SizedBox(width: 20, height: 20);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BLINKING FLAG — icono con pulso suave (fade opacity 0.4 ↔ 1.0)
+// ═════════════════════════════════════════════════════════════════════════════
+class _BlinkingFlag extends StatefulWidget {
+  const _BlinkingFlag({required this.icon, required this.color, this.tooltip});
+
+  final IconData icon;
+  final Color color;
+  final String? tooltip;
+
+  @override
+  State<_BlinkingFlag> createState() => _BlinkingFlagState();
+}
+
+class _BlinkingFlagState extends State<_BlinkingFlag>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = FadeTransition(
+      opacity: _opacity,
+      child: Icon(widget.icon, color: widget.color, size: 20),
+    );
+    return widget.tooltip != null
+        ? Tooltip(message: widget.tooltip!, child: iconWidget)
+        : iconWidget;
   }
 }
 

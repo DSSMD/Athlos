@@ -139,9 +139,9 @@ class _KpiGrid extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: AppSpacing.md,
         mainAxisSpacing: AppSpacing.md,
-        // 1.4 da cards proporcionadas para KpiCard (h1 value + label +
-        // description) en pantallas mobile típicas sin recortar texto.
-        childAspectRatio: 1.4,
+        // 1.1 da cards más altas que anchas para que el texto de
+        // description (caption) no overflowee en pantallas mobile.
+        childAspectRatio: 1.1,
         children: cards,
       );
     }
