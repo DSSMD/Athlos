@@ -111,6 +111,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
             child: const Text(
               'Cancelar',
               style: TextStyle(color: AppColors.textSecondary),
@@ -121,7 +122,7 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
               backgroundColor: Colors.red.shade700,
               elevation: 0,
             ),
-    onPressed: () async {
+            onPressed: () async {
               Navigator.pop(context);
               final messenger = ScaffoldMessenger.of(context);
               try {
@@ -226,19 +227,15 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
     // Precio promedio calculado dinámicamente
     final precioPromedio = allConjuntos.isEmpty
         ? 0.0
-        : allConjuntos.fold<double>(
-                0.0, (sum, c) => sum + c.precioTotal) /
-            allConjuntos.length;
+        : allConjuntos.fold<double>(0.0, (sum, c) => sum + c.precioTotal) /
+              allConjuntos.length;
 
     return Column(
       children: [
         if (isMobile)
           MobileScreenHeader(
             title: 'Conjuntos',
-            trailing: CompactNewButton(
-              label: 'Nuevo',
-              onPressed: _abrirCrear,
-            ),
+            trailing: CompactNewButton(label: 'Nuevo', onPressed: _abrirCrear),
             bottom: SearchInput(
               hintText: 'Buscar conjunto...',
               controller: _searchController,
@@ -253,6 +250,8 @@ class _ConjuntosPageState extends ConsumerState<ConjuntosPage> {
             onSearchChanged: (_) => setState(() => _currentPage = 1),
             newButtonLabelDesktop: 'Nuevo conjunto',
             onNewPressed: _abrirCrear,
+            newButtonColor: AppColors.primary500,
+            newTextColor: Colors.white,
           ),
         Expanded(
           child: SingleChildScrollView(
@@ -356,7 +355,8 @@ class _KpiRow extends StatelessWidget {
         valueColor: AppColors.success,
       ),
       KpiCard(
-        value: '${allConjuntos.fold<int>(0, (sum, c) => sum + c.plantillas.length)}',
+        value:
+            '${allConjuntos.fold<int>(0, (sum, c) => sum + c.plantillas.length)}',
         label: 'Plantillas totales',
         description: 'En todos los conjuntos',
         valueColor: AppColors.info,
@@ -512,7 +512,11 @@ class _MobileList extends StatelessWidget {
                     value: 'ver',
                     child: Row(
                       children: [
-                        Icon(Icons.visibility_outlined, size: 20, color: AppColors.textSecondary),
+                        Icon(
+                          Icons.visibility_outlined,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
                         SizedBox(width: AppSpacing.sm),
                         Text('Ver Detalles'),
                       ],
@@ -522,7 +526,11 @@ class _MobileList extends StatelessWidget {
                     value: 'editar',
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined, size: 20, color: AppColors.primary500),
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 20,
+                          color: AppColors.primary500,
+                        ),
                         SizedBox(width: AppSpacing.sm),
                         Text('Editar'),
                       ],

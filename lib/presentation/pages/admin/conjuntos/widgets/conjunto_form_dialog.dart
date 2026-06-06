@@ -20,8 +20,7 @@ class ConjuntoFormDialog extends ConsumerStatefulWidget {
   const ConjuntoFormDialog({super.key, this.conjunto});
 
   @override
-  ConsumerState<ConjuntoFormDialog> createState() =>
-      _ConjuntoFormDialogState();
+  ConsumerState<ConjuntoFormDialog> createState() => _ConjuntoFormDialogState();
 }
 
 class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
@@ -36,8 +35,8 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
   String? _errorGuardar;
 
   // ─── Filtro del selector de plantillas ──────────────────────────────────
-  String? _categoriaFiltro;   // categoría seleccionada (null = todas)
-  int? _tipoFiltro;           // id_tipo_prenda (null = todos)
+  String? _categoriaFiltro; // categoría seleccionada (null = todas)
+  int? _tipoFiltro; // id_tipo_prenda (null = todos)
   String _busquedaPlantilla = '';
 
   @override
@@ -140,7 +139,10 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
     return Dialog(
       backgroundColor: AppColors.brandWhite,
       insetPadding: isMobile
-          ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.md)
+          ? const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.md,
+            )
           : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -278,6 +280,7 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
                           ? null
                           : () => Navigator.pop(context),
                       child: const Text('Cancelar'),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     ElevatedButton(
@@ -299,9 +302,7 @@ class _ConjuntoFormDialogState extends ConsumerState<ConjuntoFormDialog> {
                               ),
                             )
                           : Text(
-                              _esEdicion
-                                  ? 'Guardar cambios'
-                                  : 'Crear Conjunto',
+                              _esEdicion ? 'Guardar cambios' : 'Crear Conjunto',
                               style: const TextStyle(color: Colors.white),
                             ),
                     ),
@@ -495,9 +496,12 @@ class _ItemSeleccionado extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text('${item.cantidad}',
-                    style: AppTypography.small
-                        .copyWith(fontWeight: FontWeight.bold)),
+                child: Text(
+                  '${item.cantidad}',
+                  style: AppTypography.small.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               _CantidadBtn(
                 icon: Icons.add,
@@ -574,7 +578,9 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiposAsync = ref.watch(tiposPrendaProvider);
-    final categoriasAsync = tiposAsync.whenData((tipos) => tipos.map((t) => t.categoria).toSet().toList()..sort());
+    final categoriasAsync = tiposAsync.whenData(
+      (tipos) => tipos.map((t) => t.categoria).toSet().toList()..sort(),
+    );
     final plantillasAsync = ref.watch(plantillaProvider);
 
     return Column(
@@ -598,14 +604,14 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
             decoration: const InputDecoration(
               labelText: 'Categoría',
               border: OutlineInputBorder(),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
             ),
             items: [
               const DropdownMenuItem(value: null, child: Text('Todas')),
-              ...cats.map(
-                (c) => DropdownMenuItem(value: c, child: Text(c)),
-              ),
+              ...cats.map((c) => DropdownMenuItem(value: c, child: Text(c))),
             ],
             onChanged: onCategoriaChanged,
           ),
@@ -626,16 +632,15 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
               decoration: const InputDecoration(
                 labelText: 'Tipo de prenda',
                 border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
               items: [
                 const DropdownMenuItem(value: null, child: Text('Todos')),
                 ...filtrados.map(
-                  (t) => DropdownMenuItem(
-                    value: t.id,
-                    child: Text(t.nombre),
-                  ),
+                  (t) => DropdownMenuItem(value: t.id, child: Text(t.nombre)),
                 ),
               ],
               onChanged: onTipoChanged,
@@ -652,8 +657,7 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
             labelText: 'Buscar plantilla',
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.search, size: 18),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
           onChanged: onBusquedaChanged,
         ),
@@ -666,8 +670,9 @@ class _PanelSelectorPlantillas extends ConsumerWidget {
             error: (e, _) => Center(
               child: Text(
                 'Error al cargar plantillas',
-                style: AppTypography.small
-                    .copyWith(color: AppColors.textSecondary),
+                style: AppTypography.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
             data: (todas) {
@@ -770,7 +775,9 @@ class _ListaAgrupada extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary500.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(4),
@@ -859,10 +866,7 @@ class _PlantillaOpcion extends StatelessWidget {
       onTap: yaAgregada ? null : onAgregar,
       borderRadius: BorderRadius.circular(AppRadius.sm),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 5,
-          horizontal: 2,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
         child: Row(
           children: [
             Expanded(
@@ -889,15 +893,23 @@ class _PlantillaOpcion extends StatelessWidget {
               ),
             ),
             yaAgregada
-                ? const Icon(Icons.check_circle_outline,
-                    size: 18, color: AppColors.success)
+                ? const Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: AppColors.success,
+                  )
                 : IconButton(
-                    icon: const Icon(Icons.add_circle_outline,
-                        size: 18, color: AppColors.primary500),
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      size: 18,
+                      color: AppColors.primary500,
+                    ),
                     onPressed: onAgregar,
                     padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints(minWidth: 28, minHeight: 28),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
                   ),
           ],
         ),

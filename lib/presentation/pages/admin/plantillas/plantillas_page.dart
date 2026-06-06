@@ -309,6 +309,8 @@ class _PlantillasPageState extends ConsumerState<PlantillasPage> {
             onSearchChanged: (_) => setState(() => _currentPage = 1),
             newButtonLabelDesktop: 'Nueva plantilla',
             onNewPressed: _abrirNueva,
+            newTextColor: Colors.white,
+            newButtonColor: AppColors.primary500,
           ),
         Expanded(
           child: SingleChildScrollView(

@@ -248,10 +248,18 @@ class _Header extends StatelessWidget {
         ),
         Text('Nueva orden', style: AppTypography.h2),
         const Spacer(),
-        TextButton(onPressed: onCancelar, child: const Text('Cancelar')),
+        TextButton(
+          onPressed: onCancelar,
+          child: const Text('Cancelar'),
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
+        ),
         const SizedBox(width: AppSpacing.sm),
         OutlinedButton(
           onPressed: onGuardarBorrador,
+          style: TextButton.styleFrom(
+            backgroundColor: AppColors.primary500,
+            foregroundColor: Colors.white,
+          ),
           child: const Text('Guardar borrador'),
         ),
         const SizedBox(width: AppSpacing.sm),

@@ -496,6 +496,9 @@ class _ClienteFormDrawerState extends ConsumerState<ClienteFormDrawer>
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.primary500,
+                          ),
                           child: const Text('Cerrar'),
                         ),
                       ),
@@ -671,7 +674,7 @@ class _Footer extends StatelessWidget {
               onPressed: isSaving ? null : onCancel,
               child: const Text('Cancelar'),
               style: FilledButton.styleFrom(
-                foregroundColor: AppColors.primary500
+                foregroundColor: AppColors.primary500,
               ),
             ),
           ),
@@ -681,7 +684,7 @@ class _Footer extends StatelessWidget {
             child: ElevatedButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary500,
-                foregroundColor: Colors.white
+                foregroundColor: Colors.white,
               ),
               onPressed: isSaving ? null : onSave,
               child: isSaving

@@ -106,6 +106,7 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
               children: [
                 TextButton.icon(
                   onPressed: widget.onVolver,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
                   icon: const Icon(Icons.arrow_back, size: 18),
                   label: const Text('Volver al listado'),
                 ),
@@ -1119,7 +1120,7 @@ class _HoverImageWidget extends StatefulWidget {
 
 class _HoverImageWidgetState extends State<_HoverImageWidget> {
   bool _isHovered = false;
- 
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -1141,7 +1142,7 @@ class _HoverImageWidgetState extends State<_HoverImageWidget> {
               ),
             ),
           ),
- 
+
           // Capa Oscura (Aparece en Hover)
           AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
@@ -1174,7 +1175,8 @@ class _ConfirmarEntregaButton extends StatefulWidget {
   const _ConfirmarEntregaButton({required this.orden});
 
   @override
-  State<_ConfirmarEntregaButton> createState() => _ConfirmarEntregaButtonState();
+  State<_ConfirmarEntregaButton> createState() =>
+      _ConfirmarEntregaButtonState();
 }
 
 class _ConfirmarEntregaButtonState extends State<_ConfirmarEntregaButton> {
@@ -1192,10 +1194,7 @@ class _ConfirmarEntregaButtonState extends State<_ConfirmarEntregaButton> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       backgroundColor: AppColors.brandWhite,
-                      title: Text(
-                        'Confirmar Entrega',
-                        style: AppTypography.h3,
-                      ),
+                      title: Text('Confirmar Entrega', style: AppTypography.h3),
                       content: Text(
                         '¿Está seguro de marcar este pedido como ENTREGADO? '
                         'Esta acción cambiará el estado de la orden y registrará la entrega.',
@@ -1227,17 +1226,22 @@ class _ConfirmarEntregaButtonState extends State<_ConfirmarEntregaButton> {
                     await service.actualizarEstadoOrden(
                       widget.orden.numOrden,
                       4, // 4 = Entregada
-                      descripcion: 'Pedido entregado al cliente por confirmar entrega en caja.',
+                      descripcion:
+                          'Pedido entregado al cliente por confirmar entrega en caja.',
                     );
 
                     // Refrescar órdenes e historial
                     ref.invalidate(ordenesProvider);
-                    ref.invalidate(historialOrdenProvider(widget.orden.numOrden));
+                    ref.invalidate(
+                      historialOrdenProvider(widget.orden.numOrden),
+                    );
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Pedido marcado como ENTREGADO con éxito'),
+                          content: Text(
+                            'Pedido marcado como ENTREGADO con éxito',
+                          ),
                           backgroundColor: Colors.green,
                         ),
                       );

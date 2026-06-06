@@ -182,6 +182,7 @@ class _ClienteListRowState extends State<ClienteListRow> {
                 child: TextButton(
                   onPressed: widget.onView,
                   style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary500,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
                       vertical: AppSpacing.xs,
