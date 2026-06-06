@@ -1,17 +1,21 @@
 // lib/presentation/widgets/shared/mobile_notification_avatar.dart
+//
+// El nombre conserva "notification" por historia — antes este widget pintaba
+// un dot rojo sobre el avatar para señalar notificaciones pendientes. Esa
+// responsabilidad pasó a NotificationBell
+// (widgets/notificaciones/notification_bell.dart). El nombre se mantiene
+// para evitar cambios en cascada en los callers; este widget hoy es sólo el
+// avatar tappable que abre el menú de perfil.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../theme/app_colors.dart';
 import '../auth_profile_menu.dart';
 import '../user_avatar.dart';
 
 class MobileNotificationAvatar extends ConsumerWidget {
-  const MobileNotificationAvatar({super.key, this.hasNotifications = true});
-
-  final bool hasNotifications;
+  const MobileNotificationAvatar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,39 +32,11 @@ class MobileNotificationAvatar extends ConsumerWidget {
         child: SizedBox(
           width: 40,
           height: 40,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: UserAvatar(name: nombre, size: 36),
-              ),
-              if (hasNotifications)
-                const Positioned(
-                  right: 2,
-                  top: 2,
-                  child: IgnorePointer(child: _NotificationDot()),
-                ),
-            ],
+          child: Align(
+            alignment: Alignment.center,
+            child: UserAvatar(name: nombre, size: 36),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _NotificationDot extends StatelessWidget {
-  const _NotificationDot();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: AppColors.error,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.sidebarDark, width: 2),
       ),
     );
   }

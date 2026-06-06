@@ -114,6 +114,10 @@ class StickyTopbar extends StatelessWidget {
             onPressed: onNewPressed,
             icon: const Icon(Icons.add, size: 18),
             label: Text(newButtonLabelDesktop!),
+            style: FilledButton.styleFrom(
+              backgroundColor: newButtonColor,
+              foregroundColor: newTextColor,
+            ),
           ),
         ],
       ],
