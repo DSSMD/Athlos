@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // NECESARIO PARA EL ESCUDO
 
 import 'core/router/app_router.dart';
 import 'core/inactivity/inactivity_detector.dart';
@@ -23,49 +24,82 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("🔔 Alerta recibida en segundo plano: ${message.notification?.title}");
 }
 
-// 🔥 NUEVA FUNCIÓN: Esto evita que la pantalla se quede en blanco
+// 2. FILTRO DE NOTIFICACIONES (ESCUDO)
+void _filtrarYMostrarNotificacion(RemoteMessage message) {
+  final user = Supabase.instance.client.auth.currentUser;
+  final idDestino = message.data['id_usuario']; // ID que viene en el JSON
+
+  // Lógica:
+  // Si el mensaje tiene id_usuario (personal) y no es el mio, lo ignoro.
+  // Si es null (Admin/Global), lo dejo pasar.
+  if (idDestino != null && user != null && idDestino.toString() != user.id) {
+    print("🚫 Notificación ignorada: Era para otro usuario.");
+    return;
+  }
+
+  print("✅ Notificación aceptada para: ${user?.id ?? 'Admin/Global'}");
+}
+
+// 3. CONFIGURACIÓN CON ESCUDO PARA EVITAR BUCLES
 Future<void> _configurarNotificaciones() async {
   try {
+    final prefs = await SharedPreferences.getInstance();
     await FirebaseMessaging.instance.requestPermission();
 
-    // Le volvemos a poner el timeout de 10 segundos para que no se congele
-    // ... dentro de _configurarNotificaciones() ...
+    // Configurar listener de mensajes (AQUÍ ESTÁ LA FILTRACIÓN)
+    FirebaseMessaging.onMessage.listen((message) {
+      _filtrarYMostrarNotificacion(message);
+    });
+
+    // SUSCRIPCIÓN GLOBAL (Solo una vez)
+    if (prefs.getBool('sub_global') != true) {
+      await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
+      await prefs.setBool('sub_global', true);
+      print("✅ Suscripción global activada.");
+    }
+
     String? fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken != null) {
-      final user = Supabase.instance.client.auth.currentUser;
+
+    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final user = data.session?.user;
       if (user != null) {
-        // ESTA LÍNEA ES LA CLAVE
-        await Supabase.instance.client.from('profiles').upsert({
-          'id': user.id,
-          'fcm_token':
-              fcmToken, // Asegura que se actualice el token real del dispositivo
-        });
-        print("✅ Token sincronizado con Supabase: $fcmToken");
+        // Suscripción personalizada
+        String topic = 'user_${user.id.replaceAll('-', '')}';
+
+        if (prefs.getBool('sub_$topic') != true) {
+          await FirebaseMessaging.instance.subscribeToTopic(topic);
+          await prefs.setBool('sub_$topic', true);
+        }
+
+        // ... dentro del listener de auth ...
+        // 🔥 CAMBIO CRÍTICO: Usamos .update() en lugar de .upsert()
+        // Esto solo toca el fcm_token y no toca el resto de columnas.
+        if (fcmToken != null) {
+          try {
+            await Supabase.instance.client
+                .from('profiles')
+                .update({'fcm_token': fcmToken})
+                .eq('id', user.id);
+            print("✅ Token actualizado en Supabase.");
+          } catch (e) {
+            print("⚠️ Error al actualizar token: $e");
+          }
+        }
       }
-    }
-
-    await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
-
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null && fcmToken != null) {
-      await Supabase.instance.client
-          .from('profiles')
-          .update({'fcm_token': fcmToken})
-          .eq('id', user.id);
-    }
+    });
   } catch (e) {
-    print("⚠️ Error en inicialización de notificaciones: $e");
+    print("⚠️ Error en notificaciones: $e");
   }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // A. INICIALIZAR FIREBASE (Sin bloqueos largos)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // B. INICIALIZAR SUPABASE Y ENTORNO
   await dotenv.load(fileName: ".env");
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
@@ -74,11 +108,9 @@ Future<void> main() async {
 
   await initializeDateFormatting('es_ES', null);
 
-  // 🔥 LLAMAMOS A LA FUNCIÓN, PERO SIN EL "await" AL PRINCIPIO
-  // Así la app arranca al instante y no se queda en blanco.
+  // Llamamos a la configuración sin esperar (para no bloquear UI)
   _configurarNotificaciones();
 
-  // C. ARRANCAR LA INTERFAZ
   runApp(const ProviderScope(child: MyApp()));
 }
 

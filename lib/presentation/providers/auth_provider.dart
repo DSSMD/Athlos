@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/services/auth_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // 1. El Servicio de Auth
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -18,14 +19,29 @@ class AuthNotifier extends Notifier<AuthState?> {
 
   // Llama a esto DESPUÉS de hacer signInWithPassword en tu servicio
   Future<void> manejarLoginExitoso(User user, String rol) async {
-    // Suscripción al canal PRIVADO
-    await FirebaseMessaging.instance.subscribeToTopic('user_${user.id}');
+    final prefs = await SharedPreferences.getInstance();
 
-    // Suscripción al canal GLOBAL si es jefe
-    if (rol == 'jefe_produccion') {
-      await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
+    // Bandera de control para evitar bucles
+    final subKey = 'sub_user_${user.id}';
+    final yaSuscrito = prefs.getBool(subKey) ?? false;
+
+    if (!yaSuscrito) {
+      // Suscripción al canal PRIVADO
+      await FirebaseMessaging.instance.subscribeToTopic(
+        'user_${user.id.replaceAll('-', '')}',
+      );
+      await prefs.setBool(subKey, true);
+      print("✅ Suscripción exitosa a topic privado.");
     }
-    print("✅ Suscrito a temas de Firebase correctamente.");
+
+    // Suscripción al canal GLOBAL (solo una vez)
+    if (rol == 'jefe_produccion') {
+      final subJefeKey = 'sub_jefe';
+      if (prefs.getBool(subJefeKey) != true) {
+        await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
+        await prefs.setBool(subJefeKey, true);
+      }
+    }
   }
 
   Future<void> manejarLogout() async {
