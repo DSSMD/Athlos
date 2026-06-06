@@ -511,7 +511,14 @@ class _CriticoItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, color: color, size: 18),
+        // Velocidad diferenciada según gravedad: rojo (retrasada) pulsa
+        // rápido para gritar urgencia; amarillo (próxima a vencer) pulsa
+        // lento para señalar sin competir por la atención.
+        _AnimatedAlertIcon(
+          icon: icon,
+          color: color,
+          duration: Duration(milliseconds: retrasada ? 900 : 1800),
+        ),
         const SizedBox(width: AppSpacing.sm),
         SizedBox(
           width: 100,
@@ -536,6 +543,62 @@ class _CriticoItem extends StatelessWidget {
           style: AppTypography.small.copyWith(color: AppColors.textMuted),
         ),
       ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ANIMATED ALERT ICON — pulso parametrizable. Velocidad distinta = jerarquía
+// distinta. El opacity tween (0.4 ↔ 1.0) replica el shape del _BlinkingFlag
+// original (eliminado en Bloque 4) pero acá la duration la decide el caller.
+// ═════════════════════════════════════════════════════════════════════════════
+class _AnimatedAlertIcon extends StatefulWidget {
+  const _AnimatedAlertIcon({
+    required this.icon,
+    required this.color,
+    required this.duration,
+    // Hoy todos los call sites usan el default; el param queda parametrizable
+    // para futuros usos sin tener que renombrar el widget.
+    // ignore: unused_element_parameter
+    this.size = 18,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Duration duration;
+  final double size;
+
+  @override
+  State<_AnimatedAlertIcon> createState() => _AnimatedAlertIconState();
+}
+
+class _AnimatedAlertIconState extends State<_AnimatedAlertIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat(reverse: true);
+    _animation = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Icon(widget.icon, color: widget.color, size: widget.size),
     );
   }
 }
