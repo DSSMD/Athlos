@@ -18,6 +18,8 @@ import '../../../domain/models/lote_model.dart';
 
 // Importamos la nueva pantalla que crearemos en el paso 2
 import 'orden_kanban_page.dart';
+import 'scheduling/scheduling_page.dart';
+import '../../providers/scheduling_provider.dart';
 
 class ProduccionPage extends ConsumerStatefulWidget {
   const ProduccionPage({super.key});
@@ -71,12 +73,17 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 900;
     final lotesAsync = ref.watch(lotesListProvider);
+    final ordenesEnRiesgo = ref.watch(ordenesEnRiesgoCountProvider);
 
     return Column(
       children: [
         if (isMobile)
           MobileScreenHeader(
             title: 'Directorio de Órdenes',
+            trailing: _SchedulingButton(
+              count: ordenesEnRiesgo,
+              onPressed: () => _abrirScheduling(context),
+            ),
             bottom: SearchInput(
               hintText: 'Buscar por orden o cliente...',
               controller: _searchController,
@@ -89,6 +96,10 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
             searchHint: 'Buscar por Orden o Cliente...',
             searchController: _searchController,
             onSearchChanged: (value) => setState(() => _currentPage = 1),
+            actionWidget: _SchedulingButton(
+              count: ordenesEnRiesgo,
+              onPressed: () => _abrirScheduling(context),
+            ),
           ),
         Expanded(
           child: lotesAsync.when(
@@ -381,6 +392,81 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
             },
           ),
         ),
+      ],
+    );
+  }
+
+  void _abrirScheduling(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 900;
+    if (isMobile) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SchedulingPage()),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: AppColors.background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900, maxHeight: 700),
+            child: const SchedulingPage(),
+          ),
+        ),
+      );
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// BOTÓN DE SCHEDULING CON BADGE
+// ────────────────────────────────────────────────────────────────────────────
+
+class _SchedulingButton extends StatelessWidget {
+  const _SchedulingButton({required this.count, required this.onPressed});
+  final int count;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.schedule_outlined, size: 18),
+          label: const Text('Scheduling'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: count > 0 ? AppColors.error : AppColors.primary500,
+            side: BorderSide(
+              color: count > 0
+                  ? AppColors.error.withValues(alpha: 0.5)
+                  : AppColors.border,
+            ),
+          ),
+        ),
+        if (count > 0)
+          Positioned(
+            top: -6,
+            right: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$count',
+                style: AppTypography.caption.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

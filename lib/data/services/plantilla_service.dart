@@ -144,6 +144,7 @@ class PlantillaService {
     required int idTipoPrenda,
     required String especificaciones,
     required double precioPlantilla,
+    required double tiempoProduccionUnitario,
     required List<int> tallasSeleccionadas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -155,6 +156,7 @@ class PlantillaService {
             'id_tipo_prenda': idTipoPrenda,
             'especificaciones': especificaciones,
             'precio_plantilla': precioPlantilla,
+            'tiempo_produccion_unitario': tiempoProduccionUnitario,
             'activo': true,
           })
           .select()
@@ -206,6 +208,7 @@ class PlantillaService {
     required int idTipoPrenda,
     required String especificaciones,
     required double precioPlantilla,
+    required double tiempoProduccionUnitario,
     required List<int> tallasSeleccionadas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -227,6 +230,7 @@ class PlantillaService {
             'id_tipo_prenda': idTipoPrenda,
             'especificaciones': especificaciones,
             'precio_plantilla': precioPlantilla,
+            'tiempo_produccion_unitario': tiempoProduccionUnitario,
             'version': nuevaVersion,
           })
           .eq('id_plantilla', id)

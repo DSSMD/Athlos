@@ -30,6 +30,7 @@ class StickyTopbar extends StatelessWidget {
     this.onNewPressed,
     this.newButtonColor,
     this.newTextColor,
+    this.actionWidget,
   });
 
   final String title;
@@ -43,6 +44,10 @@ class StickyTopbar extends StatelessWidget {
   final String? newButtonLabelDesktop;
 
   final VoidCallback? onNewPressed;
+
+  /// Widget adicional opcional para acciones extra (ej. botón Scheduling).
+  /// Se renderiza a la derecha del buscador, antes del botón "Nuevo".
+  final Widget? actionWidget;
 
   // Propiedad auxiliar para saber si debemos mostrar el botón
   bool _showButton(BuildContext context) =>
@@ -107,6 +112,11 @@ class StickyTopbar extends StatelessWidget {
             onChanged: onSearchChanged,
           ),
         ),
+        // Widget de acción adicional (opcional)
+        if (actionWidget != null) ...[
+          const SizedBox(width: AppSpacing.md),
+          actionWidget!,
+        ],
         // Solo renderiza el espacio y el botón si existen
         if (_showButton(context)) ...[
           const SizedBox(width: AppSpacing.md),

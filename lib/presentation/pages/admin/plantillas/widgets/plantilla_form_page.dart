@@ -356,6 +356,7 @@ class _PlantillaFormScaffoldState
               idTipoPrenda: state.idTipoPrenda!,
               especificaciones: state.especificaciones,
               precioPlantilla: precioTotal,
+              tiempoProduccionUnitario: state.tiempoProduccionUnitario,
               tallasSeleccionadas: state.tallasSeleccionadas,
               materiales: state.materiales,
             );
@@ -368,6 +369,7 @@ class _PlantillaFormScaffoldState
               idTipoPrenda: state.idTipoPrenda!,
               especificaciones: state.especificaciones,
               precioPlantilla: precioTotal,
+              tiempoProduccionUnitario: state.tiempoProduccionUnitario,
               tallasSeleccionadas: state.tallasSeleccionadas,
               materiales: state.materiales,
             );

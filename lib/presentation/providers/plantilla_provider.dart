@@ -95,6 +95,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     required int idTipoPrenda,
     required String especificaciones,
     required double precioPlantilla,
+    required double tiempoProduccionUnitario,
     required List<int> tallasSeleccionadas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -105,6 +106,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
         idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
         precioPlantilla: precioPlantilla,
+        tiempoProduccionUnitario: tiempoProduccionUnitario,
         tallasSeleccionadas: tallasSeleccionadas,
         materiales: materiales,
       );
@@ -126,6 +128,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
     required int idTipoPrenda,
     required String especificaciones,
     required double precioPlantilla,
+    required double tiempoProduccionUnitario,
     required List<int> tallasSeleccionadas,
     required List<MaterialPlantilla> materiales,
   }) async {
@@ -137,6 +140,7 @@ class PlantillaNotifier extends AsyncNotifier<List<PlantillaModel>> {
         idTipoPrenda: idTipoPrenda,
         especificaciones: especificaciones,
         precioPlantilla: precioPlantilla,
+        tiempoProduccionUnitario: tiempoProduccionUnitario,
         tallasSeleccionadas: tallasSeleccionadas,
         materiales: materiales,
       );

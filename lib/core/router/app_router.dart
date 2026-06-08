@@ -26,6 +26,8 @@ import '../../presentation/pages/admin/dashboard/dashboard_page.dart';
 import '../../presentation/pages/cajas/dashboard/ventas_dashboard_page.dart';
 import '../../presentation/pages/admin/balance/balance_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
+import '../../presentation/pages/produccion/scheduling/scheduling_page.dart';
+import '../../presentation/widgets/notificaciones/notification_center.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
 import '../../presentation/layouts/splash_screen_page.dart';
@@ -135,22 +137,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             const OrdenPage(),              // 1. Órdenes
             const InventarioPage(),         // 2. Inventario
             const ProduccionPage(),// 3. Producción
-            const PlantillasPage(),         // 4. Plantillas
-            const ConjuntosPage(),          // 5. Conjuntos
-            const ClientesPage(),           // 6. Clientes
-            // _buildPlaceholder('Pagos'),     // (Comentado temporalmente)
-            const BalancePage(),             // 7. Balance Financiero
-            const UsuariosPage(),           // 8. Usuarios
-            // _buildPlaceholder('Configuración'), // (Comentado temporalmente)
-            // _buildPlaceholder('Avisos'),    // (Comentado temporalmente)
+            const SchedulingPage(),         // 4. Scheduling
+            const PlantillasPage(),         // 5. Plantillas
+            const ConjuntosPage(),          // 6. Conjuntos
+            const ClientesPage(),           // 7. Clientes
+            const BalancePage(),             // 8. Balance Financiero
+            const UsuariosPage(),           // 9. Usuarios
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: NotificationCenter(),
+            ), // 10. Avisos
           ],
           railDestinations: _buildRailFromRole('1'),
           bottomNavItems: _buildBottomFromRole('1'),
         ),
       ),
 
-      // ────────── ROL 2: PRODUCCIÓN (3 Páginas) ──────────
-      // Todo en construcción como pediste, y sin Órdenes
+      // ────────── ROL 2: PRODUCCIÓN (5 Páginas) ──────────
       GoRoute(
         path: '/produccion',
         builder: (context, state) => MainLayout(
@@ -158,22 +161,29 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             const ProduccionDashboardPage(), // 0. Dashboard
             const InventarioPage(), // 1. Inventario
             const ProduccionPage(), // 2. Producción
+            const SchedulingPage(), // 3. Scheduling
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: NotificationCenter(),
+            ), // 4. Avisos
           ],
           railDestinations: _buildRailFromRole('2'),
           bottomNavItems: _buildBottomFromRole('2'),
         ),
       ),
 
-      // ────────── ROL 3: VENTAS (Páginas activas) ──────────
-      // Ahora incluye la OrdenPage funcional
+      // ────────── ROL 3: VENTAS (4 Páginas) ──────────
       GoRoute(
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: [
             const VentasDashboardPage(), // 0. Dashboard
-            const OrdenPage(), // 1. Órdenes (Movido aquí)
+            const OrdenPage(), // 1. Órdenes
             const ClientesPage(), // 2. Clientes
-            // _buildPlaceholder('Pagos'), // (Comentado temporalmente)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: NotificationCenter(),
+            ), // 3. Avisos
           ],
           railDestinations: _buildRailFromRole('3'),
           bottomNavItems: _buildBottomFromRole('3'),

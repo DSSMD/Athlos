@@ -241,10 +241,7 @@ class _InfoGeneralCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _InfoRow(
-            label: 'Nombre',
-            value: state.nombre.isEmpty ? '—' : state.nombre,
-          ),
+          _InfoRow(label: 'Nombre', value: state.nombre.isEmpty ? '—' : state.nombre),
           const SizedBox(height: AppSpacing.sm),
           _InfoRow(
             label: 'Categoría',
@@ -254,6 +251,20 @@ class _InfoGeneralCard extends StatelessWidget {
           _InfoRow(label: 'Tipo de prenda', value: _nombreTipo()),
           const SizedBox(height: AppSpacing.sm),
           _InfoRow(label: 'Versión', value: _versionLabel()),
+          const SizedBox(height: AppSpacing.sm),
+          _InfoRow(
+            label: 'Precio',
+            value: state.precioPlantilla > 0
+                ? '${state.precioPlantilla.toStringAsFixed(2)} Bs.'
+                : 'Sin precio',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _InfoRow(
+            label: 'T. producción',
+            value: state.tiempoProduccionUnitario > 0
+                ? '${state.tiempoProduccionUnitario.toStringAsFixed(2)} h/unidad'
+                : 'No definido',
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Especificaciones',

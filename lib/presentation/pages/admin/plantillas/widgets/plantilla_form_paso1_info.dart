@@ -50,6 +50,8 @@ class _PlantillaFormPaso1InfoState
     extends ConsumerState<PlantillaFormPaso1Info> {
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _especificacionesCtrl;
+  late final TextEditingController _precioCtrl;
+  late final TextEditingController _tiempoCtrl;
 
   @override
   void initState() {
@@ -59,12 +61,24 @@ class _PlantillaFormPaso1InfoState
     _especificacionesCtrl = TextEditingController(
       text: initial.especificaciones,
     );
+    _precioCtrl = TextEditingController(
+      text: initial.precioPlantilla > 0
+          ? initial.precioPlantilla.toString()
+          : '',
+    );
+    _tiempoCtrl = TextEditingController(
+      text: initial.tiempoProduccionUnitario > 0
+          ? initial.tiempoProduccionUnitario.toString()
+          : '',
+    );
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
     _especificacionesCtrl.dispose();
+    _precioCtrl.dispose();
+    _tiempoCtrl.dispose();
     super.dispose();
   }
 
@@ -110,6 +124,13 @@ class _PlantillaFormPaso1InfoState
       if (_especificacionesCtrl.text != next.especificaciones) {
         _especificacionesCtrl.text = next.especificaciones;
       }
+      final precioStr =
+          next.precioPlantilla > 0 ? next.precioPlantilla.toString() : '';
+      if (_precioCtrl.text != precioStr) _precioCtrl.text = precioStr;
+      final tiempoStr = next.tiempoProduccionUnitario > 0
+          ? next.tiempoProduccionUnitario.toString()
+          : '';
+      if (_tiempoCtrl.text != tiempoStr) _tiempoCtrl.text = tiempoStr;
     });
 
     // ─── Estado derivado de la secuencia ──────────────────────────────────
@@ -267,12 +288,35 @@ class _PlantillaFormPaso1InfoState
             ),
             const SizedBox(height: AppSpacing.md),
 
-            // ── PASO D: Especificaciones (siempre disponible, opcional) ──
+            // ── PASO D: Precio unitario ──────────────────────────────────
+            _label('Precio unitario (Bs.) *'),
+            TextFormField(
+              controller: _precioCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                hintText: 'Ej: 25.50',
+                prefixText: 'Bs. ',
+              ),
+              onChanged: (v) {
+                final parsed = double.tryParse(v);
+                if (parsed != null) notifier.setPrecioPlantilla(parsed);
+              },
+              validator: (v) {
+                final parsed = double.tryParse(v ?? '');
+                if (parsed == null || parsed < 0) {
+                  return 'Ingresá un precio válido (0 o mayor)';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // ── PASO E: Especificaciones ─────────────────────────────────
             _label('Especificaciones (opcional)'),
             TextFormField(
               controller: _especificacionesCtrl,
-              maxLines: 5,
-              minLines: 4,
+              maxLines: 4,
+              minLines: 3,
               maxLength: 1000,
               decoration: const InputDecoration(
                 hintText:
@@ -280,6 +324,33 @@ class _PlantillaFormPaso1InfoState
               ),
               onChanged: notifier.setEspecificaciones,
               validator: _validarEspecificaciones,
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // ── PASO F: Tiempo de producción ────────────────────────────
+            _label(
+              'Tiempo de producción (horas/unidad)',
+              hint: 'Necesario para el scheduling de órdenes',
+            ),
+            TextFormField(
+              controller: _tiempoCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                hintText: 'Ej: 0.5 = 30 min, 1.0 = 1 hora, 2.5 = 2:30 hs',
+                suffixText: 'h/u',
+              ),
+              onChanged: (v) {
+                final parsed = double.tryParse(v);
+                notifier.setTiempoProduccionUnitario(parsed ?? 0.0);
+              },
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null; // opcional
+                final parsed = double.tryParse(v);
+                if (parsed == null || parsed < 0) {
+                  return 'Ingresá un valor válido (0 o mayor)';
+                }
+                return null;
+              },
             ),
           ],
         ),

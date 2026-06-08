@@ -61,6 +61,13 @@ class SidebarMenuConfig {
     section: SidebarSection.operaciones,
   );
 
+  static const itemScheduling = SidebarItem(
+    icon: Icons.schedule_outlined,
+    selectedIcon: Icons.schedule,
+    label: 'Scheduling',
+    section: SidebarSection.operaciones,
+  );
+
   static const itemPlantillas = SidebarItem(
     icon: Icons.checkroom_outlined,
     selectedIcon: Icons.checkroom,
@@ -135,21 +142,21 @@ class SidebarMenuConfig {
       itemOrdenes, // 1
       itemInventario, // 2
       itemProduccion, // 3
-      itemPlantillas, // 4
-      itemConjuntos, // 5 💡 NUEVO ÍTEM INDEPENDIENTE
-      itemClientes, // 6
-      // itemPagos,          // 7 (Placeholder comentado por ahora)
-      itemBalance,        // 7. Balance Financiero
-      itemUsuarios,       // 8
-      // itemConfiguracion,  // 9 (Placeholder comentado por ahora)
-      itemNotificaciones, // 10 (Placeholder comentado por ahora)
+      itemScheduling, // 4
+      itemPlantillas, // 5
+      itemConjuntos, // 6
+      itemClientes, // 7
+      itemBalance, // 8
+      itemUsuarios, // 9
+      itemNotificaciones, // 10
     ],
     '2': [
-      // PRODUCCIÓN: 3 ítems base + Avisos
-      itemDashboard,
-      itemInventario,
-      itemProduccion,
-      itemNotificaciones, // Avisos — abre el panel, no navega a page
+      // PRODUCCIÓN: base + Scheduling + Avisos
+      itemDashboard, // 0
+      itemInventario, // 1
+      itemProduccion, // 2
+      itemScheduling, // 3
+      itemNotificaciones, // 4
     ],
     '3': [
       // VENTAS: ítems base + Avisos
