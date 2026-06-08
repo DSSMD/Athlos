@@ -23,5 +23,8 @@ class RouterNotifier extends ChangeNotifier {
 
     // 2. Escuchamos cambios en tu perfil completo (Nombre y Rol)
     _ref.listen(userProfileProvider, (_, _) => notifyListeners());
+
+    // 3. Escuchamos cambios en la necesidad de configuración inicial
+    _ref.listen(needsAdminSetupProvider, (_, _) => notifyListeners());
   }
 }

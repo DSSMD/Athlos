@@ -14,6 +14,7 @@ import '../../presentation/providers/auth_provider.dart';
 
 // Ajusta estas rutas a tus pantallas
 import '../../presentation/pages/auth/login_page.dart';
+import '../../presentation/pages/auth/setup_page.dart';
 import '../../presentation/layouts/main_layout.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
@@ -22,6 +23,8 @@ import '../../presentation/pages/produccion/produccion_page.dart';
 
 import '../../presentation/pages/admin/clientes_page.dart';
 import '../../presentation/pages/admin/dashboard/dashboard_page.dart';
+import '../../presentation/pages/cajas/dashboard/ventas_dashboard_page.dart';
+import '../../presentation/pages/admin/balance/balance_page.dart';
 import '../../presentation/pages/admin/plantillas/plantillas_page.dart';
 
 //import '../../presentation/models/cliente_mock.dart';
@@ -38,12 +41,25 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
     redirect: (context, state) {
       final initAsync = ref.watch(appInitProvider);
+      final needsSetupAsync = ref.watch(needsAdminSetupProvider);
       final authAsync = ref.read(authStateProvider);
       final path = state.uri.path;
 
-      // Inicialización de la app → splash siempre al arrancar
-      if (initAsync.isLoading) {
+      // Inicialización de la app o verificación de setup → splash siempre al arrancar
+      if (initAsync.isLoading || needsSetupAsync.isLoading) {
         return path == '/loading' ? null : '/loading';
+      }
+
+      final needsSetup = needsSetupAsync.value ?? false;
+
+      // Si se necesita configuración inicial, forzar la ruta /setup
+      if (needsSetup) {
+        return path == '/setup' ? null : '/setup';
+      }
+
+      // Si no necesita setup pero el usuario intenta ingresar a /setup, mandarlo a /login
+      if (path == '/setup') {
+        return '/login';
       }
 
       // Permitir callback externo
@@ -101,6 +117,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreenPage(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/setup', builder: (context, state) => const SetupPage()),
 
       // ────────── RUTA GLOBAL DE PERFIL ──────────
       // Cualquier rol que haga context.push('/perfil') abrirá esta pantalla
@@ -115,15 +132,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MainLayout(
           pages: [
             const DashboardPage(), // 0. Dashboard
-            const OrdenPage(), // 1. Órdenes
-            const InventarioPage(), // 2. Inventario
-            const ProduccionPage(), // 3. Producción
-            const PlantillasPage(), // 4. Plantillas
-            const ConjuntosPage(), // 5. Conjuntos
-            const ClientesPage(), // 6. Clientes
+            const OrdenPage(),              // 1. Órdenes
+            const InventarioPage(),         // 2. Inventario
+            const ProduccionPage(),// 3. Producción
+            const PlantillasPage(),         // 4. Plantillas
+            const ConjuntosPage(),          // 5. Conjuntos
+            const ClientesPage(),           // 6. Clientes
             // _buildPlaceholder('Pagos'),     // (Comentado temporalmente)
-            // _buildPlaceholder('Balance'),   // (Comentado temporalmente)
-            const UsuariosPage(), // 7. Usuarios (Antes 9)
+            const BalancePage(),             // 7. Balance Financiero
+            const UsuariosPage(),           // 8. Usuarios
             // _buildPlaceholder('Configuración'), // (Comentado temporalmente)
             // _buildPlaceholder('Avisos'),    // (Comentado temporalmente)
           ],
@@ -153,7 +170,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/ventas',
         builder: (context, state) => MainLayout(
           pages: [
-            _buildPlaceholder('Dashboard Ventas'), // 0. Dashboard
+            const VentasDashboardPage(), // 0. Dashboard
             const OrdenPage(), // 1. Órdenes (Movido aquí)
             const ClientesPage(), // 2. Clientes
             // _buildPlaceholder('Pagos'), // (Comentado temporalmente)

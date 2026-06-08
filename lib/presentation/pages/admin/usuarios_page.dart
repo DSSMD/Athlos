@@ -39,6 +39,9 @@ import '../../widgets/shared/sticky_topbar.dart';
 
 import '../../../domain/models/usuario_model.dart';
 import '../../providers/usuario_provider.dart';
+import '../../providers/pago_provider.dart'; // 💰 Saldos de trabajadores
+import '../../../domain/models/pago_trabajador_model.dart'; // ResumenPagoProduccionModel
+import '../../components/produccion/pago_trabajador_dialog.dart'; // Diálogo de pago
 
 class UsuariosPage extends ConsumerStatefulWidget {
   const UsuariosPage({super.key});
@@ -437,7 +440,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
               onPressed: () => showUserFormDrawer(context),
             ),
             bottom: SearchInput(
-              hintText: 'Buscar usuario...',
+              hintText: 'Buscar trabajador...',
               controller: _searchController,
               onChanged: (_) => setState(() {}),
             ),
@@ -445,7 +448,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
         else
           StickyTopbar(
             title: 'Usuarios',
-            searchHint: 'Buscar usuario...',
+            searchHint: 'Buscar trabajador...',
             searchController: _searchController,
             onSearchChanged: (_) => setState(() {}),
             newButtonLabelDesktop: 'Nuevo usuario',
@@ -463,12 +466,12 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                   selected: _selectedTab,
                   onChanged: (i) => setState(() {
                     _selectedTab = i;
-                    _searchController.clear(); // Limpiamos búsqueda al cambiar
+                    _searchController.clear();
                   }),
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
-                // 💡 Tarjeta de resumen de RRHH
+                // 💰 Tarjeta de resumen RRHH
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   decoration: BoxDecoration(
@@ -495,7 +498,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Total de trabajadores activos',
+                              'Trabajadores activos',
                               style: AppTypography.small.copyWith(
                                 color: AppColors.textMuted,
                               ),
@@ -510,7 +513,8 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
@@ -519,20 +523,15 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                     label: const Text('Exportar trabajadores'),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.xl),
 
-                // 💡 LISTADO DINÁMICO
-                if (trabajadores.isEmpty)
-                  const EmptyState(
-                    icon: Icons.badge_outlined,
-                    title: 'No hay trabajadores',
-                    subtitle:
-                        'Los usuarios con rol de Producción o Cajas aparecerán aquí.',
-                  )
-                else if (isMobile)
-                  _MobileList(users: trabajadores)
-                else
-                  _DesktopTable(users: trabajadores),
+                // 💰 Tabla de saldos de trabajadores (usa la VIEW de Supabase)
+                // TODO:(PAGOS) Este bloque requiere que la VIEW vista_pagos_produccion_por_orden
+                // esté creada en Supabase. Si no, mostrará error o lista vacía.
+                _SaldosTrabajadoresTable(
+                  trabajadores: trabajadores,
+                  query: query,
+                ),
               ],
             ),
           ),
@@ -541,6 +540,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
     );
   }
 }
+
 // ══════════════════════════════════════════════════════════════════════════════
 // TAB SELECTOR — pestañas Usuarios / Pagos a trabajadores
 // ══════════════════════════════════════════════════════════════════════════════
@@ -798,3 +798,312 @@ class _MobileList extends StatelessWidget {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TABLA DE SALDOS DE TRABAJADORES (pestaña Trabajadores)
+// Muestra los saldos globales de todos los trabajadores usando la VIEW de Supabase
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _SaldosTrabajadoresTable extends ConsumerWidget {
+  final List<UsuarioModel> trabajadores;
+  final String query;
+
+  const _SaldosTrabajadoresTable({
+    required this.trabajadores,
+    required this.query,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saldosAsync = ref.watch(saldosGlobalesTrabajadoresProvider);
+
+    // Si no hay trabajadores registrados, mostramos estado vacío simple
+    if (trabajadores.isEmpty) {
+      return const EmptyState(
+        icon: Icons.badge_outlined,
+        title: 'No hay trabajadores',
+        subtitle: 'Los usuarios con rol de Producción o Cajas aparecerán aquí.',
+      );
+    }
+
+    return saldosAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl2),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) {
+        // Fallback: si la VIEW no existe aún, mostramos solo la lista de usuarios
+        // TODO:(PAGOS) Si ves "relation vista_pagos_produccion_por_orden does not exist",
+        // es que no creaste la VIEW en Supabase todavía. Hazlo y este error desaparece.
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_outlined,
+                      size: 16, color: AppColors.warning),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'La VIEW de saldos no está disponible aún. '
+                      'Crea vista_pagos_produccion_por_orden en Supabase.',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _DesktopTable(users: trabajadores),
+          ],
+        );
+      },
+      data: (saldos) {
+        // Cruzamos saldos de la VIEW con la lista de trabajadores del provider de usuarios
+        // para mostrar solo los que pasaron el filtro de búsqueda
+        final idsTrabajadoresFiltrados =
+            trabajadores.map((t) => t.idTrabajador).whereType<String>().toSet();
+
+        final saldosFiltrados = saldos
+            .where((s) => idsTrabajadoresFiltrados.contains(s.idTrabajador))
+            .toList();
+
+        // Si ningún trabajador tiene saldos, mostramos la lista normal
+        if (saldosFiltrados.isEmpty) {
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withOpacity(0.07),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        size: 16, color: AppColors.info),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Ningún trabajador tiene asignaciones con monto acordado aún.',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.info,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _DesktopTable(users: trabajadores),
+            ],
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              // Header de la tabla
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
+                ),
+                child: Row(
+                  children: [
+                    _th('TRABAJADOR', flex: 3),
+                    _th('ÁREA', flex: 2),
+                    _th('LOTES', flex: 1),
+                    _th('PACTADO', flex: 2),
+                    _th('PAGADO', flex: 2),
+                    _th('SALDO', flex: 2),
+                    _th('ESTADO', flex: 2),
+                    const SizedBox(width: 80),
+                  ],
+                ),
+              ),
+              // Filas
+              for (var i = 0; i < saldosFiltrados.length; i++) ...[
+                _SaldoRow(
+                  saldo: saldosFiltrados[i],
+                  onPagoRegistrado: () =>
+                      ref.invalidate(saldosGlobalesTrabajadoresProvider),
+                ),
+                if (i < saldosFiltrados.length - 1)
+                  const Divider(height: 1, color: AppColors.border),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _th(String label, {int flex = 1}) => Expanded(
+        flex: flex,
+        child: Text(
+          label,
+          style: AppTypography.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
+}
+
+// Fila individual de la tabla de saldos
+class _SaldoRow extends StatelessWidget {
+  final ResumenPagoProduccionModel saldo;
+  final VoidCallback onPagoRegistrado;
+
+  const _SaldoRow({
+    required this.saldo,
+    required this.onPagoRegistrado,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color estadoColor = switch (saldo.estadoPagoGlobal) {
+      'Liquidado' => const Color(0xFF16A34A),
+      'Con Adelantos' => const Color(0xFF2563EB),
+      _ => const Color(0xFFD97706),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          // TRABAJADOR
+          Expanded(
+            flex: 3,
+            child: Text(
+              saldo.trabajadorNombre,
+              style: AppTypography.small.copyWith(fontWeight: FontWeight.w500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // ÁREA
+          Expanded(
+            flex: 2,
+            child: Text(
+              saldo.area,
+              style: AppTypography.small.copyWith(color: AppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // LOTES
+          Expanded(
+            flex: 1,
+            child: Text(
+              '${saldo.lotesAsignados}',
+              style: AppTypography.small,
+            ),
+          ),
+          // PACTADO
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Bs. ${saldo.totalPactado.toStringAsFixed(2)}',
+              style: AppTypography.small,
+            ),
+          ),
+          // PAGADO
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Bs. ${saldo.totalAdelantos.toStringAsFixed(2)}',
+              style: AppTypography.small.copyWith(
+                color: const Color(0xFF16A34A),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          // SALDO
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Bs. ${saldo.saldoPendiente.toStringAsFixed(2)}',
+              style: AppTypography.small.copyWith(
+                color: saldo.saldoPendiente <= 0
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFFD97706),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          // ESTADO badge
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: estadoColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: estadoColor.withOpacity(0.3)),
+              ),
+              child: Text(
+                saldo.estadoPagoGlobal,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: estadoColor,
+                ),
+              ),
+            ),
+          ),
+          // Botón pagar
+          SizedBox(
+            width: 80,
+            child: saldo.estadoPagoGlobal != 'Liquidado'
+                ? TextButton(
+                    onPressed: () async {
+                      final pagado = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => PagoTrabajadorDialog(
+                          idTrabajador: saldo.idTrabajador,
+                          nombreTrabajador: saldo.trabajadorNombre,
+                          numOrden: saldo.numOrden,
+                          saldoPendiente: saldo.saldoPendiente,
+                        ),
+                      );
+                      if (pagado == true) onPagoRegistrado();
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary500,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text('Pagar', style: TextStyle(fontSize: 13)),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
