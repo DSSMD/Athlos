@@ -43,6 +43,12 @@ class OrdenModel {
   final double? tiempoProcesamientoEstimado;
   final double costoTotal;
 
+  // ───── Prioridad ─────
+  /// Valores esperados de la BD: 'urgente', 'alta', 'normal'.
+  /// Se normaliza a minúsculas y cae a 'normal' cuando viene null
+  /// (registros viejos previos al ALTER TABLE).
+  final String prioridad;
+
   // ───── Resumen denormalizado (LEGACY: derivado en fromJson para listas) ─────
   /// LEGACY: resumen de productos para listas (ej: "Deportivo (10), Polera (8)").
   /// Se calcula derivado de detalleOrden en fromJson.
@@ -82,6 +88,7 @@ class OrdenModel {
     required this.fechaEntrega,
     this.tiempoProcesamientoEstimado,
     required this.costoTotal,
+    this.prioridad = 'normal',
     required this.producto,
     required this.cantidad,
     this.detalleOrden = const [],
@@ -148,6 +155,7 @@ class OrdenModel {
       tiempoProcesamientoEstimado:
           (json['tiempo_procesamiento_estimado'] as num?)?.toDouble(),
       costoTotal: (json['costo_total'] as num?)?.toDouble() ?? 0.0,
+      prioridad: (json['prioridad'] as String?)?.toLowerCase() ?? 'normal',
       producto: resumen,
       cantidad: totalCant,
       detalleOrden: detalleParsed,

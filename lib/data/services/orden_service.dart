@@ -24,7 +24,7 @@ class OrdenService {
           .select('''
             num_orden, id_cliente, id_estado, id_estado_pago,
             fecha_orden, fecha_entrega, costo_total, notas_adicionales,
-            tiempo_procesamiento_estimado, imagen_modelo,
+            tiempo_procesamiento_estimado, imagen_modelo, prioridad,
             cliente (nom_cliente, apellido_cliente, num_telefono, ci_cliente, email, direccion),
             estado_orden (nombre_estado),
             estado_pago (nombre_estado),
@@ -59,7 +59,7 @@ class OrdenService {
           .select('''
             num_orden, id_cliente, id_estado, id_estado_pago,
             fecha_orden, fecha_entrega, costo_total, notas_adicionales,
-            tiempo_procesamiento_estimado, imagen_modelo,
+            tiempo_procesamiento_estimado, imagen_modelo, prioridad,
             cliente (nom_cliente, apellido_cliente, num_telefono, ci_cliente, email, direccion),
             estado_orden (nombre_estado),
             estado_pago (nombre_estado),
@@ -125,9 +125,11 @@ class OrdenService {
           usuarioExiste = userCheck != null;
         }
 
-        final String desc = descripcion ?? (nuevoIdEstado == 4 
-            ? 'Pedido entregado al cliente'
-            : nuevoIdEstado == 3 
+        final String desc =
+            descripcion ??
+            (nuevoIdEstado == 4
+                ? 'Pedido entregado al cliente'
+                : nuevoIdEstado == 3
                 ? 'Producción finalizada de todos los lotes'
                 : 'Avance de estado de orden');
 
@@ -139,7 +141,9 @@ class OrdenService {
           'descripcion_detalle': desc,
         });
       } catch (auditError) {
-        debugPrint('SYNC AUDIT WARNING: No se pudo registrar la auditoría: $auditError');
+        debugPrint(
+          'SYNC AUDIT WARNING: No se pudo registrar la auditoría: $auditError',
+        );
       }
     } catch (e) {
       throw Exception('Error al actualizar el estado de la orden: $e');
@@ -149,7 +153,9 @@ class OrdenService {
   // =================================================================
   // LECTURA: AUDITORÍA / HISTORIAL DE CAMBIOS DE ORDEN
   // =================================================================
-  Future<List<AuditoriaOrdenModel>> obtenerAuditoriaOrden(String numOrden) async {
+  Future<List<AuditoriaOrdenModel>> obtenerAuditoriaOrden(
+    String numOrden,
+  ) async {
     try {
       final response = await _supabase
           .from('auditoria_ordenes')
@@ -164,7 +170,10 @@ class OrdenService {
           .order('fecha_cambio', ascending: false);
 
       return (response as List<dynamic>)
-          .map((json) => AuditoriaOrdenModel.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                AuditoriaOrdenModel.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       throw Exception('Error al obtener la auditoría de la orden: $e');

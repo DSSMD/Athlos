@@ -14,10 +14,13 @@ final ordenServiceProvider = Provider<OrdenService>((ref) {
 });
 
 final historialOrdenProvider =
-    FutureProvider.family<List<AuditoriaOrdenModel>, String>((ref, numOrden) async {
-  final service = ref.watch(ordenServiceProvider);
-  return await service.obtenerAuditoriaOrden(numOrden);
-});
+    FutureProvider.family<List<AuditoriaOrdenModel>, String>((
+      ref,
+      numOrden,
+    ) async {
+      final service = ref.watch(ordenServiceProvider);
+      return await service.obtenerAuditoriaOrden(numOrden);
+    });
 
 // Proveedor de la lista de órdenes (AsyncNotifier)
 final ordenesProvider =
@@ -40,14 +43,51 @@ final pagosOrdenProvider =
     });
 
 class OrdenesNotifier extends AsyncNotifier<List<OrdenModel>> {
+  // Canal de Realtime sobre la tabla `orden`. Vive mientras el provider
+  // esté activo; se desuscribe en onDispose.
+  RealtimeChannel? _channel;
+
   @override
   Future<List<OrdenModel>> build() async {
+    _subscribeToRealtime();
+
+    ref.onDispose(() {
+      _channel?.unsubscribe();
+      _channel = null;
+    });
+
     return _fetchOrdenes();
   }
 
   Future<List<OrdenModel>> _fetchOrdenes() async {
     final service = ref.read(ordenServiceProvider);
     return await service.obtenerOrdenes();
+  }
+
+  // Suscripción Realtime a cambios en la tabla `orden`. Ante cualquier
+  // INSERT/UPDATE/DELETE re-fetcha la lista completa y setea state
+  // directamente con AsyncValue.data — NO con invalidateSelf, porque eso
+  // reinicia build() y entra en loop infinito de re-subscripciones.
+  void _subscribeToRealtime() {
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id ?? 'anon';
+
+    _channel = supabase
+        .channel('ordenes-realtime-$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orden',
+          callback: (payload) async {
+            try {
+              final ordenes = await _fetchOrdenes();
+              state = AsyncValue.data(ordenes);
+            } catch (e, st) {
+              state = AsyncValue.error(e, st);
+            }
+          },
+        )
+        .subscribe();
   }
 
   // Método para recargar la lista después de crear una nueva orden
