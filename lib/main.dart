@@ -131,16 +131,24 @@ class MyApp extends ConsumerWidget {
     final authAsync = ref.watch(authStateProvider);
 
     if (authAsync.isLoading) {
-      return const MaterialApp(
+      return MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          builder: (context) => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        ),
       );
     }
 
     if (authAsync.hasError) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: Text("Error: ${authAsync.error}"))),
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: Center(child: Text("Error: ${authAsync.error}")),
+          ),
+        ),
       );
     }
 

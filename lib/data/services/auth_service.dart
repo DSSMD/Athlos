@@ -72,7 +72,7 @@ class AuthService {
             )
           ''')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
       return response;
     } catch (e) {

@@ -69,7 +69,15 @@ final userProfileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   if (authState.value?.session == null) return null;
 
   final authService = ref.watch(authServiceProvider);
-  return authService.getUserProfile();
+  final perfil = await authService.getUserProfile();
+
+  if (perfil == null) {
+    // Si el usuario está autenticado pero no tiene perfil en la BD, cerramos la sesión para limpiar el estado huérfano
+    await authService.signOut();
+    return null;
+  }
+
+  return perfil;
 });
 
 final isLoggedInProvider = Provider<bool>((ref) {
