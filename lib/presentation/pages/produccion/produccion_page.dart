@@ -163,7 +163,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                           final lotesDeEstaOrden = lotesPorOrden[ordenId]!;
                           final cliente = lotesDeEstaOrden.first.cliente;
 
-                          final Function() abrirKanban = () {
+                          abrirKanban() {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -174,7 +174,7 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                 ),
                               ),
                             );
-                          };
+                          }
 
                           return Card(
                             elevation: 0,

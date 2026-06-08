@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../components/ordenes/orden_items_editor.dart';
 import '../../components/ordenes/orden_workflow_stepper.dart';
+import '../../components/ordenes/orden_produccion_pagos_card.dart'; // 💰 Pagos a producción
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -174,6 +175,9 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
               _FechasClaveCard(orden: widget.orden),
               const SizedBox(height: AppSpacing.xl),
               _HistorialCard(numOrden: widget.orden.numOrden),
+              const SizedBox(height: AppSpacing.xl),
+              // 💰 Pagos a Producción — resumen por trabajador desde la VIEW de Supabase
+              OrdenProduccionPagosCard(numOrden: widget.orden.numOrden),
             ],
           ),
         ),
@@ -210,6 +214,9 @@ class _OrdenDetallePageState extends ConsumerState<OrdenDetallePage> {
         _FechasClaveCard(orden: widget.orden),
         const SizedBox(height: AppSpacing.lg),
         _HistorialCard(numOrden: widget.orden.numOrden),
+        const SizedBox(height: AppSpacing.lg),
+        // 💰 Pagos a Producción — resumen por trabajador desde la VIEW de Supabase
+        OrdenProduccionPagosCard(numOrden: widget.orden.numOrden),
       ],
     );
   }

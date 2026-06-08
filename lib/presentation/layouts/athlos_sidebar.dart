@@ -138,10 +138,10 @@ class SidebarMenuConfig {
       itemConjuntos,      // 5 💡 NUEVO ÍTEM INDEPENDIENTE
       itemClientes,       // 6
       // itemPagos,          // 7 (Placeholder comentado por ahora)
-      // itemBalance,        // 8 (Placeholder comentado por ahora)
-      itemUsuarios,       // 7 (Ahora índice 7 en visual, antes 9)
-      // itemConfiguracion,  // 10 (Placeholder comentado por ahora)
-      // itemNotificaciones, // 11 (Placeholder comentado por ahora)
+      itemBalance,        // 7. Balance Financiero
+      itemUsuarios,       // 8
+      // itemConfiguracion,  // 9 (Placeholder comentado por ahora)
+      // itemNotificaciones, // 10 (Placeholder comentado por ahora)
     ],
     '2': [
       // PRODUCCIÓN: 3 ítems (Órdenes fue removido de aquí)

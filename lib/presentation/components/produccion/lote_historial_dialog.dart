@@ -35,6 +35,8 @@ class _LoteHistorialDialogState extends State<LoteHistorialDialog> {
           .select('''
             fecha_inicio,
             fecha_fin,
+            monto_acordado,
+            estado_pago,
             trabajadores (
               profiles (
                 nombre,
@@ -149,6 +151,12 @@ class _LoteHistorialDialogState extends State<LoteHistorialDialog> {
           'dd MMM, HH:mm',
         ).format(fecha);
 
+        // Datos financieros del registro de asignación
+        final double monto =
+            (item['monto_acordado'] as num?)?.toDouble() ?? 0.0;
+        final String estadoPago =
+            item['estado_pago']?.toString() ?? 'Pendiente';
+
         final bool esUltimo = index == _historial.length - 1;
 
         return Row(
@@ -166,7 +174,7 @@ class _LoteHistorialDialogState extends State<LoteHistorialDialog> {
                   ),
                 ),
                 if (!esUltimo)
-                  Container(width: 2, height: 50, color: AppColors.border),
+                  Container(width: 2, height: 70, color: AppColors.border),
               ],
             ),
             const SizedBox(width: AppSpacing.md),
@@ -197,6 +205,21 @@ class _LoteHistorialDialogState extends State<LoteHistorialDialog> {
                     style: AppTypography.small.copyWith(
                       color: AppColors.textSecondary,
                     ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  // 💰 Fila financiera: monto + badge de estado de pago
+                  Row(
+                    children: [
+                      Text(
+                        'Bs. ${monto.toStringAsFixed(2)}',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _EstadoPagoBadge(estado: estadoPago),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
                 ],
@@ -236,6 +259,41 @@ class _LoteHistorialDialogState extends State<LoteHistorialDialog> {
           style: AppTypography.small.copyWith(color: AppColors.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Badge de estado de pago del trabajador en este lote
+// ──────────────────────────────────────────────────────────────────────────────
+class _EstadoPagoBadge extends StatelessWidget {
+  final String estado;
+  const _EstadoPagoBadge({required this.estado});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = switch (estado) {
+      'Pagado' => const Color(0xFF16A34A),    // verde
+      'Parcial' => const Color(0xFF2563EB),   // azul
+      _ => const Color(0xFFD97706),            // naranja (Pendiente)
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        estado,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }
