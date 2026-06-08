@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:workspace/presentation/layouts/athlos_sidebar.dart';
 import 'package:workspace/presentation/pages/perfil/mi_perfil_page.dart';
-import 'package:workspace/presentation/pages/trabajador/trabajador_dashboard_page.dart';
+import 'package:workspace/presentation/pages/produccion/dashboard/produccion_dashboard_page.dart';
 import 'package:workspace/presentation/pages/admin/inventario/inventario_page.dart';
 import 'package:workspace/presentation/pages/admin/conjuntos/conjuntos_page.dart';
 import 'app_init_provider.dart';
@@ -155,7 +155,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/produccion',
         builder: (context, state) => MainLayout(
           pages: [
-            const TrabajadorDashboardPage(), // 0. Dashboard
+            const ProduccionDashboardPage(), // 0. Dashboard
             const InventarioPage(), // 1. Inventario
             const ProduccionPage(), // 2. Producción
           ],
