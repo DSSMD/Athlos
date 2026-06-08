@@ -669,6 +669,9 @@ class _Footer extends StatelessWidget {
           Expanded(
             child: OutlinedButton(
               onPressed: isSaving ? null : onCancel,
+              style: FilledButton.styleFrom(
+                foregroundColor: AppColors.primary500
+              ),
               child: const Text('Cancelar'),
             ),
           ),
@@ -676,6 +679,10 @@ class _Footer extends StatelessWidget {
           Expanded(
             flex: 2,
             child: ElevatedButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: Colors.white
+              ),
               onPressed: isSaving ? null : onSave,
               child: isSaving
                   ? Row(

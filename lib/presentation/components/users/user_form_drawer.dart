@@ -440,8 +440,8 @@ class _UserFormDrawerState extends ConsumerState<UserFormDrawer> {
                             setState(() => _showPassword = !_showPassword),
                       ),
                       validator: (v) {
-                        if (v == null || v.length < 6) {
-                          return 'Mínimo 6 caracteres';
+                        if (v == null || v.length < 8) {
+                          return 'Mínimo 8 caracteres';
                         }
                         return null;
                       },
@@ -758,6 +758,9 @@ class _Footer extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton(
+              style: FilledButton.styleFrom(
+                foregroundColor: AppColors.primary500,
+              ),
               onPressed: isSaving ? null : onCancel,
               child: const Text('Cancelar'),
             ),
@@ -766,6 +769,10 @@ class _Footer extends StatelessWidget {
           Expanded(
             flex: 2,
             child: ElevatedButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: Colors.white
+              ),
               onPressed: isSaving ? null : onSave,
               child: isSaving
                   ? Row(

@@ -123,7 +123,9 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 
     final buffer = StringBuffer();
     // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
-    buffer.writeln('ID;Nombre;CI / NIT;Teléfono;Email;Dirección;Estado;Total Comprado (Bs);Cantidad de Órdenes');
+    buffer.writeln(
+      'ID;Nombre;CI / NIT;Teléfono;Email;Dirección;Estado;Total Comprado (Bs);Cantidad de Órdenes',
+    );
 
     for (final c in clientesReales) {
       final id = c.idCliente;
@@ -131,12 +133,16 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       final ci = c.ciCliente.replaceAll(';', ',');
       final celular = (c.numTelefono ?? '').replaceAll(';', ',');
       final email = (c.email ?? '').replaceAll(';', ',');
-      final direccion = (c.direccion ?? '').replaceAll('\n', ' ').replaceAll(';', ',');
+      final direccion = (c.direccion ?? '')
+          .replaceAll('\n', ' ')
+          .replaceAll(';', ',');
       final estado = c.activo ? 'Activo' : 'Inactivo';
       final totalComprado = c.totalComprado;
       final cantidadOrdenes = c.totalOrdenes;
 
-      buffer.writeln('$id;$nombre;$ci;$celular;$email;$direccion;$estado;$totalComprado;$cantidadOrdenes');
+      buffer.writeln(
+        '$id;$nombre;$ci;$celular;$email;$direccion;$estado;$totalComprado;$cantidadOrdenes',
+      );
     }
 
     final String csvContent = buffer.toString();
@@ -216,6 +222,8 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
             onSearchChanged: (_) => setState(() => _currentPage = 1),
             newButtonLabelDesktop: 'Nuevo cliente',
             onNewPressed: _abrirCrear,
+            newButtonColor: AppColors.primary500,
+            newTextColor: Colors.white,
           ),
         Expanded(
           child: SingleChildScrollView(
@@ -248,7 +256,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                       _currentPage = 1;
                     }),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  /*const SizedBox(height: AppSpacing.md),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
@@ -256,7 +264,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                       icon: const Icon(Icons.file_download_outlined, size: 18),
                       label: const Text('Exportar'),
                     ),
-                  ),
+                  ),*/
                 ] else
                   Row(
                     children: [
@@ -281,7 +289,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                           }),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
+                      /*const SizedBox(width: AppSpacing.md),
                       OutlinedButton.icon(
                         onPressed: _exportar,
                         icon: const Icon(
@@ -289,7 +297,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
                           size: 18,
                         ),
                         label: const Text('Exportar'),
-                      ),
+                      ),*/
                     ],
                   ),
 
@@ -529,4 +537,3 @@ class _MobileList extends StatelessWidget {
     );
   }
 }
-
