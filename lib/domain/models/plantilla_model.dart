@@ -42,6 +42,7 @@ class PlantillaModel {
     this.activa = true,
     this.especificaciones = '',
     this.precioPlantilla = 0.0,
+    this.tiempoProduccionUnitario = 0.0,
     this.tallasSeleccionadas = const [],
     this.materiales = const [],
     this.nombreTipoPrendaJoin,
@@ -54,6 +55,12 @@ class PlantillaModel {
   final int version;
   final bool activa;
   final double precioPlantilla;
+
+  /// Tiempo estimado de producción en horas por unidad.
+  /// Se usa en el algoritmo Moore-Hodgson para calcular p[j].
+  /// Valor 0 = sin tiempo definido (la plantilla no aporta al scheduling).
+  final double tiempoProduccionUnitario;
+
   final DateTime createdAt;
   final String? nombreTipoPrendaJoin;
 
@@ -71,6 +78,7 @@ class PlantillaModel {
     int? version,
     bool? activa,
     double? precioPlantilla,
+    double? tiempoProduccionUnitario,
     DateTime? createdAt,
     List<int>? tallasSeleccionadas,
     List<MaterialPlantilla>? materiales,
@@ -84,6 +92,8 @@ class PlantillaModel {
       version: version ?? this.version,
       activa: activa ?? this.activa,
       precioPlantilla: precioPlantilla ?? this.precioPlantilla,
+      tiempoProduccionUnitario:
+          tiempoProduccionUnitario ?? this.tiempoProduccionUnitario,
       createdAt: createdAt ?? this.createdAt,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
       materiales: materiales ?? this.materiales,
@@ -112,7 +122,13 @@ class PlantillaModel {
           ? rawVersion
           : int.tryParse(rawVersion?.toString() ?? '') ?? 1,
       activa: (json['activo'] as bool?) ?? true,
-      precioPlantilla: double.tryParse(json['precio_plantilla']?.toString() ?? '0') ?? 0.0,
+      precioPlantilla:
+          double.tryParse(json['precio_plantilla']?.toString() ?? '0') ?? 0.0,
+      tiempoProduccionUnitario:
+          double.tryParse(
+            json['tiempo_produccion_unitario']?.toString() ?? '0',
+          ) ??
+          0.0,
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
@@ -131,6 +147,7 @@ class PlantillaModel {
       'especificaciones': especificaciones,
       'activo': activa,
       'precio_plantilla': precioPlantilla,
+      'tiempo_produccion_unitario': tiempoProduccionUnitario,
     };
   }
 

@@ -37,6 +37,8 @@ class PlantillaFormState {
     this.categoriaPrenda,
     this.idTipoPrenda,
     this.especificaciones = '',
+    this.precioPlantilla = 0.0,
+    this.tiempoProduccionUnitario = 0.0,
     this.tallasSeleccionadas = const [],
     this.materiales = const [],
     this.pasoActual = 0,
@@ -53,6 +55,12 @@ class PlantillaFormState {
 
   final int? idTipoPrenda; // null hasta que el usuario lo elija
   final String especificaciones;
+  final double precioPlantilla;
+
+  /// Tiempo estimado de producción en horas por unidad.
+  /// Se captura en el Paso 1 del formulario.
+  final double tiempoProduccionUnitario;
+
   final List<int> tallasSeleccionadas;
   final List<MaterialPlantilla> materiales;
 
@@ -75,6 +83,8 @@ class PlantillaFormState {
     int? idTipoPrenda,
     bool clearTipo = false,
     String? especificaciones,
+    double? precioPlantilla,
+    double? tiempoProduccionUnitario,
     List<int>? tallasSeleccionadas,
     List<MaterialPlantilla>? materiales,
     int? pasoActual,
@@ -87,6 +97,9 @@ class PlantillaFormState {
           clearCategoria ? null : (categoriaPrenda ?? this.categoriaPrenda),
       idTipoPrenda: clearTipo ? null : (idTipoPrenda ?? this.idTipoPrenda),
       especificaciones: especificaciones ?? this.especificaciones,
+      precioPlantilla: precioPlantilla ?? this.precioPlantilla,
+      tiempoProduccionUnitario:
+          tiempoProduccionUnitario ?? this.tiempoProduccionUnitario,
       tallasSeleccionadas: tallasSeleccionadas ?? this.tallasSeleccionadas,
       materiales: materiales ?? this.materiales,
       pasoActual: pasoActual ?? this.pasoActual,
@@ -119,6 +132,8 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
       categoriaPrenda: categoriaPrenda,
       idTipoPrenda: p.idTipoPrenda,
       especificaciones: p.especificaciones,
+      precioPlantilla: p.precioPlantilla,
+      tiempoProduccionUnitario: p.tiempoProduccionUnitario,
       tallasSeleccionadas: p.tallasSeleccionadas,
       materiales: p.materiales,
     );
@@ -144,6 +159,12 @@ class PlantillaFormNotifier extends Notifier<PlantillaFormState> {
 
   void setEspecificaciones(String v) =>
       state = state.copyWith(especificaciones: v);
+
+  void setPrecioPlantilla(double v) =>
+      state = state.copyWith(precioPlantilla: v);
+
+  void setTiempoProduccionUnitario(double v) =>
+      state = state.copyWith(tiempoProduccionUnitario: v);
 
   // ─── PASO 2: Tallas ───────────────────────────────────────────────────────
 
