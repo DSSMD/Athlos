@@ -367,7 +367,7 @@ class _PagoTrabajadorDialogState extends ConsumerState<PagoTrabajadorDialog> {
                               ),
                             )
                           : DropdownButtonFormField<String>(
-                              value: _asignacionSeleccionada,
+                              initialValue: _asignacionSeleccionada,
                               dropdownColor: AppColors.brandWhite,
                               isExpanded: true,
                               icon: const Icon(

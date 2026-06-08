@@ -158,7 +158,7 @@ class PagoService {
         'id_trabajador': idTrabajador,
         'monto': monto,
         'tipo_pago': tipoPago,
-        if (idAsignacion != null) 'id_asignacion': idAsignacion,
+        'id_asignacion': ?idAsignacion,
         if (notas != null && notas.isNotEmpty) 'notas': notas,
         // fecha_pago se genera automáticamente con DEFAULT now()
       });

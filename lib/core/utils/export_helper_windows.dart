@@ -29,7 +29,7 @@ Future<void> saveCsvFile({
     final file = File(filePath);
 
     // Escribimos con el UTF-8 BOM (\uFEFF) para compatibilidad perfecta con Excel en Windows
-    final bytes = utf8.encode('\uFEFF' + csvContent);
+    final bytes = utf8.encode('\uFEFF$csvContent');
     await file.writeAsBytes(bytes);
 
     ScaffoldMessenger.of(context).showSnackBar(

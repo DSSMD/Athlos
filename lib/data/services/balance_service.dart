@@ -289,7 +289,7 @@ class _Bucket {
     required this.inicio,
     required this.fin,
     required this.label,
-    this.ingresos = 0,
-    this.egresos = 0,
+    this.ingresos = 0.0,
+    this.egresos = 0.0,
   });
 }

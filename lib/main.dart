@@ -28,21 +28,25 @@ import 'presentation/providers/connectivity_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Cargamos las variables de entorno de forma segura
-  await dotenv.load(fileName: ".env");
+  // ════════════════════════════════════════════════════════════════════════════
+  // ENTORNO: Comenta la línea que NO quieras usar y descomenta la que sí.
+  // ════════════════════════════════════════════════════════════════════════════
+  //await dotenv.load(fileName: ".env.local"); // 🐳 LOCAL  → Docker (supabase start)
+  await dotenv.load(fileName: ".env");    // ☁️  NUBE   → Supabase Cloud oficial
+  // ════════════════════════════════════════════════════════════════════════════
 
-  // Inicializamos Supabase usando las variables protegidas
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  // SCRUM-75: inicializa formateo de fechas en español (necesario para
-  // table_calendar y otros widgets que usan intl con locale 'es_ES').
+  // Inicializa formateo de fechas en español
   await initializeDateFormatting('es_ES', null);
 
   runApp(const ProviderScope(child: MyApp()));
 }
+
+
 
 // Cambiamos StatelessWidget por ConsumerWidget para poder leer a Riverpod
 class MyApp extends ConsumerWidget {

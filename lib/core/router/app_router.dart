@@ -14,6 +14,7 @@ import '../../presentation/providers/auth_provider.dart';
 
 // Ajusta estas rutas a tus pantallas
 import '../../presentation/pages/auth/login_page.dart';
+import '../../presentation/pages/auth/setup_page.dart';
 import '../../presentation/layouts/main_layout.dart';
 
 import '../../presentation/pages/admin/usuarios_page.dart';
@@ -39,12 +40,25 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
     redirect: (context, state) {
       final initAsync = ref.watch(appInitProvider);
+      final needsSetupAsync = ref.watch(needsAdminSetupProvider);
       final authAsync = ref.read(authStateProvider);
       final path = state.uri.path;
 
-      // Inicialización de la app → splash siempre al arrancar
-      if (initAsync.isLoading) {
+      // Inicialización de la app o verificación de setup → splash siempre al arrancar
+      if (initAsync.isLoading || needsSetupAsync.isLoading) {
         return path == '/loading' ? null : '/loading';
+      }
+
+      final needsSetup = needsSetupAsync.value ?? false;
+
+      // Si se necesita configuración inicial, forzar la ruta /setup
+      if (needsSetup) {
+        return path == '/setup' ? null : '/setup';
+      }
+
+      // Si no necesita setup pero el usuario intenta ingresar a /setup, mandarlo a /login
+      if (path == '/setup') {
+        return '/login';
       }
 
       // Permitir callback externo
@@ -102,6 +116,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreenPage(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/setup', builder: (context, state) => const SetupPage()),
 
       // ────────── RUTA GLOBAL DE PERFIL ──────────
       // Cualquier rol que haga context.push('/perfil') abrirá esta pantalla
