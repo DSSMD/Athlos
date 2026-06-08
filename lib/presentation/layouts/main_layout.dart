@@ -8,6 +8,7 @@ import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/shared/more_options_sheet.dart';
+import '../widgets/notificaciones/notification_toast_listener.dart';
 import 'athlos_sidebar.dart';
 
 // Creamos el Notifier que manejará el estado del Sidebar
@@ -58,7 +59,6 @@ class MainLayout extends ConsumerWidget {
     WidgetRef ref,
     int selectedIndex,
     bool isExtended,
-    
   ) {
     final manualState = ref.watch(sidebarCollapsedProvider);
     final shouldCollapse = manualState ?? !isExtended;
@@ -75,26 +75,30 @@ class MainLayout extends ConsumerWidget {
     }).toList();
 
     return Scaffold(
-      body: Row(
-        children: [
-          AthlosSidebar(
-            items: sidebarItems,
-            selectedIndex: selectedIndex,
-            collapsed: shouldCollapse,
-            onItemSelected: (index) {
-              ref.read(navigationIndexProvider.notifier).changeIndex(index);
-            },
-            onToggleCollapsed: () {
-              ref.read(sidebarCollapsedProvider.notifier).toggle(shouldCollapse);
-            },
-          ),
-          Expanded(
-            child: Container(
-              color: Colors.grey.shade100,
-              child: pages[selectedIndex],
+      body: NotificationToastListener(
+        child: Row(
+          children: [
+            AthlosSidebar(
+              items: sidebarItems,
+              selectedIndex: selectedIndex,
+              collapsed: shouldCollapse,
+              onItemSelected: (index) {
+                ref.read(navigationIndexProvider.notifier).changeIndex(index);
+              },
+              onToggleCollapsed: () {
+                ref
+                    .read(sidebarCollapsedProvider.notifier)
+                    .toggle(shouldCollapse);
+              },
             ),
-          ),
-        ],
+            Expanded(
+              child: Container(
+                color: Colors.grey.shade100,
+                child: pages[selectedIndex],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -125,7 +129,7 @@ class MainLayout extends ConsumerWidget {
     final currentIndex = useMoreTab && selectedIndex >= 4 ? 4 : selectedIndex;
 
     return Scaffold(
-      body: pages[selectedIndex],
+      body: NotificationToastListener(child: pages[selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: AppColors.primary500,

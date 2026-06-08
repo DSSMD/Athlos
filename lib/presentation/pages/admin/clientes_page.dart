@@ -123,7 +123,9 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
 
     final buffer = StringBuffer();
     // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
-    buffer.writeln('ID;Nombre;CI / NIT;Teléfono;Email;Dirección;Estado;Total Comprado (Bs);Cantidad de Órdenes');
+    buffer.writeln(
+      'ID;Nombre;CI / NIT;Teléfono;Email;Dirección;Estado;Total Comprado (Bs);Cantidad de Órdenes',
+    );
 
     for (final c in clientesReales) {
       final id = c.idCliente;
@@ -131,12 +133,16 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       final ci = c.ciCliente.replaceAll(';', ',');
       final celular = (c.numTelefono ?? '').replaceAll(';', ',');
       final email = (c.email ?? '').replaceAll(';', ',');
-      final direccion = (c.direccion ?? '').replaceAll('\n', ' ').replaceAll(';', ',');
+      final direccion = (c.direccion ?? '')
+          .replaceAll('\n', ' ')
+          .replaceAll(';', ',');
       final estado = c.activo ? 'Activo' : 'Inactivo';
       final totalComprado = c.totalComprado;
       final cantidadOrdenes = c.totalOrdenes;
 
-      buffer.writeln('$id;$nombre;$ci;$celular;$email;$direccion;$estado;$totalComprado;$cantidadOrdenes');
+      buffer.writeln(
+        '$id;$nombre;$ci;$celular;$email;$direccion;$estado;$totalComprado;$cantidadOrdenes',
+      );
     }
 
     final String csvContent = buffer.toString();
@@ -531,4 +537,3 @@ class _MobileList extends StatelessWidget {
     );
   }
 }
-
