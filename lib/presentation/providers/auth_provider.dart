@@ -76,3 +76,33 @@ final isLoggedInProvider = Provider<bool>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.currentUser != null;
 });
+
+// Provider asíncrono para verificar si la base de datos necesita la cuenta de administrador inicial.
+// IMPORTANTE: Usa RPC (función con SECURITY DEFINER) para poder ser llamada sin sesión activa.
+// Las políticas RLS de SELECT en profiles requieren un usuario autenticado, por lo que
+// una query directa .from('profiles') siempre devolvería null para el rol anon,
+// causando que la pantalla de setup aparezca aunque ya existan administradores.
+//
+// REQUIERE en Supabase (ejecutar en SQL Editor):
+//   CREATE OR REPLACE FUNCTION public.tiene_administrador()
+//   RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+//     SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id_rol = 1 LIMIT 1);
+//   $$;
+//   GRANT EXECUTE ON FUNCTION public.tiene_administrador() TO anon;
+final needsAdminSetupProvider = FutureProvider<bool>((ref) async {
+  try {
+    final client = Supabase.instance.client;
+
+    // Llamamos a la función RPC que puede ejecutarse sin autenticación
+    // porque tiene SECURITY DEFINER y el rol anon tiene EXECUTE concedido.
+    final bool tieneAdmin = await client.rpc('tiene_administrador');
+
+    // Si ya existe al menos un administrador, NO necesitamos setup
+    return !tieneAdmin;
+  } catch (e) {
+    // En caso de error (función no creada, sin conexión, etc.)
+    // devolvemos false por defecto para no bloquear el arranque normal.
+    return false;
+  }
+});
+

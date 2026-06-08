@@ -374,8 +374,8 @@ class _MovimientoFormModalState extends ConsumerState<MovimientoFormModal> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
             style: FilledButton.styleFrom(foregroundColor: AppColors.primary500),
+            child: const Text('Cancelar'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),

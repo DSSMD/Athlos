@@ -9,7 +9,7 @@ Future<void> saveCsvFile({
 }) async {
   try {
     // Escribimos con el UTF-8 BOM (\uFEFF) para compatibilidad perfecta con Excel
-    final bytes = utf8.encode('\uFEFF' + csvContent);
+    final bytes = utf8.encode('\uFEFF$csvContent');
     final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
     final url = html.Url.createObjectUrlFromBlob(blob);
 

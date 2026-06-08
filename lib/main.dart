@@ -99,13 +99,19 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // ════════════════════════════════════════════════════════════════════════════
+  // ENTORNO: Comenta la línea que NO quieras usar y descomenta la que sí.
+  // ════════════════════════════════════════════════════════════════════════════
+  //await dotenv.load(fileName: ".env.local"); // 🐳 LOCAL  → Docker (supabase start)
+  await dotenv.load(fileName: ".env");    // ☁️  NUBE   → Supabase Cloud oficial
+  // ════════════════════════════════════════════════════════════════════════════
 
-  await dotenv.load(fileName: ".env");
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
+  // Inicializa formateo de fechas en español
   await initializeDateFormatting('es_ES', null);
 
   // Llamamos a la configuración sin esperar (para no bloquear UI)
@@ -114,6 +120,9 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
+
+
+// Cambiamos StatelessWidget por ConsumerWidget para poder leer a Riverpod
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
