@@ -12,7 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/utils/export_helper.dart';
+//import '../../../core/utils/export_helper.dart';
 import '../../components/clientes/cliente_form_drawer.dart';
 import '../../components/clientes/cliente_card.dart';
 import '../../components/clientes/cliente_list_row.dart';
@@ -108,7 +108,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
     );
   }
 
-  void _exportar() {
+  /*void _exportar() {
     final clientesAsync = ref.read(clientesProvider);
     final clientesReales = clientesAsync.value ?? const <ClienteModel>[];
     if (clientesReales.isEmpty) {
@@ -152,7 +152,7 @@ class _ClientesPageState extends ConsumerState<ClientesPage> {
       fileName: 'Clientes_Athlos_$timestamp.csv',
       csvContent: csvContent,
     );
-  }
+  }*/
 
   // ─────────────────────────────────────────────────────────── BUILD ──
 

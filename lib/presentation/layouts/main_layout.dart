@@ -1,9 +1,7 @@
-// lib/presentation/layouts/main_layout.dart
-// Layout principal que adapta su diseño según el tamaño de pantalla (Desktop vs Mobile)
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/update_service.dart';
 import '../providers/navigation_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/breakpoints.dart';
@@ -27,7 +25,7 @@ final sidebarCollapsedProvider =
       SidebarCollapsedNotifier.new,
     );
 
-class MainLayout extends ConsumerWidget {
+class MainLayout extends ConsumerStatefulWidget {
   final List<Widget> pages;
   final List<NavigationRailDestination> railDestinations;
   final List<BottomNavigationBarItem> bottomNavItems;
@@ -40,10 +38,23 @@ class MainLayout extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainLayout> createState() => _MainLayoutState();
+}
+
+class _MainLayoutState extends ConsumerState<MainLayout> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdates(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final rawIndex = ref.watch(navigationIndexProvider);
 
-    final safeIndex = (rawIndex >= pages.length) ? 0 : rawIndex;
+    final safeIndex = (rawIndex >= widget.pages.length) ? 0 : rawIndex;
 
     // Migrated to AppBreakpoints.mobile (1100). Was previously: 800/1000.
     if (context.isMobile) {
@@ -62,7 +73,7 @@ class MainLayout extends ConsumerWidget {
   ) {
     final manualState = ref.watch(sidebarCollapsedProvider);
     final shouldCollapse = manualState ?? !isExtended;
-    final sidebarItems = railDestinations.map((dest) {
+    final sidebarItems = widget.railDestinations.map((dest) {
       return SidebarItem(
         icon: (dest.icon as Icon).icon ?? Icons.circle,
         selectedIcon:
@@ -94,7 +105,7 @@ class MainLayout extends ConsumerWidget {
             Expanded(
               child: Container(
                 color: Colors.grey.shade100,
-                child: pages[selectedIndex],
+                child: widget.pages[selectedIndex],
               ),
             ),
           ],
@@ -109,13 +120,13 @@ class MainLayout extends ConsumerWidget {
     WidgetRef ref,
     int selectedIndex,
   ) {
-    final totalItems = bottomNavItems.length;
+    final totalItems = widget.bottomNavItems.length;
     final useMoreTab = totalItems > 5;
 
     final visibleItems = <BottomNavigationBarItem>[];
     if (useMoreTab) {
       // Primeros 4 items + "Más"
-      visibleItems.addAll(bottomNavItems.take(4));
+      visibleItems.addAll(widget.bottomNavItems.take(4));
       visibleItems.add(
         const BottomNavigationBarItem(
           icon: Icon(Icons.more_horiz),
@@ -123,13 +134,13 @@ class MainLayout extends ConsumerWidget {
         ),
       );
     } else {
-      visibleItems.addAll(bottomNavItems);
+      visibleItems.addAll(widget.bottomNavItems);
     }
 
     final currentIndex = useMoreTab && selectedIndex >= 4 ? 4 : selectedIndex;
 
     return Scaffold(
-      body: NotificationToastListener(child: pages[selectedIndex]),
+      body: NotificationToastListener(child: widget.pages[selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: AppColors.primary500,
@@ -148,7 +159,7 @@ class MainLayout extends ConsumerWidget {
   }
 
   void _showMoreSheet(BuildContext context, WidgetRef ref) {
-    final hiddenItems = bottomNavItems.skip(4).toList();
+    final hiddenItems = widget.bottomNavItems.skip(4).toList();
     final options = <MoreOption>[];
 
     for (var i = 0; i < hiddenItems.length; i++) {
