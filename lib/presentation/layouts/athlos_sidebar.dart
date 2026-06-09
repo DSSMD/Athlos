@@ -98,7 +98,7 @@ class SidebarMenuConfig {
   );
 
   static const itemPagos = SidebarItem(
-    // 👈 Aquí está definido itemPagos
+    // Aquí está definido itemPagos
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments,
     label: 'Pagos',
@@ -106,7 +106,7 @@ class SidebarMenuConfig {
   );
 
   static const itemBalance = SidebarItem(
-    // 👈 Aquí está definido itemBalance
+    //  Aquí está definido itemBalance
     icon: Icons.account_balance_wallet_outlined,
     selectedIcon: Icons.account_balance_wallet,
     label: 'Balance',
@@ -133,7 +133,6 @@ class SidebarMenuConfig {
     selectedIcon: Icons.notifications,
     label: 'Avisos',
     section: SidebarSection.sistema,
-    badge: 4,
   );
 
   static Map<String, List<SidebarItem>> get itemsPorRol => {

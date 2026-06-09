@@ -164,6 +164,7 @@ class _Header extends StatelessWidget {
           // gratis por Material (gris + sin ripple).
           TextButton(
             onPressed: onMarcarTodas,
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
             child: const Text('Marcar todas como leídas'),
           ),
         ],
