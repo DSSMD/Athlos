@@ -276,6 +276,8 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                               label: const Text('Ver Tablero'),
                                               style: ElevatedButton.styleFrom(
                                                 elevation: 0,
+                                                foregroundColor: Colors.white,
+                                                backgroundColor: AppColors.primary500,
                                                 padding: const EdgeInsets.symmetric(
                                                   vertical: AppSpacing.sm,
                                                 ),
@@ -365,6 +367,8 @@ class _ProduccionPageState extends ConsumerState<ProduccionPage> {
                                       icon: const Icon(Icons.view_kanban, size: 18),
                                       label: const Text('Ver Tablero'),
                                       style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary500,
+                                        foregroundColor: Colors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(8),

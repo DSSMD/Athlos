@@ -165,10 +165,7 @@ class _PlantillaFormScaffoldState
         final idTipo = widget.initialPlantilla!.idTipoPrenda;
         final categoriaPrenda = tiposAsync.whenOrNull(
           data: (tipos) {
-            return tipos
-                .where((t) => t.id == idTipo)
-                .firstOrNull
-                ?.categoria;
+            return tipos.where((t) => t.id == idTipo).firstOrNull?.categoria;
           },
         );
         notifier.inicializarParaEditar(
@@ -210,12 +207,11 @@ class _PlantillaFormScaffoldState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
             child: const Text('Seguir editando'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Descartar'),
           ),
@@ -324,10 +320,15 @@ class _PlantillaFormScaffoldState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.primary500,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Guardar'),
           ),
         ],
@@ -683,6 +684,9 @@ class _Footer extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: guardando ? null : onCancelar,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary500,
+                ),
                 child: const Text('Cancelar'),
               ),
               const Spacer(),
@@ -690,12 +694,18 @@ class _Footer extends StatelessWidget {
                 if (compact)
                   IconButton(
                     onPressed: guardando ? null : onAtras,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary500,
+                    ),
                     icon: const Icon(Icons.arrow_back, size: 18),
                     tooltip: 'Atrás',
                   )
                 else
                   OutlinedButton.icon(
                     onPressed: guardando ? null : onAtras,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary500,
+                    ),
                     icon: const Icon(Icons.arrow_back, size: 16),
                     label: const Text('Atrás'),
                   ),
@@ -705,17 +715,27 @@ class _Footer extends StatelessWidget {
                 compact
                     ? IconButton.filled(
                         onPressed: onSiguiente,
+                        style: TextButton.styleFrom(
+                          backgroundColor: AppColors.primary500,
+                          foregroundColor: Colors.white,
+                        ),
                         icon: const Icon(Icons.arrow_forward, size: 18),
                         tooltip: 'Siguiente',
                       )
                     : FilledButton.icon(
                         onPressed: onSiguiente,
+                        style: TextButton.styleFrom(
+                          backgroundColor: AppColors.primary500,
+                          foregroundColor: Colors.white,
+                        ),
                         icon: const Icon(Icons.arrow_forward, size: 16),
                         label: const Text('Siguiente'),
                       )
               else
                 FilledButton(
                   onPressed: guardando ? null : onGuardar,
+                  style: TextButton.styleFrom(backgroundColor: AppColors.primary500,
+                  foregroundColor: Colors.white),
                   child: guardando
                       ? const SizedBox(
                           width: 16,

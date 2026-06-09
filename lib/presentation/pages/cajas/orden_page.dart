@@ -80,7 +80,9 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
 
     final buffer = StringBuffer();
     // Semicolon is the default delimiter in Spanish regional settings so Excel opens it correctly
-    buffer.writeln('Número de Orden;Cliente;CI / NIT;Teléfono;Email;Dirección;Fecha Creación;Fecha Entrega;Costo Total (Bs);Resumen Prenda;Cantidad Total;Estado de Orden;Estado de Pago;Notas');
+    buffer.writeln(
+      'Número de Orden;Cliente;CI / NIT;Teléfono;Email;Dirección;Fecha Creación;Fecha Entrega;Costo Total (Bs);Resumen Prenda;Cantidad Total;Estado de Orden;Estado de Pago;Notas',
+    );
 
     for (final o in allOrders) {
       final numOrden = o.numOrden.toUpperCase();
@@ -88,17 +90,25 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
       final ci = (o.clienteCi ?? '').replaceAll(';', ',');
       final tel = (o.clienteTelefono ?? '').replaceAll(';', ',');
       final email = (o.clienteEmail ?? '').replaceAll(';', ',');
-      final dir = (o.clienteDireccion ?? '').replaceAll('\n', ' ').replaceAll(';', ',');
-      final fCreacion = '${o.fechaOrden.day}/${o.fechaOrden.month}/${o.fechaOrden.year}';
-      final fEntrega = '${o.fechaEntrega.day}/${o.fechaEntrega.month}/${o.fechaEntrega.year}';
+      final dir = (o.clienteDireccion ?? '')
+          .replaceAll('\n', ' ')
+          .replaceAll(';', ',');
+      final fCreacion =
+          '${o.fechaOrden.day}/${o.fechaOrden.month}/${o.fechaOrden.year}';
+      final fEntrega =
+          '${o.fechaEntrega.day}/${o.fechaEntrega.month}/${o.fechaEntrega.year}';
       final costo = o.costoTotal;
       final producto = o.producto.replaceAll(';', ',');
       final cant = o.cantidad;
       final estOrden = o.estadoOrden;
       final estPago = o.estadoPago;
-      final notas = o.notasAdicionales.replaceAll('\n', ' ').replaceAll(';', ',');
+      final notas = o.notasAdicionales
+          .replaceAll('\n', ' ')
+          .replaceAll(';', ',');
 
-      buffer.writeln('$numOrden;$cliente;$ci;$tel;$email;$dir;$fCreacion;$fEntrega;$costo;$producto;$cant;$estOrden;$estPago;$notas');
+      buffer.writeln(
+        '$numOrden;$cliente;$ci;$tel;$email;$dir;$fCreacion;$fEntrega;$costo;$producto;$cant;$estOrden;$estPago;$notas',
+      );
     }
 
     final String csvContent = buffer.toString();
@@ -188,6 +198,8 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
                 onNewPressed: () {
                   setState(() => _creandoOrden = true);
                 },
+                newButtonColor: AppColors.primary500,
+                newTextColor: Colors.white,
               ),
             Expanded(
               child: SingleChildScrollView(
@@ -245,8 +257,15 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: OutlinedButton.icon(
-                          onPressed: () => _exportarOrdenes(listaDeOrdenesReales),
-                          icon: const Icon(Icons.file_download_outlined, size: 18),
+                          onPressed: () =>
+                              _exportarOrdenes(listaDeOrdenesReales),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.primary500,
+                          ),
+                          icon: const Icon(
+                            Icons.file_download_outlined,
+                            size: 18,
+                          ),
                           label: const Text('Exportar'),
                         ),
                       ),
@@ -286,7 +305,12 @@ class _OrdenPageState extends ConsumerState<OrdenPage> {
                           ),
                           const SizedBox(width: AppSpacing.md),
                           OutlinedButton.icon(
-                            onPressed: () => _exportarOrdenes(listaDeOrdenesReales),
+                            onPressed: () =>
+                                _exportarOrdenes(listaDeOrdenesReales),
+                            style: TextButton.styleFrom(
+                              backgroundColor: AppColors.primary500,
+                              foregroundColor: Colors.white
+                            ),
                             icon: const Icon(
                               Icons.file_download_outlined,
                               size: 18,
@@ -819,4 +843,3 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
-

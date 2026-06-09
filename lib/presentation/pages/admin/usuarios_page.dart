@@ -83,7 +83,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
       final id = u.id;
       final nombre = u.name.replaceAll(';', ',');
       final email = u.email.replaceAll(';', ',');
-      
+
       String rol = 'Invitado';
       switch (u.role) {
         case UserRole.administrador:
@@ -134,7 +134,7 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
       final id = t.id;
       final nombre = t.name.replaceAll(';', ',');
       final email = t.email.replaceAll(';', ',');
-      
+
       String rol = 'Invitado';
       switch (t.role) {
         case UserRole.administrador:
@@ -342,6 +342,9 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
                       onPressed: () => _exportarUsuarios(allUsers),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary500,
+                      ),
                       icon: const Icon(Icons.file_download_outlined, size: 18),
                       label: const Text('Exportar'),
                     ),
@@ -370,6 +373,9 @@ class _UsuariosPageState extends ConsumerState<UsuariosPage> {
                         icon: const Icon(
                           Icons.file_download_outlined,
                           size: 18,
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary500,
                         ),
                         label: const Text('Exportar'),
                       ),

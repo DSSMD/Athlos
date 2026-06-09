@@ -25,7 +25,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../domain/models/inventario_model.dart';
 import '../../../../../domain/models/material_plantilla_model.dart';
 
-
 import '../../../../providers/plantilla_form_provider.dart';
 import '../../../../providers/insumo_provider.dart';
 
@@ -86,11 +85,10 @@ class PlantillaFormPaso3Materiales extends ConsumerWidget {
                           state.materiales[i].id,
                         ),
                         isMobile: isMobile,
-                        onChangeInsumo: (id) =>
-                            notifier.setMaterialInsumo(
-                              state.materiales[i].id,
-                              id,
-                            ),
+                        onChangeInsumo: (id) => notifier.setMaterialInsumo(
+                          state.materiales[i].id,
+                          id,
+                        ),
                         onChangeCantidad: (c) => notifier.setMaterialCantidad(
                           state.materiales[i].id,
                           c,
@@ -104,13 +102,17 @@ class PlantillaFormPaso3Materiales extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _FooterCostoTotal(materiales: state.materiales, insumos: insumos),
+                _FooterCostoTotal(
+                  materiales: state.materiales,
+                  insumos: insumos,
+                ),
               ],
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
                   onPressed: notifier.agregarMaterial,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.primary500),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Agregar insumo'),
                 ),
@@ -198,9 +200,7 @@ class _MaterialRowState extends State<_MaterialRow> {
   /// en el catálogo, null si todavía no se eligió o no se encuentra.
   String? _valorActualDropdown() {
     if (widget.material.idInsumo.isEmpty) return null;
-    final existe = widget.insumos.any(
-      (i) => i.id == widget.material.idInsumo,
-    );
+    final existe = widget.insumos.any((i) => i.id == widget.material.idInsumo);
     return existe ? widget.material.idInsumo : null;
   }
 
@@ -234,18 +234,19 @@ class _MaterialRowState extends State<_MaterialRow> {
       dropdownMenuEntries: widget.insumos
           .where((i) => i.activo || i.id == widget.material.idInsumo)
           .map((i) {
-        final yaUsadoEnOtraFila = widget.seleccionadosOtros.contains(i.id);
-        final base =
-            '${i.nombre}${i.unidad.isNotEmpty ? ' (${i.unidad})' : ''}';
-        final label = !i.activo
-            ? '$base (Desactivado)'
-            : (yaUsadoEnOtraFila ? '$base — ya seleccionado' : base);
-        return DropdownMenuEntry<String>(
-          value: i.id,
-          label: label,
-          enabled: i.activo && !yaUsadoEnOtraFila,
-        );
-      }).toList(),
+            final yaUsadoEnOtraFila = widget.seleccionadosOtros.contains(i.id);
+            final base =
+                '${i.nombre}${i.unidad.isNotEmpty ? ' (${i.unidad})' : ''}';
+            final label = !i.activo
+                ? '$base (Desactivado)'
+                : (yaUsadoEnOtraFila ? '$base — ya seleccionado' : base);
+            return DropdownMenuEntry<String>(
+              value: i.id,
+              label: label,
+              enabled: i.activo && !yaUsadoEnOtraFila,
+            );
+          })
+          .toList(),
       onSelected: (v) {
         if (v != null) widget.onChangeInsumo(v);
       },
@@ -270,10 +271,12 @@ class _MaterialRowState extends State<_MaterialRow> {
       },
     );
 
-    final insumoSelected = widget.insumos.where((i) => i.id == widget.material.idInsumo).firstOrNull;
+    final insumoSelected = widget.insumos
+        .where((i) => i.id == widget.material.idInsumo)
+        .firstOrNull;
     final costoUnitario = insumoSelected?.costoUnitario ?? 0.0;
     final costoParcial = widget.material.cantidad * costoUnitario;
-    
+
     final costoText = Text(
       '${costoParcial.toStringAsFixed(2)} Bs.',
       style: AppTypography.small.copyWith(
@@ -371,10 +374,7 @@ class _EmptyMateriales extends StatelessWidget {
 // ─── FOOTER COSTO TOTAL ──────────────────────────────────────────────────────
 
 class _FooterCostoTotal extends StatelessWidget {
-  const _FooterCostoTotal({
-    required this.materiales,
-    required this.insumos,
-  });
+  const _FooterCostoTotal({required this.materiales, required this.insumos});
 
   final List<MaterialPlantilla> materiales;
   final List<InventarioItemModel> insumos;
@@ -401,15 +401,11 @@ class _FooterCostoTotal extends StatelessWidget {
         children: [
           Text(
             'Costo Total Estimado',
-            style: AppTypography.small.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTypography.small.copyWith(fontWeight: FontWeight.w600),
           ),
           Text(
             '${total.toStringAsFixed(2)} Bs.',
-            style: AppTypography.h3.copyWith(
-              color: AppColors.success,
-            ),
+            style: AppTypography.h3.copyWith(color: AppColors.success),
           ),
         ],
       ),
