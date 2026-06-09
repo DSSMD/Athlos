@@ -49,6 +49,7 @@ app.*.map.json
 .env
 .env*
 *.env
+.env.*
 
 # Archivos de configuración de SO adicionales
 Thumbs.db

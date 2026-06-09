@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "167895460051",
+    "project_id": "notificaciones-athlos-s-a",
+    "storage_bucket": "notificaciones-athlos-s-a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:167895460051:android:6dc08fb9d793b732470c26",
+        "android_client_info": {
+          "package_name": "com.example.workspace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnOX-BVUK9GLG4IsXUWENZFN52buI59NU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

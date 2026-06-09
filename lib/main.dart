@@ -1,121 +1,200 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // NECESARIO PARA EL ESCUDO
 
-void main() {
-  runApp(const MyApp());
+import 'core/router/app_router.dart';
+import 'core/inactivity/inactivity_detector.dart';
+import 'core/inactivity/session_expired_snackbar.dart';
+import 'presentation/providers/auth_provider.dart';
+import 'presentation/widgets/shared/no_internet_overlay.dart';
+import 'presentation/providers/connectivity_provider.dart';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
+
+// 1. MANEJADOR EN SEGUNDO PLANO
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("🔔 Alerta recibida en segundo plano: ${message.notification?.title}");
 }
 
-class MyApp extends StatelessWidget {
+// 2. FILTRO DE NOTIFICACIONES (ESCUDO)
+void _filtrarYMostrarNotificacion(RemoteMessage message) {
+  final user = Supabase.instance.client.auth.currentUser;
+  final idDestino = message.data['id_usuario']; // ID que viene en el JSON
+
+  // Lógica:
+  // Si el mensaje tiene id_usuario (personal) y no es el mio, lo ignoro.
+  // Si es null (Admin/Global), lo dejo pasar.
+  if (idDestino != null && user != null && idDestino.toString() != user.id) {
+    print("🚫 Notificación ignorada: Era para otro usuario.");
+    return;
+  }
+
+  print("✅ Notificación aceptada para: ${user?.id ?? 'Admin/Global'}");
+}
+
+// 3. CONFIGURACIÓN CON ESCUDO PARA EVITAR BUCLES
+Future<void> _configurarNotificaciones() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await FirebaseMessaging.instance.requestPermission();
+
+    // Configurar listener de mensajes (AQUÍ ESTÁ LA FILTRACIÓN)
+    FirebaseMessaging.onMessage.listen((message) {
+      _filtrarYMostrarNotificacion(message);
+    });
+
+    // SUSCRIPCIÓN GLOBAL (Solo una vez)
+    if (prefs.getBool('sub_global') != true) {
+      await FirebaseMessaging.instance.subscribeToTopic('jefes_produccion');
+      await prefs.setBool('sub_global', true);
+      print("✅ Suscripción global activada.");
+    }
+
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+
+    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final user = data.session?.user;
+      if (user != null) {
+        // Suscripción personalizada
+        String topic = 'user_${user.id.replaceAll('-', '')}';
+
+        if (prefs.getBool('sub_$topic') != true) {
+          await FirebaseMessaging.instance.subscribeToTopic(topic);
+          await prefs.setBool('sub_$topic', true);
+        }
+
+        // ... dentro del listener de auth ...
+        // 🔥 CAMBIO CRÍTICO: Usamos .update() en lugar de .upsert()
+        // Esto solo toca el fcm_token y no toca el resto de columnas.
+        if (fcmToken != null) {
+          try {
+            await Supabase.instance.client
+                .from('profiles')
+                .update({'fcm_token': fcmToken})
+                .eq('id', user.id);
+            print("✅ Token actualizado en Supabase.");
+          } catch (e) {
+            print("⚠️ Error al actualizar token: $e");
+          }
+        }
+      }
+    });
+  } catch (e) {
+    print("⚠️ Error en notificaciones: $e");
+  }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // ════════════════════════════════════════════════════════════════════════════
+  // ENTORNO: Comenta la línea que NO quieras usar y descomenta la que sí.
+  // ════════════════════════════════════════════════════════════════════════════
+  //await dotenv.load(fileName: ".env.local"); // 🐳 LOCAL  → Docker (supabase start)
+  await dotenv.load(fileName: ".env");    // ☁️  NUBE   → Supabase Cloud oficial
+  // ════════════════════════════════════════════════════════════════════════════
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  // Inicializa formateo de fechas en español
+  await initializeDateFormatting('es_ES', null);
+
+  // Llamamos a la configuración sin esperar (para no bloquear UI)
+  _configurarNotificaciones();
+
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+
+
+// Cambiamos StatelessWidget por ConsumerWidget para poder leer a Riverpod
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authAsync = ref.watch(authStateProvider);
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    if (authAsync.isLoading) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          builder: (context) => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      );
+    }
+
+    if (authAsync.hasError) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: Center(child: Text("Error: ${authAsync.error}")),
+          ),
+        ),
+      );
+    }
+
+    final router = ref.watch(goRouterProvider);
+    final isLoggedIn = authAsync.value?.session != null;
+    final hasInternet = ref.watch(isConnectedProvider);
+
+    return InactivityDetector(
+      enabled: isLoggedIn,
+      onInactive: () async {
+        await Supabase.instance.client.auth.signOut();
+        SessionExpiredSnackbar.show();
+      },
+      child: MaterialApp.router(
+        title: 'Athlos Workspace',
+        debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
+        routerConfig: router,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
+        locale: const Locale('es', 'ES'),
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          fontFamily: 'Montserrat',
+        ),
+        builder: (context, child) {
+          return Stack(
+            children: [
+              child!,
+              if (!hasInternet)
+                Positioned.fill(
+                  child: NoInternetOverlay(
+                    onRetry: () => ref
+                        .read(isConnectedProvider.notifier)
+                        .checkConnectionManual(),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
