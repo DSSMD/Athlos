@@ -46,8 +46,7 @@ class SchedulingPage extends ConsumerWidget {
             // ── BODY ────────────────────────────────────────────────────────
             Expanded(
               child: schedulingAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -86,9 +85,8 @@ class SchedulingPage extends ConsumerWidget {
                 data: (resultados) {
                   if (resultados.isEmpty) {
                     return _EmptyScheduling(
-                      onRecalcular: () => ref
-                          .read(schedulingStateProvider.notifier)
-                          .calcular(),
+                      onRecalcular: () =>
+                          ref.read(schedulingStateProvider.notifier).calcular(),
                     );
                   }
                   return SingleChildScrollView(
@@ -169,13 +167,14 @@ class _SchedulingHeader extends StatelessWidget {
           ),
           FilledButton.icon(
             onPressed: isLoading ? null : onRecalcular,
+            style: TextButton.styleFrom(backgroundColor: AppColors.primary500, foregroundColor: Colors.white),
             icon: isLoading
                 ? const SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.primary500
                     ),
                   )
                 : const Icon(Icons.calculate_outlined, size: 18),
@@ -327,6 +326,7 @@ class _EmptyScheduling extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             onPressed: onRecalcular,
+            style: TextButton.styleFrom(backgroundColor: AppColors.primary500, foregroundColor: Colors.white),
             icon: const Icon(Icons.calculate_outlined),
             label: const Text('Calcular ahora'),
           ),
@@ -499,10 +499,7 @@ class _DesktopRow extends StatelessWidget {
             ),
           ),
           // Estado en-tiempo / tarde
-          Expanded(
-            flex: 2,
-            child: _EstadoBadge(enTiempo: enTiempo),
-          ),
+          Expanded(flex: 2, child: _EstadoBadge(enTiempo: enTiempo)),
         ],
       ),
     );
@@ -545,7 +542,9 @@ class _MobileCard extends StatelessWidget {
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: enTiempo ? AppColors.border : AppColors.error.withValues(alpha: 0.4),
+          color: enTiempo
+              ? AppColors.border
+              : AppColors.error.withValues(alpha: 0.4),
           width: enTiempo ? 1 : 1.5,
         ),
       ),
@@ -601,10 +600,7 @@ class _MobileCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              _InfoChip(
-                label: 'Prioridad',
-                value: result.prioridad,
-              ),
+              _InfoChip(label: 'Prioridad', value: result.prioridad),
               const SizedBox(width: AppSpacing.sm),
               _InfoChip(
                 label: 'Entrega',
