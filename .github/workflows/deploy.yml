@@ -33,6 +33,13 @@ jobs:
       - name: Instalar Dependencias de Flutter
         run: flutter pub get
 
+      - name: Crear Archivos de Entorno (.env y .env.local)
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL || 'https://txnmhtoczfgjdwdptrfl.supabase.co' }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ' }}" >> .env
+          echo "SUPABASE_URL=http://localhost:54321" > .env.local
+          echo "SUPABASE_ANON_KEY=local_anon_key" >> .env.local
+
       - name: Compilar APK (Release)
         run: flutter build apk --release
 
@@ -61,6 +68,20 @@ jobs:
 
       - name: Instalar Dependencias de Flutter
         run: flutter pub get
+
+      - name: Crear Archivos de Entorno (.env y .env.local)
+        shell: pwsh
+        run: |
+          $supabaseUrl = "${{ secrets.SUPABASE_URL }}"
+          if ([string]::IsNullOrEmpty($supabaseUrl)) { $supabaseUrl = "https://txnmhtoczfgjdwdptrfl.supabase.co" }
+          $supabaseKey = "${{ secrets.SUPABASE_ANON_KEY }}"
+          if ([string]::IsNullOrEmpty($supabaseKey)) { $supabaseKey = "sb_publishable_hZCE_7ITTUx2teLWHqB25A_j_6VCmoZ" }
+          
+          "SUPABASE_URL=$supabaseUrl" | Out-File -FilePath .env -Encoding utf8
+          "SUPABASE_ANON_KEY=$supabaseKey" | Out-File -FilePath .env -Append -Encoding utf8
+          
+          "SUPABASE_URL=http://localhost:54321" | Out-File -FilePath .env.local -Encoding utf8
+          "SUPABASE_ANON_KEY=local_anon_key" | Out-File -FilePath .env.local -Append -Encoding utf8
 
       - name: Compilar App Windows (Release)
         run: flutter build windows --release
@@ -117,14 +138,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Verificar si el tag ya existe para no fallar el workflow
-          if gh release view "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
-            echo "El Release ${{ env.TAG_NAME }} ya existe. Actualizando los archivos..."
-            gh release upload "${{ env.TAG_NAME }}" release-assets/* --clobber
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "El Release $TAG_NAME ya existe. Actualizando los archivos..."
+            gh release upload "$TAG_NAME" release-assets/* --clobber
           else
-            echo "Creando nuevo Release ${{ env.TAG_NAME }}..."
-            gh release create "${{ env.TAG_NAME }}" release-assets/* \
-              --title "Versión ${{ env.TAG_NAME }}" \
-              --notes "## Cambios en esta versión (${{ env.VERSION }})
+            echo "Creando nuevo Release $TAG_NAME..."
+            gh release create "$TAG_NAME" release-assets/* \
+              --title "Versión $TAG_NAME" \
+              --notes "## Cambios en esta versión ($VERSION)
               
               * Compilaciones automáticas listas para Windows y Android.
               * El actualizador buscará esta versión de forma automática." \
