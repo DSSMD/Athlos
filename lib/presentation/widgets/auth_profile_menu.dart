@@ -10,6 +10,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import 'logout_confirmation_dialog.dart';
 import 'user_avatar.dart';
+import '../../core/services/update_service.dart';
 
 class AuthProfileMenu extends ConsumerWidget {
   final bool isCollapsed;
@@ -75,6 +76,9 @@ class AuthProfileMenu extends ConsumerWidget {
                 case _ProfileAction.profile:
                   _goToProfile(context);
                   break;
+                case _ProfileAction.update:
+                  UpdateService.checkForUpdates(context, forceShow: true);
+                  break;
                 case _ProfileAction.logout:
                   _handleLogout(context, ref);
                   break;
@@ -93,6 +97,25 @@ class AuthProfileMenu extends ConsumerWidget {
                     const SizedBox(width: AppSpacing.md),
                     Text(
                       'Mi Perfil',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<_ProfileAction>(
+                value: _ProfileAction.update,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.system_update_alt_rounded,
+                      size: 20,
+                      color: AppColors.textPrimary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      'Buscar Actualizaciones',
                       style: AppTypography.small.copyWith(
                         color: AppColors.textPrimary,
                       ),
@@ -178,7 +201,7 @@ class AuthProfileMenu extends ConsumerWidget {
   }
 }
 
-enum _ProfileAction { profile, logout }
+enum _ProfileAction { profile, update, logout }
 
 void _goToProfile(BuildContext context) {
   context.push('/perfil'); 
@@ -274,6 +297,22 @@ Future<void> showAuthProfileSheet(BuildContext context, WidgetRef ref) async {
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 _goToProfile(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.system_update_alt_rounded,
+                color: AppColors.textPrimary,
+              ),
+              title: Text(
+                'Buscar Actualizaciones',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                UpdateService.checkForUpdates(context, forceShow: true);
               },
             ),
             ListTile(

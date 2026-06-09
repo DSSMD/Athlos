@@ -358,5 +358,3 @@ class _AsignarTrabajadorDialogState extends State<AsignarTrabajadorDialog> {
     );
   }
 }
-
-// ignore_for_file: use_build_context_synchronously

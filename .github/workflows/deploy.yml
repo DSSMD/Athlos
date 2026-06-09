@@ -1,0 +1,133 @@
+name: Compilar y Desplegar Athlos (Windows & Android)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permite ejecución manual desde la pestaña de Actions
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Compilar Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar Dependencias de Flutter
+        run: flutter pub get
+
+      - name: Compilar APK (Release)
+        run: flutter build apk --release
+
+      - name: Renombrar APK para el Release
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Athlos-Android.apk
+
+      - name: Subir APK como Artefacto Temporal
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/Athlos-Android.apk
+          retention-days: 1
+
+  build-windows:
+    name: Compilar Windows (Instalador EXE)
+    runs-on: windows-latest
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar Dependencias de Flutter
+        run: flutter pub get
+
+      - name: Compilar App Windows (Release)
+        run: flutter build windows --release
+
+      - name: Compilar Instalador (Inno Setup)
+        run: |
+          iscc windows/installer.iss
+
+      - name: Renombrar Instalador para el Release
+        run: |
+          mv build/InstaladorAthlos.exe build/Athlos-Instalador-Windows.exe
+
+      - name: Subir Instalador como Artefacto Temporal
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/Athlos-Instalador-Windows.exe
+          retention-days: 1
+
+  create-release:
+    name: Crear Release en GitHub
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Crear Directorio para Assets
+        run: mkdir -p release-assets
+
+      - name: Descargar APK compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: release-assets
+
+      - name: Descargar Instalador Windows compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: release-assets
+
+      - name: Obtener Versión desde pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(grep 'version: ' pubspec.yaml | sed 's/version: //')
+          # Remover el número de compilación (+X) para el tag de git
+          TAG_NAME="v$(echo $VERSION | cut -d'+' -f1)"
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Crear GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Verificar si el tag ya existe para no fallar el workflow
+          if gh release view "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
+            echo "El Release ${{ env.TAG_NAME }} ya existe. Actualizando los archivos..."
+            gh release upload "${{ env.TAG_NAME }}" release-assets/* --clobber
+          else
+            echo "Creando nuevo Release ${{ env.TAG_NAME }}..."
+            gh release create "${{ env.TAG_NAME }}" release-assets/* \
+              --title "Versión ${{ env.TAG_NAME }}" \
+              --notes "## Cambios en esta versión (${{ env.VERSION }})
+              
+              * Compilaciones automáticas listas para Windows y Android.
+              * El actualizador buscará esta versión de forma automática." \
+              --draft=false \
+              --prerelease=false
+          fi

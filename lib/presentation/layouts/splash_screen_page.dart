@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -10,16 +11,29 @@ class SplashScreenPage extends StatefulWidget {
 class _SplashScreenPageState extends State<SplashScreenPage> {
   // Iniciamos la opacidad en 0 (totalmente invisible)
   double _opacity = 0.0;
+  String _versionStr = '';
 
   @override
   void initState() {
     super.initState();
+    _loadVersion();
     // Un milisegundo después de pintar la pantalla negra, disparamos la animación
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _opacity = 1.0; // Cambiamos a 100% visible
       });
     });
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _versionStr = 'v${packageInfo.version}';
+      });
+    } catch (e) {
+      // Ignorar error de carga si ocurre
+    }
   }
 
   @override
@@ -50,6 +64,18 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
               ),
               const SizedBox(height: 48),
               const CircularProgressIndicator(color: Color(0xFFFF0000)),
+              if (_versionStr.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text(
+                  _versionStr,
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -57,3 +83,4 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
     );
   }
 }
+
